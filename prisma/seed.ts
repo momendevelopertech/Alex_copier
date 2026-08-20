@@ -878,17 +878,46 @@ async function main() {
   // -------------------------------------------
   console.log('?? Creating settlements...');
 
+  // شركة جملة آلات (company1) - مبيعات آلات + إيجار + أقساط
+  // شركة جملة قطع غيار (company2) - مبيعات قطع غيار + صيانة
+  // شركة القطاعي (company3) - خدمات + صيانة + بيع
+
   const settlementsData = [
-    { settlementNumber: 'STL-2024-001', companyId: company1.id, customerId: 'cust-1', engineerId: 'eng-1', amount: 130000, paymentMethod: 'CASH' as const, reason: 'Sale of machine SN-2024-001', status: 'VERIFIED' as const, collectedBy: user1.id, verifiedBy: user3.id },
-    { settlementNumber: 'STL-2024-002', companyId: company1.id, customerId: 'cust-2', amount: 60000, paymentMethod: 'CASH' as const, reason: 'Installment 1 for machine SN-2024-002', status: 'VERIFIED' as const, collectedBy: user7.id, verifiedBy: user3.id },
-    { settlementNumber: 'STL-2024-003', companyId: company1.id, customerId: 'cust-3', engineerId: 'eng-5', amount: 115000, paymentMethod: 'CREDIT' as const, reason: 'Sale of machine SN-2024-003', status: 'VERIFIED' as const, collectedBy: user1.id, verifiedBy: user3.id },
-    { settlementNumber: 'STL-2024-004', companyId: company1.id, customerId: 'cust-4', amount: 140000, paymentMethod: 'CASH' as const, reason: 'Sale of machine SN-2024-004', status: 'INITIAL' as const, collectedBy: user1.id },
-    { settlementNumber: 'STL-2024-005', companyId: company2.id, customerId: 'cust-6', amount: 50000, paymentMethod: 'CASH' as const, reason: 'Installment 1 for machine SN-2024-005', status: 'INITIAL' as const, collectedBy: user2.id },
-    { settlementNumber: 'STL-2024-006', companyId: company1.id, customerId: 'cust-1', engineerId: 'eng-1', amount: 2000, paymentMethod: 'CASH' as const, reason: 'Spare parts sale', status: 'VERIFIED' as const, collectedBy: user7.id, verifiedBy: user3.id },
-    { settlementNumber: 'STL-2024-007', companyId: company1.id, engineerId: 'eng-4', amount: 3500, paymentMethod: 'CASH' as const, reason: 'Monthly rental collection - mach-09', status: 'INITIAL' as const, collectedBy: user4.id },
-    { settlementNumber: 'STL-2024-008', companyId: company1.id, customerId: 'cust-2', amount: 60000, paymentMethod: 'CASH' as const, reason: 'Installment 2 for machine SN-2024-002', status: 'INITIAL' as const, collectedBy: user7.id },
-    { settlementNumber: 'STL-2024-009', companyId: company1.id, customerId: 'cust-8', engineerId: 'eng-3', amount: 125000, paymentMethod: 'MIXED' as const, reason: 'Sale of machine SN-2024-006', status: 'VERIFIED' as const, collectedBy: user1.id, verifiedBy: user3.id },
-    { settlementNumber: 'STL-2024-010', companyId: company2.id, customerId: 'cust-14', engineerId: 'eng-6', amount: 8000, paymentMethod: 'CASH' as const, reason: 'Spare parts and maintenance', status: 'INITIAL' as const, collectedBy: user2.id },
+    // ===== شركة جملة آلات (company1) — 10 تسوية =====
+    { settlementNumber: 'STL-2024-001', companyId: company1.id, customerId: 'cust-1', engineerId: 'eng-1', amount: 130000, paymentMethod: 'CASH' as const, reason: 'بيع جهاز Ricoh C3004 — مكتبة النور', status: 'VERIFIED' as const, collectedBy: user1.id, verifiedBy: user3.id },
+    { settlementNumber: 'STL-2024-002', companyId: company1.id, customerId: 'cust-2', amount: 60000, paymentMethod: 'CASH' as const, reason: 'قسط أول — جهاز Ricoh C4504 — الشروق', status: 'VERIFIED' as const, collectedBy: user7.id, verifiedBy: user3.id },
+    { settlementNumber: 'STL-2024-003', companyId: company1.id, customerId: 'cust-3', engineerId: 'eng-5', amount: 115000, paymentMethod: 'CREDIT' as const, reason: 'بيع جهاز Canon C3326i — النهضة', status: 'VERIFIED' as const, collectedBy: user1.id, verifiedBy: user3.id },
+    { settlementNumber: 'STL-2024-004', companyId: company1.id, customerId: 'cust-4', amount: 140000, paymentMethod: 'CASH' as const, reason: 'بيع جهاز Xerox VersaLink C405 — الفجر', status: 'INITIAL' as const, collectedBy: user1.id },
+    { settlementNumber: 'STL-2024-005', companyId: company1.id, customerId: 'cust-2', amount: 60000, paymentMethod: 'CASH' as const, reason: 'قسط ثاني — جهاز Ricoh C4504 — الشروق', status: 'INITIAL' as const, collectedBy: user7.id },
+    { settlementNumber: 'STL-2024-006', companyId: company1.id, customerId: 'cust-1', engineerId: 'eng-1', amount: 2000, paymentMethod: 'CASH' as const, reason: 'بيع قطع غيار — درام يونيتس', status: 'VERIFIED' as const, collectedBy: user7.id, verifiedBy: user3.id },
+    { settlementNumber: 'STL-2024-007', companyId: company1.id, engineerId: 'eng-4', amount: 3500, paymentMethod: 'CASH' as const, reason: 'تحصيل إيجار شهري — mach-09', status: 'INITIAL' as const, collectedBy: user4.id },
+    { settlementNumber: 'STL-2024-008', companyId: company1.id, customerId: 'cust-8', engineerId: 'eng-3', amount: 125000, paymentMethod: 'MIXED' as const, reason: 'بيع جهاز Konica C250i — الأعمال', status: 'VERIFIED' as const, collectedBy: user1.id, verifiedBy: user3.id },
+    { settlementNumber: 'STL-2024-009', companyId: company1.id, customerId: 'cust-5', amount: 7500, paymentMethod: 'CREDIT' as const, reason: 'مبيعة قطع غيار — رولرات —曙光', status: 'INITIAL' as const, collectedBy: user7.id },
+    { settlementNumber: 'STL-2024-010', companyId: company1.id, customerId: 'cust-9', engineerId: 'eng-2', amount: 82000, paymentMethod: 'CASH' as const, reason: 'بيع جهاز Ricoh 3055 — المizrab', status: 'INITIAL' as const, collectedBy: user1.id },
+
+    // ===== شركة جملة قطع غيار (company2) — 10 تسوية =====
+    { settlementNumber: 'STL-2024-011', companyId: company2.id, customerId: 'cust-6', amount: 50000, paymentMethod: 'CASH' as const, reason: 'قسط أول — جهاز Sharp MX-3071 — الأمان', status: 'VERIFIED' as const, collectedBy: user2.id, verifiedBy: user3.id },
+    { settlementNumber: 'STL-2024-012', companyId: company2.id, customerId: 'cust-14', engineerId: 'eng-6', amount: 8000, paymentMethod: 'CASH' as const, reason: 'بيع قطع غيار + صيانة — أجهزة Konica', status: 'VERIFIED' as const, collectedBy: user2.id, verifiedBy: user3.id },
+    { settlementNumber: 'STL-2024-013', companyId: company2.id, customerId: 'cust-10', amount: 22000, paymentMethod: 'CASH' as const, reason: 'بيع 3 درام يونيتس — Sharp MX', status: 'INITIAL' as const, collectedBy: user2.id },
+    { settlementNumber: 'STL-2024-014', companyId: company2.id, customerId: 'cust-11', engineerId: 'eng-3', amount: 15000, paymentMethod: 'CREDIT' as const, reason: 'بيع طبول + رولرات — Konica bizhub', status: 'INITIAL' as const, collectedBy: user2.id },
+    { settlementNumber: 'STL-2024-015', companyId: company2.id, customerId: 'cust-6', amount: 50000, paymentMethod: 'CASH' as const, reason: 'قسط ثاني — جهاز Sharp MX-3071 — الأمان', status: 'INITIAL' as const, collectedBy: user2.id },
+    { settlementNumber: 'STL-2024-016', companyId: company2.id, customerId: 'cust-12', engineerId: 'eng-6', amount: 4500, paymentMethod: 'CASH' as const, reason: 'بيع فلاتر + كمية تونر — Sharp MX-M264', status: 'VERIFIED' as const, collectedBy: user2.id, verifiedBy: user3.id },
+    { settlementNumber: 'STL-2024-017', companyId: company2.id, customerId: 'cust-13', amount: 35000, paymentMethod: 'INSTALLMENT' as const, reason: 'بيع جهاز Konica C3110 — النور', status: 'INITIAL' as const, collectedBy: user2.id },
+    { settlementNumber: 'STL-2024-018', companyId: company2.id, customerId: 'cust-15', engineerId: 'eng-2', amount: 12000, paymentMethod: 'CASH' as const, reason: 'بيع قطع غيار — رولرات Xerox WorkCentre', status: 'INITIAL' as const, collectedBy: user2.id },
+    { settlementNumber: 'STL-2024-019', companyId: company2.id, customerId: 'cust-10', amount: 18000, paymentMethod: 'CASH' as const, reason: 'بيع طبورة + درام — Konica 458', status: 'VERIFIED' as const, collectedBy: user2.id, verifiedBy: user3.id },
+    { settlementNumber: 'STL-2024-020', companyId: company2.id, customerId: 'cust-14', amount: 6500, paymentMethod: 'CASH' as const, reason: 'بيع قطع غيار — فلاتر + وصلات', status: 'INITIAL' as const, collectedBy: user2.id },
+
+    // ===== شركة القطاعي (company3) — 10 تسوية =====
+    { settlementNumber: 'STL-2024-021', companyId: company3.id, customerId: 'cust-7', engineerId: 'eng-4', amount: 42000, paymentMethod: 'CASH' as const, reason: 'تحصيل إيجار شهري — عقد الإيجار — النجاح', status: 'VERIFIED' as const, collectedBy: user4.id, verifiedBy: user3.id },
+    { settlementNumber: 'STL-2024-022', companyId: company3.id, customerId: 'cust-9', amount: 28000, paymentMethod: 'CASH' as const, reason: 'بيع جهاز Xerox B405 — المزرع', status: 'INITIAL' as const, collectedBy: user4.id },
+    { settlementNumber: 'STL-2024-023', companyId: company3.id, customerId: 'cust-11', engineerId: 'eng-3', amount: 16000, paymentMethod: 'CREDIT' as const, reason: 'بيع قطع غيار — بكرات — Konica bizhub', status: 'INITIAL' as const, collectedBy: user4.id },
+    { settlementNumber: 'STL-2024-024', companyId: company3.id, customerId: 'cust-15', engineerId: 'eng-2', amount: 58000, paymentMethod: 'CASH' as const, reason: 'بيع جهاز Xerox WorkCentre 6515', status: 'VERIFIED' as const, collectedBy: user4.id, verifiedBy: user3.id },
+    { settlementNumber: 'STL-2024-025', companyId: company3.id, customerId: 'cust-7', engineerId: 'eng-4', amount: 3500, paymentMethod: 'CASH' as const, reason: 'رسوم صيانة دورية — الإنجاز', status: 'INITIAL' as const, collectedBy: user4.id },
+    { settlementNumber: 'STL-2024-026', companyId: company3.id, customerId: 'cust-12', amount: 32000, paymentMethod: 'INSTALLMENT' as const, reason: 'قسط أول — بيع جهاز Ricoh 2554', status: 'INITIAL' as const, collectedBy: user4.id },
+    { settlementNumber: 'STL-2024-027', companyId: company3.id, customerId: 'cust-3', engineerId: 'eng-5', amount: 4000, paymentMethod: 'CASH' as const, reason: 'بيع قطع غيار — درام — Canon', status: 'VERIFIED' as const, collectedBy: user5.id, verifiedBy: user3.id },
+    { settlementNumber: 'STL-2024-028', companyId: company3.id, customerId: 'cust-4', amount: 45000, paymentMethod: 'CASH' as const, reason: 'بيع جهاز Canon 2625 — الفجر', status: 'INITIAL' as const, collectedBy: user5.id },
+    { settlementNumber: 'STL-2024-029', companyId: company3.id, customerId: 'cust-8', engineerId: 'eng-3', amount: 9500, paymentMethod: 'CASH' as const, reason: 'رسوم صيانة + قطع — الأعمال', status: 'INITIAL' as const, collectedBy: user5.id },
+    { settlementNumber: 'STL-2024-030', companyId: company3.id, customerId: 'cust-1', engineerId: 'eng-1', amount: 110000, paymentMethod: 'MIXED' as const, reason: 'بيع جهاز Ricoh MP C4004 — مكتب النور', status: 'VERIFIED' as const, collectedBy: user4.id, verifiedBy: user3.id },
   ];
 
   for (const s of settlementsData) {
@@ -1061,7 +1090,7 @@ async function main() {
   console.log('  - 6 contracts');
   console.log('  - 15 service requests');
   console.log('  - 20 visits');
-  console.log('  - 10 settlements');
+  console.log('  - 30 settlements (10 per company)');
   console.log('  - 8 expenses');
   console.log('  - 10 warranties');
   console.log('  - 6 engineer salaries');
