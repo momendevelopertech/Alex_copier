@@ -6,6 +6,7 @@ export async function GET() {
     const purchases = await prisma.purchaseOrder.findMany({
       include: {
         supplier: true,
+        company: true,
         items: {
           include: { product: true },
         },

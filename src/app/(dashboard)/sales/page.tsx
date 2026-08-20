@@ -31,22 +31,24 @@ const paymentStatusColors: Record<string, string> = {
 };
 
 interface Customer { id: string; name: string; }
+interface Company { id: string; name: string; }
 interface Product { id: string; name: string; }
 interface SalesItem { id: string; productId: string; quantity: number; unitPrice: number; discount: number; product: Product; }
 interface SalesOrder {
-  id: string; customerId: string; orderType: string; status: string; total: number; discount: number;
+  id: string; companyId: string; customerId: string; orderType: string; status: string; total: number; discount: number;
   discountType: string; taxRate: number; paymentMethod: string; paymentStatus: string;
-  notes: string | null; orderDate: string; createdAt: string; customer: Customer; items: SalesItem[];
+  notes: string | null; orderDate: string; createdAt: string; customer: Customer; company?: Company; items: SalesItem[];
 }
 
 export default function SalesPage() {
   const { t } = useI18n();
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [form, setForm] = useState({ customerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", discount: "", discountType: "FIXED", taxRate: "", notes: "" });
+  const [form, setForm] = useState({ companyId: "", customerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", discount: "", discountType: "FIXED", taxRate: "", notes: "" });
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
 
@@ -56,9 +58,10 @@ export default function SalesPage() {
 
   const fetchData = async () => {
     setLoading(true);
-    const [sRes, cRes] = await Promise.all([fetch("/api/sales"), fetch("/api/customers")]);
+    const [sRes, cRes, coRes] = await Promise.all([fetch("/api/sales"), fetch("/api/customers"), fetch("/api/companies")]);
     setOrders(await sRes.json());
     setCustomers(await cRes.json());
+    setCompanies(await coRes.json());
     setLoading(false);
   };
 
@@ -71,7 +74,7 @@ export default function SalesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...form, discount: parseFloat(form.discount) || 0, taxRate: parseFloat(form.taxRate) || 0, items: [] }),
     });
-    setForm({ customerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", discount: "", discountType: "FIXED", taxRate: "", notes: "" });
+    setForm({ companyId: "", customerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", discount: "", discountType: "FIXED", taxRate: "", notes: "" });
     setShowForm(false);
     fetchData();
   };
@@ -86,6 +89,10 @@ export default function SalesPage() {
       {showForm && (
         <div className="bg-white rounded-xl shadow-md p-6 mb-6">
           <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <select value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })} className="border rounded-lg px-4 py-2" required>
+              <option value="">{t("companies.selectCompany")}</option>
+              {companies.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+            </select>
             <select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="border rounded-lg px-4 py-2" required>
               <option value="">{t("sales.selectCustomer")}</option>
               {customers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
@@ -127,6 +134,7 @@ export default function SalesPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("sales.orderNumber")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.company")}</th>
                   <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("sales.customer")}</th>
                   <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("sales.orderType")}</th>
                   <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("sales.total")}</th>
@@ -142,6 +150,7 @@ export default function SalesPage() {
                   <Fragment key={order.id}>
                     <tr className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium">{order.id.slice(0, 8)}</td>
+                      <td className="px-4 py-3 text-sm">{order.company?.name || companies.find(c => c.id === order.companyId)?.name || "—"}</td>
                       <td className="px-4 py-3 text-sm">{order.customer.name}</td>
                       <td className="px-4 py-3 text-sm">{ORDER_TYPE_LABELS[order.orderType] || order.orderType}</td>
                       <td className="px-4 py-3 text-sm">{order.total.toLocaleString()}</td>

@@ -19,6 +19,7 @@ import {
   Receipt,
   BarChart3,
   Settings,
+  Building2,
   Menu,
   X,
 } from "lucide-react";
@@ -35,6 +36,7 @@ const navItems = [
   { key: "navigation.inventory", href: "/inventory", icon: Package },
   { key: "navigation.workshop", href: "/workshop", icon: Cog },
   { key: "navigation.finance", href: "/finance", icon: Wallet },
+  { key: "navigation.companies", href: "/companies", icon: Building2 },
   { key: "navigation.settlements", href: "/settlements", icon: Receipt },
   { key: "navigation.reports", href: "/reports", icon: BarChart3 },
   { key: "navigation.settings", href: "/settings", icon: Settings },

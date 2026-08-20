@@ -16,6 +16,7 @@
     "settlements": "Settlements",
     "reports": "Reports",
     "settings": "Settings",
+    "companies": "Companies",
     "logout": "Logout"
   },
   "dashboard": {
@@ -47,6 +48,7 @@
     "confirm": "Confirm",
     "back": "Back",
     "next": "Next",
+    "company": "Company",
     "loading": "Loading...",
     "close": "Close",
     "noData": "No data",
@@ -369,8 +371,19 @@
     "SALES_EMPLOYEE": "Sales Employee"
   },
   "companies": {
-    "jmalAhlat": "Jumla Automation",
-    "jmalParts": "Jumla Parts",
+    "title": "Companies",
+    "overview": "Overview",
+    "allCompanies": "All Companies",
+    "totalAssets": "Total Assets",
+    "totalRevenue": "Total Revenue",
+    "totalExpenses": "Total Expenses",
+    "netProfit": "Net Profit",
+    "machines": "Machines",
+    "customers": "Customers",
+    "contracts": "Contracts",
+    "selectCompany": "Select Company",
+    "jmalAhlat": "Jumla Machines",
+    "jmalParts": "Jumla Spare Parts",
     "sectory": "Sectory"
   }
 }

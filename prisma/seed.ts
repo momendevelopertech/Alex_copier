@@ -62,8 +62,8 @@ async function main() {
   const company1 = await prisma.company.create({
     data: {
       id: 'company1',
-      name: 'جمال لأجهزة الأتمتة',
-      nameAr: 'جمال لأجهزة الأتمتة',
+      name: 'شركة جملة آلات',
+      nameAr: 'شركة جملة آلات',
       taxNumber: '123-456-789',
       tradeRegister: 'TR-001',
       address: 'شارع فريد ندا - وسط البلد - الإسكندرية',
@@ -75,8 +75,8 @@ async function main() {
   const company2 = await prisma.company.create({
     data: {
       id: 'company2',
-      name: 'جمال لقطع الغيار',
-      nameAr: 'جمال لقطع الغيار',
+      name: 'شركة جملة قطع غيار',
+      nameAr: 'شركة جملة قطع غيار',
       taxNumber: '987-654-321',
       tradeRegister: 'TR-002',
       address: 'شارع الجيش - سيدي جابر - الإسكندرية',
@@ -88,8 +88,8 @@ async function main() {
   const company3 = await prisma.company.create({
     data: {
       id: 'company3',
-      name: 'سيكتوري',
-      nameAr: 'سيكتوري',
+      name: 'شركة القطاعي',
+      nameAr: 'شركة القطاعي',
       taxNumber: '456-789-123',
       tradeRegister: 'TR-003',
       address: 'شارع الكورنيش - محطة الرمل - الإسكندرية',

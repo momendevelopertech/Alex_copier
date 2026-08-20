@@ -5,11 +5,12 @@ import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 
 interface Supplier { id: string; name: string; }
+interface Company { id: string; name: string; }
 interface Product { id: string; name: string; }
 interface PurchaseItem { id: string; productId: string; quantity: number; unitPrice: number; product: Product; }
 interface PurchaseOrder {
-  id: string; supplierId: string; status: string; total: number; notes: string | null;
-  orderDate: string; createdAt: string; supplier: Supplier; items: PurchaseItem[];
+  id: string; companyId: string; supplierId: string; status: string; total: number; notes: string | null;
+  orderDate: string; createdAt: string; supplier: Supplier; company?: Company; items: PurchaseItem[];
 }
 interface ItemRow { productId: string; quantity: string; unitPrice: string; }
 
@@ -31,19 +32,21 @@ export default function PurchasesPage() {
   const { t } = useI18n();
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ supplierId: "", notes: "" });
+  const [form, setForm] = useState({ companyId: "", supplierId: "", notes: "" });
   const [itemRows, setItemRows] = useState<ItemRow[]>([{ productId: "", quantity: "", unitPrice: "" }]);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
 
   const fetchData = async () => {
     setLoading(true);
-    const [pRes, sRes, prRes] = await Promise.all([fetch("/api/purchases"), fetch("/api/suppliers"), fetch("/api/inventory")]);
+    const [pRes, sRes, prRes, coRes] = await Promise.all([fetch("/api/purchases"), fetch("/api/suppliers"), fetch("/api/inventory"), fetch("/api/companies")]);
     setOrders(await pRes.json());
     setSuppliers(await sRes.json());
+    setCompanies(await coRes.json());
     const inv = await prRes.json();
     setProducts(Array.isArray(inv) ? inv.map((i: { product?: Product }) => i.product).filter((p): p is Product => Boolean(p)) : []);
     setLoading(false);
@@ -68,7 +71,7 @@ export default function PurchasesPage() {
     const items = itemRows.filter((r) => r.productId && r.quantity && r.unitPrice).map((r) => ({ productId: r.productId, quantity: parseInt(r.quantity), unitPrice: parseFloat(r.unitPrice) }));
     if (items.length === 0) return;
     await fetch("/api/purchases", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, orderDate: new Date().toISOString(), items }) });
-    setForm({ supplierId: "", notes: "" });
+    setForm({ companyId: "", supplierId: "", notes: "" });
     setItemRows([{ productId: "", quantity: "", unitPrice: "" }]);
     setShowForm(false);
     fetchData();
@@ -84,7 +87,11 @@ export default function PurchasesPage() {
       {showForm && (
         <div className="bg-white rounded-xl shadow-md p-6 mb-6">
           <form onSubmit={handleCreate} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <select value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })} className="border rounded-lg px-4 py-2" required>
+                <option value="">{t("companies.selectCompany")}</option>
+                {companies.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+              </select>
               <select value={form.supplierId} onChange={(e) => setForm({ ...form, supplierId: e.target.value })} className="border rounded-lg px-4 py-2" required>
                 <option value="">{t("purchases.selectSupplier")}</option>
                 {suppliers.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
@@ -125,6 +132,7 @@ export default function PurchasesPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("purchases.orderNumber")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.company")}</th>
                   <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("purchases.supplier")}</th>
                   <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.status")}</th>
                   <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("purchases.total")}</th>
@@ -135,6 +143,7 @@ export default function PurchasesPage() {
                 {paged.map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium">{order.id.slice(0, 8)}</td>
+                    <td className="px-4 py-3 text-sm">{order.company?.name || companies.find(c => c.id === order.companyId)?.name || "—"}</td>
                     <td className="px-4 py-3 text-sm">{order.supplier.name}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[order.status] || ""}`}>

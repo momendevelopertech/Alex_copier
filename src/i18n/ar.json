@@ -16,6 +16,7 @@
     "settlements": "التسويات",
     "reports": "التقارير",
     "settings": "الإعدادات",
+    "companies": "الشركات",
     "logout": "تسجيل الخروج"
   },
   "dashboard": {
@@ -47,6 +48,7 @@
     "confirm": "تأكيد",
     "back": "رجوع",
     "next": "التالي",
+    "company": "الشركة",
     "loading": "جاري التحميل...",
     "close": "إغلاق",
     "noData": "لا توجد بيانات",
@@ -380,8 +382,19 @@
     "SALES_EMPLOYEE": "موظف مبيعات"
   },
   "companies": {
-    "jmalAhlat": "جمال لأجهزة الأتمتة",
-    "jmalParts": "جمال لقطع الغيار",
-    "sectory": "سيكتوري"
+    "title": "الشركات",
+    "overview": "نظرة عامة",
+    "allCompanies": "جميع الشركات",
+    "totalAssets": "إجمالي الأصول",
+    "totalRevenue": "إجمالي الإيرادات",
+    "totalExpenses": "إجمالي المصروفات",
+    "netProfit": "صافي الربح",
+    "machines": "الأجهزة",
+    "customers": "العملاء",
+    "contracts": "العقود",
+    "selectCompany": "اختر الشركة",
+    "jmalAhlat": "شركة جملة آلات",
+    "jmalParts": "شركة جملة قطع غيار",
+    "sectory": "شركة القطاعي"
   }
 }
