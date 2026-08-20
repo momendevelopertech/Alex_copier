@@ -24,6 +24,15 @@ const statusColors: Record<string, string> = {
   UNDER_MAINTENANCE: "bg-orange-100 text-orange-800",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  UNDER_INSPECTION: "تحت الفحص",
+  UNDER_MAINTENANCE: "تحت الصيانة",
+  SOLD: "مباع",
+  RENTED: "مؤجر",
+  IN_WAREHOUSE: "في المستودع",
+  SCRAPPED: "مهمل",
+};
+
 export default function WorkshopPage() {
   const { t } = useI18n();
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -62,24 +71,24 @@ export default function WorkshopPage() {
   };
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">{t("workshop")}</h1>
+    <div dir="rtl">
+      <h1 className="text-2xl font-bold mb-6">{t("workshop.title")}</h1>
 
       <div className="bg-white rounded-xl shadow-md p-6">
         {loading ? (
-          <p className="text-gray-500">{t("loading")}</p>
+          <p className="text-gray-500">{t("common.loading")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("serialNumber")}</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("manufacturer")}</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("model")}</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("status")}</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("purchaseDate")}</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("notes")}</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("actions")}</th>
+                  <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("machines.serialNumber")}</th>
+                  <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("machines.manufacturer")}</th>
+                  <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("machines.model")}</th>
+                  <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("machines.status")}</th>
+                  <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("workshop.purchaseDate")}</th>
+                  <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("common.notes")}</th>
+                  <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -90,24 +99,24 @@ export default function WorkshopPage() {
                     <td className="px-4 py-3 text-sm">{machine.model}</td>
                     <td className="px-4 py-3 text-sm">
                       <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[machine.status] || "bg-gray-100 text-gray-800"}`}>
-                        {t(machine.status)}
+                        {STATUS_LABELS[machine.status] || machine.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm">{machine.purchaseDate ? new Date(machine.purchaseDate).toLocaleDateString() : "-"}</td>
+                    <td className="px-4 py-3 text-sm">{machine.purchaseDate ? new Date(machine.purchaseDate).toLocaleDateString("ar-EG") : "-"}</td>
                     <td className="px-4 py-3 text-sm max-w-xs truncate">{machine.notes || "-"}</td>
                     <td className="px-4 py-3 text-sm">
                       <button
                         onClick={() => setScrapTarget(scrapTarget === machine.id ? null : machine.id)}
                         className="bg-red-500 text-white px-3 py-1 rounded-lg text-xs hover:bg-red-600 transition"
                       >
-                        {t("createScrapOrder")}
+                        {t("workshop.createScrapOrder")}
                       </button>
                     </td>
                   </tr>
                 ))}
                 {machines.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-400">{t("noData")}</td>
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-400">{t("common.noData")}</td>
                   </tr>
                 )}
               </tbody>
@@ -118,10 +127,10 @@ export default function WorkshopPage() {
 
       {scrapTarget && (
         <div className="bg-white rounded-xl shadow-md p-6 mt-6">
-          <h2 className="text-lg font-semibold mb-4">{t("scrapOrder")} - {machines.find((m) => m.id === scrapTarget)?.serialNumber}</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("workshop.scrapOrder")} - {machines.find((m) => m.id === scrapTarget)?.serialNumber}</h2>
           <form onSubmit={(e) => handleScrap(e, scrapTarget)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("reason")}</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("workshop.reason")}</label>
               <textarea
                 value={scrapForm.reason}
                 onChange={(e) => setScrapForm({ ...scrapForm, reason: e.target.value })}
@@ -131,7 +140,7 @@ export default function WorkshopPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("approvedBy")}</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("workshop.approvedBy")}</label>
               <input
                 type="text"
                 value={scrapForm.approvedBy}
@@ -141,7 +150,7 @@ export default function WorkshopPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("scrapValue")}</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("workshop.scrapValue")}</label>
               <input
                 type="number"
                 min="0"
@@ -154,10 +163,10 @@ export default function WorkshopPage() {
             </div>
             <div className="md:col-span-2 flex gap-3">
               <button type="submit" className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">
-                {t("submit")}
+                {t("common.submit")}
               </button>
               <button type="button" onClick={() => setScrapTarget(null)} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
-                {t("cancel")}
+                {t("common.cancel")}
               </button>
             </div>
           </form>

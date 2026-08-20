@@ -23,14 +23,14 @@ interface Engineer {
 }
 
 const reportCards = [
-  { key: "contractProfitability", icon: "💰", description: "revenueMinusCosts" },
-  { key: "engineerPerformance", icon: "👷", description: "visitResolutionSales" },
-  { key: "liveCashPosition", icon: "💵", description: "settlementsUnverified" },
-  { key: "machinesNeedingInspection", icon: "🔍", description: "underInspectionCount" },
-  { key: "expiringWarranties", icon: "🛡️", description: "warrantyExpiry" },
-  { key: "customerSatisfaction", icon: "⭐", description: "averageRatings" },
-  { key: "investorDistribution", icon: "📊", description: "distributionHistory" },
-  { key: "sparePartsMatrix", icon: "🔧", description: "compatibilityMatrix" },
+  { key: "contractProfitability", icon: "💰", desc: "revenueMinusCosts" },
+  { key: "engineerPerformance", icon: "👷", desc: "visitResolutionSales" },
+  { key: "liveCashPosition", icon: "💵", desc: "settlementsUnverified" },
+  { key: "machinesNeedingInspection", icon: "🔍", desc: "underInspectionCount" },
+  { key: "expiringWarranties", icon: "🛡️", desc: "warrantyExpiry" },
+  { key: "customerSatisfaction", icon: "⭐", desc: "averageRatings" },
+  { key: "investorDistribution", icon: "📊", desc: "distributionHistory" },
+  { key: "sparePartsMatrix", icon: "🔧", desc: "compatibilityMatrix" },
 ];
 
 export default function ReportsPage() {
@@ -72,37 +72,37 @@ export default function ReportsPage() {
   };
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">{t("reports")}</h1>
+    <div dir="rtl">
+      <h1 className="text-2xl font-bold mb-6">{t("reports.title")}</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {reportCards.map((card) => (
           <div key={card.key}>
             <button
               onClick={() => toggleCard(card.key)}
-              className="bg-white rounded-xl shadow-md p-6 w-full text-left hover:shadow-lg transition cursor-pointer"
+              className="bg-white rounded-xl shadow-md p-6 w-full text-right hover:shadow-lg transition cursor-pointer"
             >
               <div className="text-3xl mb-3">{card.icon}</div>
-              <h3 className="text-lg font-semibold mb-1">{t(card.key)}</h3>
-              <p className="text-sm text-gray-500">{t(card.description)}</p>
+              <h3 className="text-lg font-semibold mb-1">{t(`reports.${card.key}`)}</h3>
+              <p className="text-sm text-gray-500">{t(`reports.${card.desc}`)}</p>
             </button>
 
             {expanded === card.key && card.key === "contractProfitability" && (
               <div className="bg-white rounded-xl shadow-md p-6 mt-3">
-                <h3 className="text-lg font-semibold mb-4">{t("contractProfitability")}</h3>
+                <h3 className="text-lg font-semibold mb-4">{t("reports.contractProfitability")}</h3>
                 {loadingContracts ? (
-                  <p className="text-gray-500">{t("loading")}</p>
+                  <p className="text-gray-500">{t("common.loading")}</p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
                         <tr className="bg-gray-50">
-                          <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("contractNumber")}</th>
-                          <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("customer")}</th>
-                          <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("type")}</th>
-                          <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("value")}</th>
-                          <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("status")}</th>
-                          <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("estimatedProfit")}</th>
+                          <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("reports.contractNumber")}</th>
+                          <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("reports.customer")}</th>
+                          <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("reports.type")}</th>
+                          <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("reports.value")}</th>
+                          <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("common.status")}</th>
+                          <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("reports.estimatedProfit")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -130,7 +130,7 @@ export default function ReportsPage() {
                         })}
                         {contracts.length === 0 && (
                           <tr>
-                            <td colSpan={6} className="px-4 py-8 text-center text-gray-400">{t("noData")}</td>
+                            <td colSpan={6} className="px-4 py-8 text-center text-gray-400">{t("common.noData")}</td>
                           </tr>
                         )}
                       </tbody>
@@ -142,19 +142,19 @@ export default function ReportsPage() {
 
             {expanded === card.key && card.key === "engineerPerformance" && (
               <div className="bg-white rounded-xl shadow-md p-6 mt-3">
-                <h3 className="text-lg font-semibold mb-4">{t("engineerPerformance")}</h3>
+                <h3 className="text-lg font-semibold mb-4">{t("reports.engineerPerformance")}</h3>
                 {loadingEngineers ? (
-                  <p className="text-gray-500">{t("loading")}</p>
+                  <p className="text-gray-500">{t("common.loading")}</p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
                         <tr className="bg-gray-50">
-                          <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("name")}</th>
-                          <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("areas")}</th>
-                          <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("skills")}</th>
-                          <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("salary")}</th>
-                          <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("commissionRate")}</th>
+                          <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("engineers.name")}</th>
+                          <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("engineers.areas")}</th>
+                          <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("engineers.skills")}</th>
+                          <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("engineers.salary")}</th>
+                          <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("engineers.commissionRate")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -163,14 +163,14 @@ export default function ReportsPage() {
                             <td className="px-4 py-3 text-sm font-medium">{eng.name}</td>
                             <td className="px-4 py-3 text-sm">
                               {(eng.areas || []).map((a) => (
-                                <span key={a} className="inline-flex px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800 mr-1 mb-1">
+                                <span key={a} className="inline-flex px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800 mx-1 mb-1">
                                   {a}
                                 </span>
                               ))}
                             </td>
                             <td className="px-4 py-3 text-sm">
                               {(eng.skills || []).map((s) => (
-                                <span key={s} className="inline-flex px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-800 mr-1 mb-1">
+                                <span key={s} className="inline-flex px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-800 mx-1 mb-1">
                                   {s}
                                 </span>
                               ))}
@@ -181,7 +181,7 @@ export default function ReportsPage() {
                         ))}
                         {engineers.length === 0 && (
                           <tr>
-                            <td colSpan={5} className="px-4 py-8 text-center text-gray-400">{t("noData")}</td>
+                            <td colSpan={5} className="px-4 py-8 text-center text-gray-400">{t("common.noData")}</td>
                           </tr>
                         )}
                       </tbody>
@@ -193,7 +193,7 @@ export default function ReportsPage() {
 
             {expanded === card.key && !["contractProfitability", "engineerPerformance"].includes(card.key) && (
               <div className="bg-white rounded-xl shadow-md p-6 mt-3">
-                <p className="text-gray-400 text-sm">{t("comingSoon")}</p>
+                <p className="text-gray-400 text-sm">{t("reports.comingSoon")}</p>
               </div>
             )}
           </div>

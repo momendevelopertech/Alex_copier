@@ -32,6 +32,18 @@ const movementTypeColors: Record<string, string> = {
   ADJUSTMENT: "bg-gray-100 text-gray-800",
 };
 
+const MOVEMENT_LABELS: Record<string, string> = {
+  PURCHASE_IN: "وارد شراء",
+  INTER_COMPANY_IN: "وارد بين الشركات",
+  INTER_COMPANY_OUT: "صادر بين الشركات",
+  SALE_OUT: "صادر مبيعات",
+  ENGINEER_CUSTODY_OUT: "عهدة مهندس (صادر)",
+  ENGINEER_RETURN: "مرتجع مهندس",
+  CONSUMED: "مستهلك",
+  SCRAP: "مهمل",
+  ADJUSTMENT: "تسوية",
+};
+
 export default function InventoryPage() {
   const { t } = useI18n();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -72,23 +84,23 @@ export default function InventoryPage() {
   };
 
   return (
-    <div>
+    <div dir="rtl">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">{t("inventory")}</h1>
+        <h1 className="text-2xl font-bold">{t("inventory.title")}</h1>
         <button
           onClick={() => setShowForm(!showForm)}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
         >
-          {t("addStockMovement")}
+          {t("inventory.addStockMovement")}
         </button>
       </div>
 
       {showForm && (
         <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4">{t("stockMovement")}</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("inventory.stockMovement")}</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("warehouseId")}</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("inventory.warehouseId")}</label>
               <input
                 type="text"
                 value={form.warehouseId}
@@ -98,7 +110,7 @@ export default function InventoryPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("productId")}</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("inventory.productId")}</label>
               <input
                 type="text"
                 value={form.productId}
@@ -108,7 +120,7 @@ export default function InventoryPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("quantity")}</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("inventory.quantity")}</label>
               <input
                 type="number"
                 min="1"
@@ -119,25 +131,19 @@ export default function InventoryPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("movementType")}</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("inventory.movementType")}</label>
               <select
                 value={form.movementType}
                 onChange={(e) => setForm({ ...form, movementType: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="PURCHASE_IN">{t("PURCHASE_IN")}</option>
-                <option value="INTER_COMPANY_IN">{t("INTER_COMPANY_IN")}</option>
-                <option value="INTER_COMPANY_OUT">{t("INTER_COMPANY_OUT")}</option>
-                <option value="SALE_OUT">{t("SALE_OUT")}</option>
-                <option value="ENGINEER_CUSTODY_OUT">{t("ENGINEER_CUSTODY_OUT")}</option>
-                <option value="ENGINEER_RETURN">{t("ENGINEER_RETURN")}</option>
-                <option value="CONSUMED">{t("CONSUMED")}</option>
-                <option value="SCRAP">{t("SCRAP")}</option>
-                <option value="ADJUSTMENT">{t("ADJUSTMENT")}</option>
+                {Object.entries(MOVEMENT_LABELS).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
               </select>
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("notes")}</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("common.notes")}</label>
               <textarea
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
@@ -147,10 +153,10 @@ export default function InventoryPage() {
             </div>
             <div className="md:col-span-2 flex gap-3">
               <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
-                {t("submit")}
+                {t("common.save")}
               </button>
               <button type="button" onClick={() => setShowForm(false)} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
-                {t("cancel")}
+                {t("common.cancel")}
               </button>
             </div>
           </form>
@@ -159,15 +165,15 @@ export default function InventoryPage() {
 
       <div className="bg-white rounded-xl shadow-md p-6">
         {loading ? (
-          <p className="text-gray-500">{t("loading")}</p>
+          <p className="text-gray-500">{t("common.loading")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("product")}</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("warehouse")}</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">{t("quantity")}</th>
+                  <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("inventory.product")}</th>
+                  <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("inventory.warehouse")}</th>
+                  <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("inventory.quantity")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -184,7 +190,7 @@ export default function InventoryPage() {
                 ))}
                 {inventory.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="px-4 py-8 text-center text-gray-400">{t("noData")}</td>
+                    <td colSpan={3} className="px-4 py-8 text-center text-gray-400">{t("common.noData")}</td>
                   </tr>
                 )}
               </tbody>

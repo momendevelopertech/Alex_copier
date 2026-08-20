@@ -18,6 +18,7 @@ interface I18nContextValue {
 const I18nContext = createContext<I18nContextValue | null>(null);
 
 function getNestedValue(obj: unknown, path: string): string {
+  if (!path || typeof path !== "string") return "";
   const keys = path.split(".");
   let current: unknown = obj;
   for (const key of keys) {
@@ -45,6 +46,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   };
 
   const t = (key: string): string => {
+    if (!key || typeof key !== "string") return "";
     return getNestedValue(translations[locale], key);
   };
 

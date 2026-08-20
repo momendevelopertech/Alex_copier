@@ -3,41 +3,21 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
 
-interface Supplier {
-  id: string;
-  name: string;
-}
-
-interface Product {
-  id: string;
-  name: string;
-}
-
-interface PurchaseItem {
-  id: string;
-  productId: string;
-  quantity: number;
-  unitPrice: number;
-  product: Product;
-}
-
+interface Supplier { id: string; name: string; }
+interface Product { id: string; name: string; }
+interface PurchaseItem { id: string; productId: string; quantity: number; unitPrice: number; product: Product; }
 interface PurchaseOrder {
-  id: string;
-  supplierId: string;
-  status: string;
-  total: number;
-  notes: string | null;
-  orderDate: string;
-  createdAt: string;
-  supplier: Supplier;
-  items: PurchaseItem[];
+  id: string; supplierId: string; status: string; total: number; notes: string | null;
+  orderDate: string; createdAt: string; supplier: Supplier; items: PurchaseItem[];
 }
+interface ItemRow { productId: string; quantity: string; unitPrice: string; }
 
-interface ItemRow {
-  productId: string;
-  quantity: string;
-  unitPrice: string;
-}
+const STATUS_LABELS: Record<string, string> = {
+  DRAFT: "مسودة",
+  CONFIRMED: "مؤكد",
+  RECEIVED: "تم الاستلام",
+  CANCELLED: "ملغي",
+};
 
 const statusColors: Record<string, string> = {
   DRAFT: "bg-gray-100 text-gray-800",
@@ -58,11 +38,7 @@ export default function PurchasesPage() {
 
   const fetchData = async () => {
     setLoading(true);
-    const [pRes, sRes, prRes] = await Promise.all([
-      fetch("/api/purchases"),
-      fetch("/api/suppliers"),
-      fetch("/api/inventory"),
-    ]);
+    const [pRes, sRes, prRes] = await Promise.all([fetch("/api/purchases"), fetch("/api/suppliers"), fetch("/api/inventory")]);
     setOrders(await pRes.json());
     setSuppliers(await sRes.json());
     const inv = await prRes.json();
@@ -70,20 +46,10 @@ export default function PurchasesPage() {
     setLoading(false);
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  const addRow = () => {
-    setItemRows([...itemRows, { productId: "", quantity: "", unitPrice: "" }]);
-  };
-
-  const removeRow = (index: number) => {
-    if (itemRows.length > 1) {
-      setItemRows(itemRows.filter((_, i) => i !== index));
-    }
-  };
-
+  const addRow = () => setItemRows([...itemRows, { productId: "", quantity: "", unitPrice: "" }]);
+  const removeRow = (index: number) => { if (itemRows.length > 1) setItemRows(itemRows.filter((_, i) => i !== index)); };
   const updateRow = (index: number, field: keyof ItemRow, value: string) => {
     const updated = [...itemRows];
     updated[index] = { ...updated[index], [field]: value };
@@ -92,21 +58,9 @@ export default function PurchasesPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const items = itemRows
-      .filter((r) => r.productId && r.quantity && r.unitPrice)
-      .map((r) => ({ productId: r.productId, quantity: parseInt(r.quantity), unitPrice: parseFloat(r.unitPrice) }));
-
+    const items = itemRows.filter((r) => r.productId && r.quantity && r.unitPrice).map((r) => ({ productId: r.productId, quantity: parseInt(r.quantity), unitPrice: parseFloat(r.unitPrice) }));
     if (items.length === 0) return;
-
-    await fetch("/api/purchases", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        orderDate: new Date().toISOString(),
-        items,
-      }),
-    });
+    await fetch("/api/purchases", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, orderDate: new Date().toISOString(), items }) });
     setForm({ supplierId: "", notes: "" });
     setItemRows([{ productId: "", quantity: "", unitPrice: "" }]);
     setShowForm(false);
@@ -114,12 +68,10 @@ export default function PurchasesPage() {
   };
 
   return (
-    <div>
+    <div dir="rtl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">{t("purchases.title")}</h1>
-        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-          {t("purchases.addOrder")}
-        </button>
+        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">{t("purchases.addOrder")}</button>
       </div>
 
       {showForm && (
@@ -127,36 +79,28 @@ export default function PurchasesPage() {
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <select value={form.supplierId} onChange={(e) => setForm({ ...form, supplierId: e.target.value })} className="border rounded-lg px-4 py-2" required>
-                <option value="">Select Supplier</option>
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
+                <option value="">{t("purchases.selectSupplier")}</option>
+                {suppliers.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
               </select>
               <textarea placeholder={t("common.notes")} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="border rounded-lg px-4 py-2" rows={2} />
             </div>
-
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <h3 className="font-medium">Items</h3>
-                <button type="button" onClick={addRow} className="text-blue-600 hover:underline text-sm">+ Add Row</button>
+                <h3 className="font-medium">{t("purchases.items")}</h3>
+                <button type="button" onClick={addRow} className="text-blue-600 hover:underline text-sm">{t("purchases.addRow")}</button>
               </div>
               {itemRows.map((row, idx) => (
                 <div key={idx} className="flex gap-2 items-center">
                   <select value={row.productId} onChange={(e) => updateRow(idx, "productId", e.target.value)} className="border rounded-lg px-4 py-2 flex-1">
-                    <option value="">Select Product</option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
+                    <option value="">{t("purchases.selectProduct")}</option>
+                    {products.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
                   </select>
-                  <input type="number" placeholder="Qty" value={row.quantity} onChange={(e) => updateRow(idx, "quantity", e.target.value)} className="border rounded-lg px-4 py-2 w-24" min="1" />
-                  <input type="number" placeholder="Unit Price" value={row.unitPrice} onChange={(e) => updateRow(idx, "unitPrice", e.target.value)} className="border rounded-lg px-4 py-2 w-32" min="0" step="0.01" />
-                  {itemRows.length > 1 && (
-                    <button type="button" onClick={() => removeRow(idx)} className="text-red-600 hover:text-red-800 text-lg font-bold px-2">×</button>
-                  )}
+                  <input type="number" placeholder={t("purchases.quantity")} value={row.quantity} onChange={(e) => updateRow(idx, "quantity", e.target.value)} className="border rounded-lg px-4 py-2 w-24" min="1" />
+                  <input type="number" placeholder={t("purchases.unitPrice")} value={row.unitPrice} onChange={(e) => updateRow(idx, "unitPrice", e.target.value)} className="border rounded-lg px-4 py-2 w-32" min="0" step="0.01" />
+                  {itemRows.length > 1 && (<button type="button" onClick={() => removeRow(idx)} className="text-red-600 hover:text-red-800 text-lg font-bold px-2">×</button>)}
                 </div>
               ))}
             </div>
-
             <div className="flex gap-2">
               <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">{t("common.save")}</button>
               <button type="button" onClick={() => setShowForm(false)} className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">{t("common.cancel")}</button>
@@ -166,20 +110,18 @@ export default function PurchasesPage() {
       )}
 
       <div className="bg-white rounded-xl shadow-md p-6">
-        {loading ? (
-          <p className="text-gray-500">{t("common.loading")}</p>
-        ) : orders.length === 0 ? (
-          <p className="text-gray-500">{t("common.noData")}</p>
-        ) : (
+        {loading ? <p className="text-gray-500">{t("common.loading")}</p>
+        : orders.length === 0 ? <p className="text-gray-500">{t("common.noData")}</p>
+        : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Order #</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Supplier</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t("common.status")}</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t("purchases.total")}</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t("common.date")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("purchases.orderNumber")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("purchases.supplier")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.status")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("purchases.total")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.date")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -189,11 +131,11 @@ export default function PurchasesPage() {
                     <td className="px-4 py-3 text-sm">{order.supplier.name}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[order.status] || ""}`}>
-                        {t(`purchases.status.${order.status.toLowerCase()}`)}
+                        {STATUS_LABELS[order.status] || order.status}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm">{order.total.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-sm">{new Date(order.orderDate || order.createdAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-sm">{new Date(order.orderDate || order.createdAt).toLocaleDateString("ar-EG")}</td>
                   </tr>
                 ))}
               </tbody>

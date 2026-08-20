@@ -3,30 +3,28 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
 
-interface Customer {
-  id: string;
-  name: string;
-}
+const PRIORITY_LABELS: Record<string, string> = {
+  NORMAL: "عادي",
+  IMPORTANT: "مهم",
+  URGENT: "عاجل",
+  EMERGENCY: "طارئ",
+};
 
-interface Engineer {
-  id: string;
-  name: string;
-}
+const STATUS_LABELS: Record<string, string> = {
+  NEW: "جديد",
+  ASSIGNED: "تم التعيين",
+  VISITED: "تمت الزيارة",
+  RESOLVED: "تم الحل",
+  NOT_RESOLVED: "لم يتم الحل",
+  REASSIGNED: "إعادة التعيين",
+  CLOSED: "مغلق",
+};
 
-interface Machine {
-  id: string;
-  serialNumber: string;
-}
-
-interface Location {
-  id: string;
-  name: string;
-}
-
-interface ProblemDetail {
-  id: string;
-  description: string;
-}
+interface Customer { id: string; name: string; }
+interface Engineer { id: string; name: string; }
+interface Machine { id: string; serialNumber: string; }
+interface Location { id: string; name: string; }
+interface ProblemDetail { id: string; description: string; }
 
 interface ServiceRequest {
   id: string;
@@ -95,9 +93,7 @@ export default function ServiceRequestsPage() {
     setLoading(false);
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,7 +141,7 @@ export default function ServiceRequestsPage() {
   };
 
   return (
-    <div>
+    <div dir="rtl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">{t("serviceRequests.title")}</h1>
         <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
@@ -157,18 +153,15 @@ export default function ServiceRequestsPage() {
         <div className="bg-white rounded-xl shadow-md p-6 mb-6">
           <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="border rounded-lg px-4 py-2" required>
-              <option value="">Select Customer</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
+              <option value="">{t("serviceRequests.selectCustomer")}</option>
+              {customers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
             </select>
-            <input type="text" placeholder={t("common.description")} value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })} className="border rounded-lg px-4 py-2" />
-            <input type="text" placeholder="Machine ID" value={form.machineId} onChange={(e) => setForm({ ...form, machineId: e.target.value })} className="border rounded-lg px-4 py-2" />
+            <input type="text" placeholder={t("serviceRequests.machineId")} value={form.machineId} onChange={(e) => setForm({ ...form, machineId: e.target.value })} className="border rounded-lg px-4 py-2" />
             <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} className="border rounded-lg px-4 py-2">
-              <option value="NORMAL">{t("serviceRequests.normal")}</option>
-              <option value="IMPORTANT">{t("serviceRequests.important")}</option>
-              <option value="URGENT">{t("serviceRequests.urgent")}</option>
-              <option value="EMERGENCY">{t("serviceRequests.emergency")}</option>
+              <option value="NORMAL">{PRIORITY_LABELS.NORMAL}</option>
+              <option value="IMPORTANT">{PRIORITY_LABELS.IMPORTANT}</option>
+              <option value="URGENT">{PRIORITY_LABELS.URGENT}</option>
+              <option value="EMERGENCY">{PRIORITY_LABELS.EMERGENCY}</option>
             </select>
             <textarea placeholder={t("common.description")} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="border rounded-lg px-4 py-2 md:col-span-2" rows={3} required />
             <div className="md:col-span-2 flex gap-2">
@@ -189,16 +182,16 @@ export default function ServiceRequestsPage() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Request #</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Customer</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Machine</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t("serviceRequests.priority")}</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t("serviceRequests.status")}</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Engineer</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t("common.date")}</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t("serviceRequests.problems")}</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Rating</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t("common.actions")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("serviceRequests.requestNumber")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("serviceRequests.customer")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("serviceRequests.machine")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("serviceRequests.priority")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("serviceRequests.status")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("serviceRequests.engineer")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.date")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("serviceRequests.problems")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("serviceRequests.rating")}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -209,16 +202,16 @@ export default function ServiceRequestsPage() {
                     <td className="px-4 py-3 text-sm">{req.machine?.serialNumber || "-"}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityColors[req.priority] || ""}`}>
-                        {t(`serviceRequests.${req.priority.toLowerCase()}`)}
+                        {PRIORITY_LABELS[req.priority] || req.priority}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[req.status] || ""}`}>
-                        {req.status}
+                        {STATUS_LABELS[req.status] || req.status}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm">{req.engineer?.name || "-"}</td>
-                    <td className="px-4 py-3 text-sm">{new Date(req.createdAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-sm">{new Date(req.createdAt).toLocaleDateString("ar-EG")}</td>
                     <td className="px-4 py-3 text-sm text-center">{req.problems.length}</td>
                     <td className="px-4 py-3 text-sm">{renderStars(req.customerRating)}</td>
                     <td className="px-4 py-3 text-sm">
@@ -229,26 +222,24 @@ export default function ServiceRequestsPage() {
                               {t("serviceRequests.assign")}
                             </button>
                             <button onClick={() => handleStatus(req.id, "RESOLVED")} className="text-green-600 hover:underline text-xs">
-                              Resolve
+                              {t("common.resolve")}
                             </button>
                             <button onClick={() => handleStatus(req.id, "NOT_RESOLVED")} className="text-red-600 hover:underline text-xs">
-                              Not Resolved
+                              {t("common.notResolve")}
                             </button>
                           </>
                         )}
                         {req.status === "RESOLVED" && (
-                          <button onClick={() => handleStatus(req.id, "CLOSED")} className="text-gray-600 hover:underline text-xs">Close</button>
+                          <button onClick={() => handleStatus(req.id, "CLOSED")} className="text-gray-600 hover:underline text-xs">{t("serviceRequests.closed")}</button>
                         )}
                       </div>
                       {assigningId === req.id && (
                         <div className="mt-2 flex gap-1">
                           <select value={assignEngineerId} onChange={(e) => setAssignEngineerId(e.target.value)} className="border rounded-lg px-2 py-1 text-xs">
-                            <option value="">Select</option>
-                            {engineers.map((eng) => (
-                              <option key={eng.id} value={eng.id}>{eng.name}</option>
-                            ))}
+                            <option value="">{t("serviceRequests.selectEngineer")}</option>
+                            {engineers.map((eng) => (<option key={eng.id} value={eng.id}>{eng.name}</option>))}
                           </select>
-                          <button onClick={() => handleAssign(req.id)} className="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700">OK</button>
+                          <button onClick={() => handleAssign(req.id)} className="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700">{t("serviceRequests.ok")}</button>
                         </div>
                       )}
                     </td>

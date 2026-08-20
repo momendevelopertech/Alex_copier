@@ -19,18 +19,18 @@ interface RecentItem {
 }
 
 const statCards = [
-  { key: "totalMachines", label: "machines", color: "bg-blue-500", icon: "📦" },
-  { key: "totalCustomers", label: "customers", color: "bg-green-500", icon: "👥" },
-  { key: "activeContracts", label: "contracts", color: "bg-purple-500", icon: "📋" },
-  { key: "pendingServiceRequests", label: "pendingServiceRequests", color: "bg-amber-500", icon: "⏳" },
-  { key: "totalRevenue", label: "totalRevenue", color: "bg-emerald-500", icon: "💰" },
+  { key: "totalMachines", label: "dashboard.totalMachines", color: "bg-blue-500", icon: "📦" },
+  { key: "totalCustomers", label: "dashboard.totalCustomers", color: "bg-green-500", icon: "👥" },
+  { key: "activeContracts", label: "dashboard.activeContracts", color: "bg-purple-500", icon: "📋" },
+  { key: "pendingServiceRequests", label: "dashboard.pendingServiceRequests", color: "bg-amber-500", icon: "⏳" },
+  { key: "totalRevenue", label: "dashboard.totalRevenue", color: "bg-emerald-500", icon: "💰" },
 ];
 
 const quickActions = [
-  { label: "addMachine", href: "/machines", color: "bg-blue-50 text-blue-700 hover:bg-blue-100" },
-  { label: "createServiceRequest", href: "/service-requests", color: "bg-amber-50 text-amber-700 hover:bg-amber-100" },
-  { label: "newSale", href: "/sales", color: "bg-green-50 text-green-700 hover:bg-green-100" },
-  { label: "addCustomer", href: "/customers", color: "bg-purple-50 text-purple-700 hover:bg-purple-100" },
+  { label: "dashboard.addMachine", href: "/machines", color: "bg-blue-50 text-blue-700 hover:bg-blue-100" },
+  { label: "dashboard.createServiceRequest", href: "/service-requests", color: "bg-amber-50 text-amber-700 hover:bg-amber-100" },
+  { label: "dashboard.newSale", href: "/sales", color: "bg-green-50 text-green-700 hover:bg-green-100" },
+  { label: "dashboard.addCustomer", href: "/customers", color: "bg-purple-50 text-purple-700 hover:bg-purple-100" },
 ];
 
 export default function Dashboard() {
@@ -96,8 +96,8 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">{t("dashboard")}</h1>
+    <div dir="rtl">
+      <h1 className="text-2xl font-bold mb-6">{t("dashboard.title")}</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {statCards.map((card) => (
@@ -119,15 +119,15 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-lg font-semibold mb-4">{t("recentServiceRequests")}</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("dashboard.recentServiceRequests")}</h2>
           {recentRequests.length === 0 ? (
-            <p className="text-gray-400 text-sm">{t("noData")}</p>
+            <p className="text-gray-400 text-sm">{t("common.noData")}</p>
           ) : (
             <ul className="space-y-3">
               {recentRequests.map((item) => (
                 <li key={item.id} className="flex items-center justify-between border-b border-gray-50 pb-2">
                   <span className="text-sm">{item.title}</span>
-                  <span className="text-xs text-gray-400">{item.date ? new Date(item.date).toLocaleDateString() : ""}</span>
+                  <span className="text-xs text-gray-400">{item.date ? new Date(item.date).toLocaleDateString("ar-EG") : ""}</span>
                 </li>
               ))}
             </ul>
@@ -135,15 +135,15 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-lg font-semibold mb-4">{t("recentSales")}</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("dashboard.recentSales")}</h2>
           {recentSales.length === 0 ? (
-            <p className="text-gray-400 text-sm">{t("noData")}</p>
+            <p className="text-gray-400 text-sm">{t("common.noData")}</p>
           ) : (
             <ul className="space-y-3">
               {recentSales.map((item) => (
                 <li key={item.id} className="flex items-center justify-between border-b border-gray-50 pb-2">
                   <span className="text-sm">{item.title}</span>
-                  <span className="text-xs text-gray-400">{item.date ? new Date(item.date).toLocaleDateString() : ""}</span>
+                  <span className="text-xs text-gray-400">{item.date ? new Date(item.date).toLocaleDateString("ar-EG") : ""}</span>
                 </li>
               ))}
             </ul>
@@ -152,7 +152,7 @@ export default function Dashboard() {
       </div>
 
       <div className="bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-lg font-semibold mb-4">{t("quickActions")}</h2>
+        <h2 className="text-lg font-semibold mb-4">{t("dashboard.quickActions")}</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {quickActions.map((action) => (
             <Link
