@@ -1,0 +1,208 @@
+{
+  "navigation": {
+    "dashboard": "لوحة التحكم",
+    "machines": "الأجهزة",
+    "customers": "العملاء",
+    "suppliers": "الموردون",
+    "engineers": "المهندسون",
+    "investors": "المستثمرون",
+    "serviceRequests": "طلبات الخدمة",
+    "contracts": "العقود",
+    "purchases": "المشتريات",
+    "sales": "المبيعات",
+    "inventory": "المخزون",
+    "workshop": "الورشة",
+    "finance": "المالية",
+    "settlements": "التسويات",
+    "reports": "التقارير",
+    "settings": "الإعدادات",
+    "logout": "تسجيل الخروج"
+  },
+  "dashboard": {
+    "title": "لوحة التحكم",
+    "totalMachines": "إجمالي الأجهزة",
+    "totalCustomers": "إجمالي العملاء",
+    "activeContracts": "العقود النشطة",
+    "pendingServices": "طلبات الخدمة المعلقة",
+    "recentActivity": "النشاط الأخير"
+  },
+  "common": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "create": "إنشاء",
+    "search": "بحث",
+    "filter": "تصفية",
+    "export": "تصدير",
+    "print": "طباعة",
+    "confirm": "تأكيد",
+    "back": "رجوع",
+    "next": "التالي",
+    "loading": "جاري التحميل...",
+    "close": "إغلاق",
+    "noData": "لا توجد بيانات",
+    "success": "تم بنجاح",
+    "error": "حدث خطأ",
+    "actions": "الإجراءات",
+    "status": "الحالة",
+    "date": "التاريخ",
+    "amount": "المبلغ",
+    "notes": "ملاحظات",
+    "description": "الوصف"
+  },
+  "machines": {
+    "title": "الأجهزة",
+    "serialNumber": "الرقم التسلسلي",
+    "manufacturer": "الشركة المصنعة",
+    "model": "الطراز",
+    "status": "الحالة",
+    "addMachine": "إضافة جهاز",
+    "history": "سجل الجهاز",
+    "meterReading": "قراءة العدّاد"
+  },
+  "customers": {
+    "title": "العملاء",
+    "name": "الاسم",
+    "phone": "الهاتف",
+    "email": "البريد الإلكتروني",
+    "address": "العنوان",
+    "creditLimit": "حد الائتمان",
+    "locations": "المواقع",
+    "addCustomer": "إضافة عميل"
+  },
+  "suppliers": {
+    "title": "الموردون",
+    "name": "الاسم",
+    "phone": "الهاتف",
+    "email": "البريد الإلكتروني",
+    "address": "العنوان",
+    "addSupplier": "إضافة مورد"
+  },
+  "engineers": {
+    "title": "المهندسون",
+    "name": "الاسم",
+    "areas": "المناطق",
+    "skills": "المهارات",
+    "salary": "الراتب",
+    "commission": "العمولة",
+    "addEngineer": "إضافة مهندس"
+  },
+  "investors": {
+    "title": "المستثمرون",
+    "name": "الاسم",
+    "ownershipPct": "نسبة الملكية",
+    "addInvestor": "إضافة مستثمر"
+  },
+  "serviceRequests": {
+    "title": "طلبات الخدمة",
+    "priority": "الأولوية",
+    "status": "الحالة",
+    "assign": "تعيين",
+    "resolve": "حل",
+    "visit": "زيارة",
+    "problems": "المشكلات",
+    "newRequest": "طلب جديد",
+    "normal": "عادي",
+    "important": "مهم",
+    "urgent": "عاجل",
+    "emergency": "طارئ"
+  },
+  "contracts": {
+    "title": "العقود",
+    "type": "النوع",
+    "startDate": "تاريخ البداية",
+    "endDate": "تاريخ النهاية",
+    "value": "القيمة",
+    "machines": "الأجهزة",
+    "addContract": "إضافة عقد",
+    "contractNumber": "رقم العقد",
+    "billingCycle": "دورة الفوترة",
+    "visitLimit": "حد الزيارات",
+    "costPerCopy": "التكلفة لكل نسخة"
+  },
+  "purchases": {
+    "title": "المشتريات",
+    "orderNumber": "رقم الطلب",
+    "supplier": "المورد",
+    "total": "الإجمالي",
+    "addOrder": "إضافة طلب شراء",
+    "status": {
+      "draft": "مسودة",
+      "confirmed": "مؤكد",
+      "received": "تم الاستلام",
+      "cancelled": "ملغي"
+    }
+  },
+  "sales": {
+    "title": "المبيعات",
+    "orderNumber": "رقم الطلب",
+    "customer": "العميل",
+    "total": "الإجمالي",
+    "addOrder": "إضافة طلب مبيعات",
+    "paymentMethod": "طريقة الدفع",
+    "paymentStatus": "حالة الدفع"
+  },
+  "inventory": {
+    "title": "المخزون",
+    "product": "المنتج",
+    "quantity": "الكمية",
+    "warehouse": "المستودع",
+    "stockMovement": "حركة المخزون"
+  },
+  "workshop": {
+    "title": "الورشة",
+    "scrapOrder": "أمر تلف",
+    "sparePartCustody": "عهدة قطع الغيار",
+    "addScrapOrder": "إضافة أمر تلف"
+  },
+  "finance": {
+    "title": "المالية",
+    "settlements": "التسويات",
+    "invoices": "الفواتير",
+    "expenses": "المصروفات",
+    "accounts": "الحسابات",
+    "journal": "القيود اليومية"
+  },
+  "settlements": {
+    "title": "التسويات",
+    "number": "رقم التسوية",
+    "amount": "المبلغ",
+    "paymentMethod": "طريقة الدفع",
+    "reason": "السبب",
+    "status": "الحالة",
+    "collectedBy": "حصّلها",
+    "verifiedBy": "تحقق منها",
+    "initial": "أولي",
+    "verified": "تم التحقق"
+  },
+  "reports": {
+    "title": "التقارير",
+    "salesReport": "تقرير المبيعات",
+    "purchaseReport": "تقرير المشتريات",
+    "serviceReport": "تقرير الخدمة",
+    "financialReport": "التقرير المالي",
+    "engineerReport": "تقرير المهندسين",
+    "inventoryReport": "تقرير المخزون"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "language": "اللغة",
+    "company": "الشركة",
+    "users": "المستخدمون"
+  },
+  "roles": {
+    "GENERAL_MANAGER": "المدير العام",
+    "COMPANY_MANAGER": "مدير الشركة",
+    "ACCOUNTANT": "المحاسب",
+    "MAINTENANCE_MANAGER": "مدير الصيانة",
+    "WORKSHOP_MANAGER": "مدير الورشة",
+    "ENGINEER": "مهندس",
+    "SALES_EMPLOYEE": "موظف مبيعات"
+  },
+  "companies": {
+    "jmalAhlat": "جمال لأجهزة الأتمتة",
+    "jmalParts": "جمال لقطع الغيار",
+    "sectory": "سيكتوري"
+  }
+}

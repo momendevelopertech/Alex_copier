@@ -7,56 +7,953 @@ datasource db {
   provider = "postgresql"
 }
 
-model Product {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  price       Float
-  stock       Int      @default(0)
-  imageUrl    String?
-  category    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  orderItems  OrderItem[]
+// ═══════════════════════════════════════════════════════════
+// PHASE 0 - AUTH
+// ═══════════════════════════════════════════════════════════
+
+enum UserRole {
+  GENERAL_MANAGER
+  COMPANY_MANAGER
+  ACCOUNTANT
+  MAINTENANCE_MANAGER
+  WORKSHOP_MANAGER
+  ENGINEER
+  SALES_EMPLOYEE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+  companyId    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  settlements         Settlement[]  @relation("SettlementCollectedBy")
+  verifiedSettlements Settlement[]  @relation("SettlementVerifiedBy")
+  expenses            Expense[]
+  approvalLogs        ApprovalLog[]
+  sessions            Session[]
+  engineer            Engineer?
+  company             Company?      @relation(fields: [companyId], references: [id])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 1 - CORE
+// ═══════════════════════════════════════════════════════════
+
+enum CustomerType {
+  INDIVIDUAL
+  COMPANY
+}
+
+model Company {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  nameAr        String?
+  taxNumber     String?
+  tradeRegister String?
+  address       String?
+  phone         String?
+  email         String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  users                 User[]
+  ledgers               CustomerLedger[]
+  suppliers             Supplier[]
+  products              Product[]
+  warehouses            Warehouse[]
+  purchaseOrders        PurchaseOrder[]
+  salesOrders           SalesOrder[]
+  interCompanySales     InterCompanyInvoice[] @relation("InterCompanySales")
+  interCompanyPurchases InterCompanyInvoice[] @relation("InterCompanyPurchases")
+  expenses              Expense[]
+  settlements           Settlement[]
+  accounts              Account[]
+  journalEntries        JournalEntry[]
 }
 
 model Customer {
+  id            String       @id @default(cuid())
+  name          String
+  companyName   String?
+  contactPerson String?
+  phone         String?
+  whatsapp      String?
+  email         String?
+  address       String?
+  city          String?
+  governorate   String?
+  gpsLat        Float?
+  gpsLng        Float?
+  taxNumber     String?
+  tradeRegister String?
+  creditLimit   Float        @default(0)
+  paymentTerms  String?
+  customerType  CustomerType @default(INDIVIDUAL)
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  locations         CustomerLocation[]
+  ledgers           CustomerLedger[]
+  orders            SalesOrder[]
+  serviceRequests   ServiceRequest[]
+  contracts         Contract[]
+  machineOwnerships MachineOwnerHistory[]
+  machines          Machine[]
+  settlements       Settlement[]
+}
+
+model CustomerLocation {
+  id          String   @id @default(cuid())
+  customerId  String
+  name        String
+  address     String?
+  city        String?
+  governorate String?
+  gpsLat      Float?
+  gpsLng      Float?
+  phone       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customer        Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  machines        Machine[]
+  serviceRequests ServiceRequest[]
+}
+
+model CustomerLedger {
+  id         String @id @default(cuid())
+  customerId String
+  companyId  String
+  balance    Float  @default(0)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, companyId])
+}
+
+model Supplier {
+  id          String   @id @default(cuid())
+  name        String
+  contactName String?
+  phone       String?
+  email       String?
+  address     String?
+  taxNumber   String?
+  companyId   String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company        Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  purchaseOrders PurchaseOrder[]
+  invoices       PurchaseInvoice[]
+}
+
+model Engineer {
+  id                 String   @id @default(cuid())
+  userId             String?  @unique
+  name               String
+  phone              String?
+  email              String?
+  baseSalary         Float    @default(8000)
+  transportAllowance Float    @default(2000)
+  commissionRate     Float    @default(25)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  areas           EngineerArea[]
+  skills          EngineerSkill[]
+  serviceRequests ServiceRequest[]
+  visits          Visit[]
+  custodyItems    SparePartCustody[]
+  salaryRecords   EngineerSalary[]
+  user            User?              @relation(fields: [userId], references: [id])
+  settlements     Settlement[]
+  warranties      Warranty[]
+}
+
+model EngineerArea {
+  id         String  @id @default(cuid())
+  engineerId String
+  areaName   String
+  isDefault  Boolean @default(true)
+
+  engineer Engineer @relation(fields: [engineerId], references: [id], onDelete: Cascade)
+
+  @@unique([engineerId, areaName])
+}
+
+model EngineerSkill {
+  id         String @id @default(cuid())
+  engineerId String
+  modelType  String
+  skillLevel Int    @default(1)
+
+  engineer Engineer @relation(fields: [engineerId], references: [id], onDelete: Cascade)
+
+  @@unique([engineerId, modelType])
+}
+
+model Investor {
+  id           String   @id @default(cuid())
+  name         String
+  phone        String?
+  email        String?
+  ownershipPct Float
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  distributions InvestorDistribution[]
+}
+
+model InvestorDistributionCycle {
+  id          String   @id @default(cuid())
+  cycleDate   DateTime
+  totalProfit Float
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  distributions InvestorDistribution[]
+}
+
+model InvestorDistribution {
+  id         String    @id @default(cuid())
+  cycleId    String
+  investorId String
+  amount     Float
+  paidAt     DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  cycle    InvestorDistributionCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  investor Investor                  @relation(fields: [investorId], references: [id], onDelete: Cascade)
+}
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 2 - MACHINES & INVENTORY
+// ═══════════════════════════════════════════════════════════
+
+enum ProductType {
+  MACHINE
+  SPARE_PART
+}
+
+enum MachineStatus {
+  SOLD
+  RENTED
+  IN_WAREHOUSE
+  UNDER_MAINTENANCE
+  UNDER_INSPECTION
+  SCRAPPED
+}
+
+enum PaperSize {
+  A3
+  A4
+  A3_A4
+}
+
+enum TransactionType {
+  SALE
+  RENTAL
+  RETURN
+  TRADE_IN
+  TRANSFER
+  MAINTENANCE
+  SCRAP
+}
+
+enum ReadingSource {
+  MANUAL
+  OCR
+  SCANNER
+}
+
+enum StockMovementType {
+  PURCHASE_IN
+  INTER_COMPANY_IN
+  INTER_COMPANY_OUT
+  SALE_OUT
+  ENGINEER_CUSTODY_OUT
+  ENGINEER_RETURN
+  CONSUMED
+  SCRAP
+  ADJUSTMENT
+}
+
+enum CustodyStatus {
+  ISSUED
+  PARTIALLY_USED
+  FULLY_USED
+  RETURNED
+}
+
+model Product {
+  id             String      @id @default(cuid())
+  name           String
+  description    String?
+  productType    ProductType
+  companyId      String
+  sku            String?
+  gs1Code        String?
+  egsCode        String?
+  purchasePrice  Float?
+  wholesalePrice Float?
+  retailPrice    Float?
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  company                  Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  machines                 Machine[]
+  orderItems               SalesOrderItem[]
+  purchaseItems            PurchaseOrderItem[]
+  inventoryItems           WarehouseInventory[]
+  custodies                SparePartCustody[]
+  stockMovements           StockMovement[]
+  sparePartCompatibilities SparePartCompatibility[] @relation("SparePartCompat")
+  compatibleMachines       SparePartCompatibility[] @relation("CompatibleMachine")
+}
+
+model Machine {
+  id                 String        @id @default(cuid())
+  serialNumber       String        @unique
+  manufacturer       String?
+  model              String?
+  isColor            Boolean       @default(false)
+  paperSize          PaperSize     @default(A4)
+  currentStatus      MachineStatus @default(IN_WAREHOUSE)
+  purchaseDate       DateTime?
+  purchasePrice      Float?
+  salePrice          Float?
+  saleDate           DateTime?
+  notes              String?
+  productId          String?
+  currentOwnerId     String?
+  customerLocationId String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  product          Product?              @relation(fields: [productId], references: [id])
+  currentOwner     Customer?             @relation(fields: [currentOwnerId], references: [id])
+  customerLocation CustomerLocation?     @relation(fields: [customerLocationId], references: [id])
+  history          MachineOwnerHistory[]
+  meterReadings    MeterReading[]
+  serviceRequests  ServiceRequest[]
+  contracts        ContractMachine[]
+  scrapOrder       ScrapOrder?
+  warranty         Warranty?
+}
+
+model MachineOwnerHistory {
+  id              String          @id @default(cuid())
+  machineId       String
+  transactionType TransactionType
+  customerId      String?
+  companyId       String
+  date            DateTime        @default(now())
+  financialValue  Float?
+  notes           String?
+  salesOrderId    String?
+  contractId      String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  machine  Machine   @relation(fields: [machineId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id])
+}
+
+model MeterReading {
+  id          String        @id @default(cuid())
+  machineId   String
+  reading     Int
+  source      ReadingSource @default(MANUAL)
+  readingDate DateTime      @default(now())
+  visitId     String?
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  machine Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
+}
+
+model SparePartCompatibility {
+  id             String @id @default(cuid())
+  sparePartId    String
+  machineModelId String
+
+  sparePart    Product @relation("SparePartCompat", fields: [sparePartId], references: [id], onDelete: Cascade)
+  machineModel Product @relation("CompatibleMachine", fields: [machineModelId], references: [id], onDelete: Cascade)
+
+  @@unique([sparePartId, machineModelId])
+}
+
+model Warehouse {
   id        String   @id @default(cuid())
   name      String
-  email     String?  @unique
-  phone     String?
-  address   String?
+  companyId String
+  isMain    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  orders    Order[]
+
+  company        Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  inventory      WarehouseInventory[]
+  stockMovements StockMovement[]
 }
 
-model Order {
-  id         String      @id @default(cuid())
-  customerId String
-  customer   Customer    @relation(fields: [customerId], references: [id])
-  status     OrderStatus @default(PENDING)
-  total      Float
+model WarehouseInventory {
+  id          String @id @default(cuid())
+  warehouseId String
+  productId   String
+  quantity    Int    @default(0)
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([warehouseId, productId])
+}
+
+model StockMovement {
+  id           String            @id @default(cuid())
+  warehouseId  String
+  productId    String
+  quantity     Int
+  movementType StockMovementType
+  referenceId  String?
+  notes        String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model SparePartCustody {
+  id               String        @id @default(cuid())
+  engineerId       String
+  productId        String
+  quantityIssued   Int           @default(0)
+  quantityUsed     Int           @default(0)
+  quantityReturned Int           @default(0)
+  status           CustodyStatus @default(ISSUED)
+  issuedAt         DateTime
+  visitId          String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  engineer Engineer @relation(fields: [engineerId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 3 - PURCHASING
+// ═══════════════════════════════════════════════════════════
+
+enum PurchaseOrderStatus {
+  DRAFT
+  CONFIRMED
+  RECEIVED
+  CANCELLED
+}
+
+model PurchaseOrder {
+  id         String              @id @default(cuid())
+  companyId  String
+  supplierId String
+  status     PurchaseOrderStatus @default(DRAFT)
+  total      Float               @default(0)
   notes      String?
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  items      OrderItem[]
+  orderDate  DateTime
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  company  Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  supplier Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  items    PurchaseOrderItem[]
+  invoices PurchaseInvoice[]
 }
 
-model OrderItem {
-  id        String  @id @default(cuid())
-  orderId   String
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
-  quantity  Int
-  price     Float
+model PurchaseOrderItem {
+  id              String   @id @default(cuid())
+  purchaseOrderId String
+  productId       String
+  quantity        Int
+  unitPrice       Float
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
-enum OrderStatus {
-  PENDING
-  PROCESSING
-  SHIPPED
+model PurchaseInvoice {
+  id              String   @id @default(cuid())
+  companyId       String
+  supplierId      String
+  purchaseOrderId String?
+  invoiceNumber   String
+  total           Float
+  invoiceDate     DateTime
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  supplier      Supplier       @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+}
+
+model InterCompanyInvoice {
+  id              String   @id @default(cuid())
+  fromCompanyId   String
+  toCompanyId     String
+  invoiceNumber   String
+  total           Float
+  invoiceDate     DateTime
+  purchaseOrderId String?
+  salesOrderId    String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  fromCompany Company @relation("InterCompanySales", fields: [fromCompanyId], references: [id], onDelete: Cascade)
+  toCompany   Company @relation("InterCompanyPurchases", fields: [toCompanyId], references: [id], onDelete: Cascade)
+}
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 4 - SALES & CONTRACTS
+// ═══════════════════════════════════════════════════════════
+
+enum OrderType {
+  MACHINE_SALE
+  SPARE_PART_SALE
+}
+
+enum SalesOrderStatus {
+  DRAFT
+  CONFIRMED
   DELIVERED
   CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT
+  INSTALLMENT
+  MIXED
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+}
+
+enum DiscountType {
+  FIXED
+  PERCENTAGE
+}
+
+enum InstallmentStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum ContractType {
+  MAINTENANCE_ONLY
+  MAINTENANCE_AND_PARTS
+  MAINTENANCE_AND_PRINTING
+  RENTAL
+}
+
+enum ContractStatus {
+  ACTIVE
+  EXPIRED
+  TERMINATED
+  SUSPENDED
+}
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+model SalesOrder {
+  id            String           @id @default(cuid())
+  companyId     String
+  customerId    String
+  orderType     OrderType
+  status        SalesOrderStatus @default(DRAFT)
+  total         Float            @default(0)
+  discount      Float            @default(0)
+  discountType  DiscountType     @default(FIXED)
+  taxRate       Float            @default(0)
+  paymentMethod PaymentMethod
+  paymentStatus PaymentStatus    @default(PENDING)
+  notes         String?
+  orderDate     DateTime
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  company      Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer     Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items        SalesOrderItem[]
+  installments Installment[]
+}
+
+model SalesOrderItem {
+  id           String   @id @default(cuid())
+  salesOrderId String
+  productId    String
+  quantity     Int
+  unitPrice    Float
+  discount     Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  product    Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Installment {
+  id            String            @id @default(cuid())
+  salesOrderId  String
+  installmentNo Int
+  amount        Float
+  dueDate       DateTime
+  paidDate      DateTime?
+  status        InstallmentStatus @default(PENDING)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+}
+
+model Contract {
+  id                  String         @id @default(cuid())
+  contractNumber      String         @unique
+  customerId          String
+  contractType        ContractType
+  status              ContractStatus @default(ACTIVE)
+  startDate           DateTime
+  endDate             DateTime
+  value               Float
+  billingCycle        BillingCycle
+  visitLimit          Int?
+  costPerCopy         Float?
+  earlyTerminationFee Float?
+  notes               String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  customer Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  machines ContractMachine[]
+  visits   Visit[]
+}
+
+model ContractMachine {
+  id         String @id @default(cuid())
+  contractId String
+  machineId  String
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  machine  Machine  @relation(fields: [machineId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, machineId])
+}
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 5 - SERVICE
+// ═══════════════════════════════════════════════════════════
+
+enum Priority {
+  NORMAL
+  IMPORTANT
+  URGENT
+  EMERGENCY
+}
+
+enum RequestStatus {
+  NEW
+  ASSIGNED
+  VISITED
+  RESOLVED
+  NOT_RESOLVED
+  REASSIGNED
+  CLOSED
+}
+
+model ServiceRequest {
+  id             String        @id @default(cuid())
+  requestNumber  String        @unique
+  customerId     String
+  locationId     String?
+  machineId      String?
+  description    String
+  priority       Priority      @default(NORMAL)
+  status         RequestStatus @default(NEW)
+  engineerId     String?
+  companyId      String
+  customerRating Int?
+  ratingNotes    String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  customer Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  location CustomerLocation? @relation(fields: [locationId], references: [id])
+  machine  Machine?          @relation(fields: [machineId], references: [id])
+  engineer Engineer?         @relation(fields: [engineerId], references: [id])
+  problems ProblemDetail[]
+  visits   Visit[]
+}
+
+model ProblemDetail {
+  id               String   @id @default(cuid())
+  serviceRequestId String
+  description      String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+}
+
+model Visit {
+  id               String   @id @default(cuid())
+  serviceRequestId String
+  engineerId       String
+  contractId       String?
+  visitedAt        DateTime
+  resolved         Boolean  @default(false)
+  resolutionNotes  String?
+  partsUsed        String?
+  meterReadingId   String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  engineer       Engineer       @relation(fields: [engineerId], references: [id], onDelete: Cascade)
+  contract       Contract?      @relation(fields: [contractId], references: [id])
+}
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 6 - WORKSHOP
+// ═══════════════════════════════════════════════════════════
+
+enum ScrapStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ScrapOrder {
+  id          String      @id @default(cuid())
+  orderNumber String      @unique
+  machineId   String      @unique
+  reason      String
+  approvedBy  String
+  scrapValue  Float?
+  status      ScrapStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  machine Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
+}
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 7 - FINANCE
+// ═══════════════════════════════════════════════════════════
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum SettlementStatus {
+  INITIAL
+  VERIFIED
+}
+
+model Account {
+  id          String      @id @default(cuid())
+  code        String
+  name        String
+  accountType AccountType
+  companyId   String
+  balance     Float       @default(0)
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  company      Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  journalItems JournalEntryItem[]
+}
+
+model JournalEntry {
+  id            String   @id @default(cuid())
+  companyId     String
+  entryNumber   String
+  date          DateTime
+  description   String
+  referenceType String?
+  referenceId   String?
+  isVerified    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  items   JournalEntryItem[]
+}
+
+model JournalEntryItem {
+  id             String @id @default(cuid())
+  journalEntryId String
+  accountId      String
+  debit          Float  @default(0)
+  credit         Float  @default(0)
+
+  journalEntry JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account      Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+}
+
+model Settlement {
+  id               String           @id @default(cuid())
+  settlementNumber String           @unique
+  companyId        String
+  customerId       String?
+  engineerId       String?
+  amount           Float
+  paymentMethod    PaymentMethod
+  reason           String
+  status           SettlementStatus @default(INITIAL)
+  collectedBy      String
+  verifiedBy       String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer  Customer? @relation(fields: [customerId], references: [id])
+  engineer  Engineer? @relation(fields: [engineerId], references: [id])
+  collector User      @relation("SettlementCollectedBy", fields: [collectedBy], references: [id])
+  verifier  User?     @relation("SettlementVerifiedBy", fields: [verifiedBy], references: [id])
+}
+
+model ApprovalLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String
+  entityType String
+  entityId   String
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  companyId   String
+  category    String
+  description String
+  amount      Float
+  paidBy      String
+  receiptUrl  String?
+  accountCode String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  payer   User    @relation(fields: [paidBy], references: [id])
+}
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 8 - WARRANTY & ENGINEER SALARY
+// ═══════════════════════════════════════════════════════════
+
+model Warranty {
+  id              String   @id @default(cuid())
+  machineId       String   @unique
+  startDate       DateTime
+  endDate         DateTime
+  copyLimit       Int?
+  copyLimitMonths Int?
+  isExpired       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  machine    Machine   @relation(fields: [machineId], references: [id], onDelete: Cascade)
+  engineer   Engineer? @relation(fields: [engineerId], references: [id])
+  engineerId String?
+}
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 9 - BANK RECONCILIATION
+// ═══════════════════════════════════════════════════════════
+
+model BankReconciliation {
+  id               String   @id @default(cuid())
+  companyId        String
+  accountCode      String
+  statementDate    DateTime
+  statementBalance Float
+  systemBalance    Float
+  difference       Float
+  isReconciled     Boolean  @default(false)
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 8 - WARRANTY & ENGINEER SALARY
+// ═══════════════════════════════════════════════════════════
+
+model EngineerSalary {
+  id                 String    @id @default(cuid())
+  engineerId         String
+  month              Int
+  year               Int
+  baseSalary         Float
+  transportAllowance Float
+  totalSales         Float     @default(0)
+  totalCostOfGoods   Float     @default(0)
+  commissionAmount   Float     @default(0)
+  totalDeductions    Float     @default(0)
+  netPayable         Float     @default(0)
+  isPaid             Boolean   @default(false)
+  paidAt             DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  engineer Engineer @relation(fields: [engineerId], references: [id], onDelete: Cascade)
 }

@@ -1,0 +1,221 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useI18n } from "@/i18n/context";
+
+interface Customer {
+  id: string;
+  name: string;
+}
+
+interface ContractMachine {
+  id: string;
+  machineId: string;
+  machine: { id: string; serialNumber: string; model: string | null };
+}
+
+interface Contract {
+  id: string;
+  contractNumber: string;
+  customerId: string;
+  contractType: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  value: number;
+  billingCycle: string;
+  visitLimit: number | null;
+  costPerCopy: number | null;
+  earlyTerminationFee: number | null;
+  notes: string | null;
+  createdAt: string;
+  customer: Customer;
+  machines: ContractMachine[];
+  _count: { visits: number };
+}
+
+const contractTypeColors: Record<string, string> = {
+  MAINTENANCE_ONLY: "bg-blue-100 text-blue-800",
+  MAINTENANCE_AND_PARTS: "bg-green-100 text-green-800",
+  MAINTENANCE_AND_PRINTING: "bg-purple-100 text-purple-800",
+  RENTAL: "bg-orange-100 text-orange-800",
+};
+
+const statusColors: Record<string, string> = {
+  ACTIVE: "bg-green-100 text-green-800",
+  EXPIRED: "bg-gray-100 text-gray-800",
+  TERMINATED: "bg-red-100 text-red-800",
+  SUSPENDED: "bg-yellow-100 text-yellow-800",
+};
+
+export default function ContractsPage() {
+  const { t } = useI18n();
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    customerId: "",
+    contractType: "MAINTENANCE_ONLY",
+    startDate: "",
+    endDate: "",
+    value: "",
+    billingCycle: "MONTHLY",
+    visitLimit: "",
+    costPerCopy: "",
+    earlyTerminationFee: "",
+    notes: "",
+  });
+
+  const fetchData = async () => {
+    setLoading(true);
+    const [cRes, custRes] = await Promise.all([
+      fetch("/api/contracts"),
+      fetch("/api/customers"),
+    ]);
+    setContracts(await cRes.json());
+    setCustomers(await custRes.json());
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await fetch("/api/contracts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...form,
+        value: parseFloat(form.value) || 0,
+        visitLimit: form.visitLimit ? parseInt(form.visitLimit) : undefined,
+        costPerCopy: form.costPerCopy ? parseFloat(form.costPerCopy) : undefined,
+        earlyTerminationFee: form.earlyTerminationFee ? parseFloat(form.earlyTerminationFee) : undefined,
+      }),
+    });
+    setForm({
+      customerId: "", contractType: "MAINTENANCE_ONLY", startDate: "", endDate: "",
+      value: "", billingCycle: "MONTHLY", visitLimit: "", costPerCopy: "",
+      earlyTerminationFee: "", notes: "",
+    });
+    setShowForm(false);
+    fetchData();
+  };
+
+  const handleStatusToggle = async (id: string, currentStatus: string) => {
+    const nextStatus = currentStatus === "ACTIVE" ? "TERMINATED" : "ACTIVE";
+    await fetch(`/api/contracts/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: nextStatus }),
+    });
+    fetchData();
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">{t("contracts.title")}</h1>
+        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+          {t("contracts.addContract")}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="border rounded-lg px-4 py-2" required>
+              <option value="">Select Customer</option>
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            <select value={form.contractType} onChange={(e) => setForm({ ...form, contractType: e.target.value })} className="border rounded-lg px-4 py-2">
+              <option value="MAINTENANCE_ONLY">Maintenance Only</option>
+              <option value="MAINTENANCE_AND_PARTS">Maintenance & Parts</option>
+              <option value="MAINTENANCE_AND_PRINTING">Maintenance & Printing</option>
+              <option value="RENTAL">Rental</option>
+            </select>
+            <select value={form.billingCycle} onChange={(e) => setForm({ ...form, billingCycle: e.target.value })} className="border rounded-lg px-4 py-2">
+              <option value="MONTHLY">Monthly</option>
+              <option value="QUARTERLY">Quarterly</option>
+              <option value="YEARLY">Yearly</option>
+            </select>
+            <div>
+              <label className="text-sm text-gray-500 mb-1 block">{t("contracts.startDate")}</label>
+              <input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="border rounded-lg px-4 py-2 w-full" required />
+            </div>
+            <div>
+              <label className="text-sm text-gray-500 mb-1 block">{t("contracts.endDate")}</label>
+              <input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} className="border rounded-lg px-4 py-2 w-full" required />
+            </div>
+            <input type="number" placeholder={t("contracts.value")} value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} className="border rounded-lg px-4 py-2" required />
+            <input type="number" placeholder={t("contracts.visitLimit")} value={form.visitLimit} onChange={(e) => setForm({ ...form, visitLimit: e.target.value })} className="border rounded-lg px-4 py-2" />
+            <input type="number" placeholder={t("contracts.costPerCopy")} value={form.costPerCopy} onChange={(e) => setForm({ ...form, costPerCopy: e.target.value })} className="border rounded-lg px-4 py-2" />
+            <input type="number" placeholder="Early Termination Fee" value={form.earlyTerminationFee} onChange={(e) => setForm({ ...form, earlyTerminationFee: e.target.value })} className="border rounded-lg px-4 py-2" />
+            <textarea placeholder={t("common.notes")} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="border rounded-lg px-4 py-2 md:col-span-3" rows={2} />
+            <div className="md:col-span-3 flex gap-2">
+              <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">{t("common.save")}</button>
+              <button type="button" onClick={() => setShowForm(false)} className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">{t("common.cancel")}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <div className="bg-white rounded-xl shadow-md p-6">
+        {loading ? (
+          <p className="text-gray-500">{t("common.loading")}</p>
+        ) : contracts.length === 0 ? (
+          <p className="text-gray-500">{t("common.noData")}</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t("contracts.contractNumber")}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Customer</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t("contracts.type")}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t("common.status")}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t("contracts.value")}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t("contracts.startDate")}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t("contracts.endDate")}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t("contracts.machines")}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t("common.actions")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {contracts.map((c) => (
+                  <tr key={c.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm font-medium">{c.contractNumber}</td>
+                    <td className="px-4 py-3 text-sm">{c.customer.name}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${contractTypeColors[c.contractType] || ""}`}>
+                        {c.contractType.replace(/_/g, " ")}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[c.status] || ""}`}>
+                        {c.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm">{c.value.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-sm">{new Date(c.startDate).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-sm">{new Date(c.endDate).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-sm text-center">{c.machines.length}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <button onClick={() => handleStatusToggle(c.id, c.status)} className={`text-xs hover:underline ${c.status === "ACTIVE" ? "text-red-600" : "text-green-600"}`}>
+                        {c.status === "ACTIVE" ? "Terminate" : "Activate"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,207 @@
+{
+  "navigation": {
+    "dashboard": "Dashboard",
+    "machines": "Machines",
+    "customers": "Customers",
+    "suppliers": "Suppliers",
+    "engineers": "Engineers",
+    "investors": "Investors",
+    "serviceRequests": "Service Requests",
+    "contracts": "Contracts",
+    "purchases": "Purchases",
+    "sales": "Sales",
+    "inventory": "Inventory",
+    "workshop": "Workshop",
+    "finance": "Finance",
+    "settlements": "Settlements",
+    "reports": "Reports",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "totalMachines": "Total Machines",
+    "totalCustomers": "Total Customers",
+    "activeContracts": "Active Contracts",
+    "pendingServices": "Pending Services",
+    "recentActivity": "Recent Activity"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "print": "Print",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "loading": "Loading...",
+    "noData": "No data available",
+    "success": "Success",
+    "error": "An error occurred",
+    "actions": "Actions",
+    "status": "Status",
+    "date": "Date",
+    "amount": "Amount",
+    "notes": "Notes",
+    "description": "Description"
+  },
+  "machines": {
+    "title": "Machines",
+    "serialNumber": "Serial Number",
+    "manufacturer": "Manufacturer",
+    "model": "Model",
+    "status": "Status",
+    "addMachine": "Add Machine",
+    "history": "Machine History",
+    "meterReading": "Meter Reading"
+  },
+  "customers": {
+    "title": "Customers",
+    "name": "Name",
+    "phone": "Phone",
+    "email": "Email",
+    "address": "Address",
+    "creditLimit": "Credit Limit",
+    "locations": "Locations",
+    "addCustomer": "Add Customer"
+  },
+  "suppliers": {
+    "title": "Suppliers",
+    "name": "Name",
+    "phone": "Phone",
+    "email": "Email",
+    "address": "Address",
+    "addSupplier": "Add Supplier"
+  },
+  "engineers": {
+    "title": "Engineers",
+    "name": "Name",
+    "areas": "Areas",
+    "skills": "Skills",
+    "salary": "Salary",
+    "commission": "Commission",
+    "addEngineer": "Add Engineer"
+  },
+  "investors": {
+    "title": "Investors",
+    "name": "Name",
+    "ownershipPct": "Ownership %",
+    "addInvestor": "Add Investor"
+  },
+  "serviceRequests": {
+    "title": "Service Requests",
+    "priority": "Priority",
+    "status": "Status",
+    "assign": "Assign",
+    "resolve": "Resolve",
+    "visit": "Visit",
+    "problems": "Problems",
+    "newRequest": "New Request",
+    "normal": "Normal",
+    "important": "Important",
+    "urgent": "Urgent",
+    "emergency": "Emergency"
+  },
+  "contracts": {
+    "title": "Contracts",
+    "type": "Type",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "value": "Value",
+    "machines": "Machines",
+    "addContract": "Add Contract",
+    "contractNumber": "Contract Number",
+    "billingCycle": "Billing Cycle",
+    "visitLimit": "Visit Limit",
+    "costPerCopy": "Cost Per Copy"
+  },
+  "purchases": {
+    "title": "Purchases",
+    "orderNumber": "Order Number",
+    "supplier": "Supplier",
+    "total": "Total",
+    "addOrder": "Add Purchase Order",
+    "status": {
+      "draft": "Draft",
+      "confirmed": "Confirmed",
+      "received": "Received",
+      "cancelled": "Cancelled"
+    }
+  },
+  "sales": {
+    "title": "Sales",
+    "orderNumber": "Order Number",
+    "customer": "Customer",
+    "total": "Total",
+    "addOrder": "Add Sales Order",
+    "paymentMethod": "Payment Method",
+    "paymentStatus": "Payment Status"
+  },
+  "inventory": {
+    "title": "Inventory",
+    "product": "Product",
+    "quantity": "Quantity",
+    "warehouse": "Warehouse",
+    "stockMovement": "Stock Movement"
+  },
+  "workshop": {
+    "title": "Workshop",
+    "scrapOrder": "Scrap Order",
+    "sparePartCustody": "Spare Part Custody",
+    "addScrapOrder": "Add Scrap Order"
+  },
+  "finance": {
+    "title": "Finance",
+    "settlements": "Settlements",
+    "invoices": "Invoices",
+    "expenses": "Expenses",
+    "accounts": "Accounts",
+    "journal": "Journal Entries"
+  },
+  "settlements": {
+    "title": "Settlements",
+    "number": "Settlement Number",
+    "amount": "Amount",
+    "paymentMethod": "Payment Method",
+    "reason": "Reason",
+    "status": "Status",
+    "collectedBy": "Collected By",
+    "verifiedBy": "Verified By",
+    "initial": "Initial",
+    "verified": "Verified"
+  },
+  "reports": {
+    "title": "Reports",
+    "salesReport": "Sales Report",
+    "purchaseReport": "Purchase Report",
+    "serviceReport": "Service Report",
+    "financialReport": "Financial Report",
+    "engineerReport": "Engineer Report",
+    "inventoryReport": "Inventory Report"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "company": "Company",
+    "users": "Users"
+  },
+  "roles": {
+    "GENERAL_MANAGER": "General Manager",
+    "COMPANY_MANAGER": "Company Manager",
+    "ACCOUNTANT": "Accountant",
+    "MAINTENANCE_MANAGER": "Maintenance Manager",
+    "WORKSHOP_MANAGER": "Workshop Manager",
+    "ENGINEER": "Engineer",
+    "SALES_EMPLOYEE": "Sales Employee"
+  },
+  "companies": {
+    "jmalAhlat": "Jamal for Automation Devices",
+    "jmalParts": "Jamal for Spare Parts",
+    "sectory": "Sectory"
+  }
+}

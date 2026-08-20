@@ -1,23 +1,22 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
+import { I18nProvider } from "@/i18n/context";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Alex ERP",
-  description: "ERP Dashboard System",
+  title: "Alexandria Copier ERP",
+  description: "ERP System for Alexandria Copier - Machine Sales, Service & Maintenance Management",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="ar" dir="rtl">
       <body className={inter.className}>
-        <div className="flex min-h-screen bg-gray-50">
-          <Sidebar />
-          <main className="flex-1 p-8">{children}</main>
-        </div>
+        <I18nProvider>
+          {children}
+        </I18nProvider>
       </body>
     </html>
   );
