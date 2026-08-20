@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
+import Pagination from "@/components/Pagination";
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CASH: "نقدي",
@@ -46,6 +47,12 @@ export default function SalesPage() {
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [form, setForm] = useState({ customerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", discount: "", discountType: "FIXED", taxRate: "", notes: "" });
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
+
+  const filtered = orders;
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const fetchData = async () => {
     setLoading(true);
@@ -114,6 +121,7 @@ export default function SalesPage() {
         {loading ? <p className="text-gray-500">{t("common.loading")}</p>
         : orders.length === 0 ? <p className="text-gray-500">{t("common.noData")}</p>
         : (
+          <>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -130,7 +138,7 @@ export default function SalesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {orders.map((order) => (
+                {paged.map((order) => (
                   <Fragment key={order.id}>
                     <tr className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium">{order.id.slice(0, 8)}</td>
@@ -186,6 +194,8 @@ export default function SalesPage() {
               </tbody>
             </table>
           </div>
+          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
+          </>
         )}
       </div>
     </div>

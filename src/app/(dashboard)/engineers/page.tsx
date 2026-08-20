@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
+import Pagination from "@/components/Pagination";
 
 interface EngineerArea {
   id: string;
@@ -46,6 +47,8 @@ export default function EngineersPage() {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Engineer | null>(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
 
   const fetchEngineers = async () => {
     setLoading(true);
@@ -64,6 +67,9 @@ export default function EngineersPage() {
       e.name.toLowerCase().includes(search.toLowerCase()) ||
       (e.phone && e.phone.includes(search))
   );
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -269,7 +275,7 @@ export default function EngineersPage() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((engineer) => (
+                paged.map((engineer) => (
                   <tr
                     key={engineer.id}
                     className="hover:bg-gray-50 cursor-pointer"
@@ -299,6 +305,13 @@ export default function EngineersPage() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          totalItems={filtered.length}
+          pageSize={PAGE_SIZE}
+        />
       </div>
     </div>
   );

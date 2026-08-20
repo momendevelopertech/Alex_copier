@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useI18n } from "@/i18n/context";
+import Pagination from "@/components/Pagination";
 
 interface CustomerLocation {
   id: string;
@@ -56,6 +57,8 @@ export default function CustomersPage() {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Customer | null>(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -75,6 +78,9 @@ export default function CustomersPage() {
       (c.companyName && c.companyName.toLowerCase().includes(search.toLowerCase())) ||
       (c.phone && c.phone.includes(search))
   );
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -342,7 +348,7 @@ export default function CustomersPage() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((customer) => (
+                paged.map((customer) => (
                   <tr
                     key={customer.id}
                     className="hover:bg-gray-50 cursor-pointer"
@@ -378,6 +384,13 @@ export default function CustomersPage() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          totalItems={filtered.length}
+          pageSize={PAGE_SIZE}
+        />
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
+import Pagination from "@/components/Pagination";
 
 const PRIORITY_LABELS: Record<string, string> = {
   NORMAL: "عادي",
@@ -79,6 +80,8 @@ export default function ServiceRequestsPage() {
     description: "",
     priority: "NORMAL",
   });
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
 
   const fetchData = async () => {
     setLoading(true);
@@ -140,6 +143,10 @@ export default function ServiceRequestsPage() {
     );
   };
 
+  const filtered = requests;
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   return (
     <div dir="rtl">
       <div className="flex items-center justify-between mb-6">
@@ -178,6 +185,7 @@ export default function ServiceRequestsPage() {
         ) : requests.length === 0 ? (
           <p className="text-gray-500">{t("common.noData")}</p>
         ) : (
+          <>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -195,7 +203,7 @@ export default function ServiceRequestsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {requests.map((req) => (
+                {paged.map((req) => (
                   <tr key={req.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium">{req.requestNumber}</td>
                     <td className="px-4 py-3 text-sm">{req.customer.name}</td>
@@ -248,6 +256,8 @@ export default function ServiceRequestsPage() {
               </tbody>
             </table>
           </div>
+          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
+          </>
         )}
       </div>
     </div>

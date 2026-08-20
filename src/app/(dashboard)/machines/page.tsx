@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useI18n } from "@/i18n/context";
+import Pagination from "@/components/Pagination";
 
 interface Machine {
   id: string;
@@ -56,6 +57,8 @@ export default function MachinesPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
 
   const fetchMachines = async () => {
     setLoading(true);
@@ -74,6 +77,9 @@ export default function MachinesPage() {
       m.serialNumber.toLowerCase().includes(search.toLowerCase()) ||
       (m.model && m.model.toLowerCase().includes(search.toLowerCase()))
   );
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -234,7 +240,7 @@ export default function MachinesPage() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((machine) => (
+                paged.map((machine) => (
                   <tr key={machine.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm">{machine.serialNumber}</td>
                     <td className="px-4 py-3 text-sm">{machine.manufacturer}</td>
@@ -267,6 +273,13 @@ export default function MachinesPage() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          totalItems={filtered.length}
+          pageSize={PAGE_SIZE}
+        />
       </div>
     </div>
   );

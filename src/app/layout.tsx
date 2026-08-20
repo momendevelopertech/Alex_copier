@@ -13,7 +13,14 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
-      <body className={cairo.className}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var l=localStorage.getItem('locale');if(l==='en'){document.documentElement.dir='ltr';document.documentElement.lang='en'}else if(l==='ar'){document.documentElement.dir='rtl';document.documentElement.lang='ar'}}catch(e){}})()`,
+          }}
+        />
+      </head>
+      <body className={cairo.className} suppressHydrationWarning>
         <I18nProvider>
           {children}
         </I18nProvider>

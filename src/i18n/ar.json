@@ -357,7 +357,18 @@
     "title": "الإعدادات",
     "language": "اللغة",
     "company": "الشركة",
-    "users": "المستخدمون"
+    "users": "المستخدمون",
+    "general": "عام",
+    "profile": "الملف الشخصي",
+    "notifications": "الإشعارات",
+    "security": "الأمان"
+  },
+  "pagination": {
+    "showing": "عرض",
+    "of": "من",
+    "prev": "السابق",
+    "next": "التالي",
+    "page": "صفحة"
   },
   "roles": {
     "GENERAL_MANAGER": "المدير العام",

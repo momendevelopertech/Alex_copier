@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useSyncExternalStore, type ReactNode } from "react";
 import ar from "@/i18n/ar.json";
 import en from "@/i18n/en.json";
 
@@ -28,27 +28,48 @@ function getNestedValue(obj: unknown, path: string): string {
   return typeof current === "string" ? current : path;
 }
 
+function readLocaleFromStorage(): Locale {
+  if (typeof window === "undefined") return "ar";
+  try {
+    const stored = localStorage.getItem("locale");
+    if (stored === "ar" || stored === "en") return stored;
+  } catch {}
+  return "ar";
+}
+
+let listeners: Array<() => void> = [];
+function emitLocaleChange() {
+  for (const l of listeners) l();
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("ar");
+  const [, setTick] = useState(0);
 
-  useEffect(() => {
-    const stored = localStorage.getItem("locale") as Locale | null;
-    if (stored === "ar" || stored === "en") {
-      setLocaleState(stored);
-    }
-  }, []);
+  const locale = useSyncExternalStore(
+    (onStoreChange) => {
+      listeners.push(onStoreChange);
+      return () => {
+        listeners = listeners.filter((l) => l !== onStoreChange);
+      };
+    },
+    readLocaleFromStorage,
+    () => "ar" as Locale,
+  );
 
-  const setLocale = (newLocale: Locale) => {
-    setLocaleState(newLocale);
-    localStorage.setItem("locale", newLocale);
+  const setLocale = useCallback((newLocale: Locale) => {
+    try {
+      localStorage.setItem("locale", newLocale);
+    } catch {}
     document.documentElement.dir = newLocale === "ar" ? "rtl" : "ltr";
     document.documentElement.lang = newLocale;
-  };
+    emitLocaleChange();
+    setTick((t) => t + 1);
+  }, []);
 
-  const t = (key: string): string => {
+  const t = useCallback((key: string): string => {
     if (!key || typeof key !== "string") return "";
     return getNestedValue(translations[locale], key);
-  };
+  }, [locale]);
 
   const dir = locale === "ar" ? "rtl" : "ltr";
 

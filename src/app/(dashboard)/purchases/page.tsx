@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
+import Pagination from "@/components/Pagination";
 
 interface Supplier { id: string; name: string; }
 interface Product { id: string; name: string; }
@@ -35,6 +36,8 @@ export default function PurchasesPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ supplierId: "", notes: "" });
   const [itemRows, setItemRows] = useState<ItemRow[]>([{ productId: "", quantity: "", unitPrice: "" }]);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
 
   const fetchData = async () => {
     setLoading(true);
@@ -47,6 +50,10 @@ export default function PurchasesPage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  const filtered = orders;
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const addRow = () => setItemRows([...itemRows, { productId: "", quantity: "", unitPrice: "" }]);
   const removeRow = (index: number) => { if (itemRows.length > 1) setItemRows(itemRows.filter((_, i) => i !== index)); };
@@ -125,7 +132,7 @@ export default function PurchasesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {orders.map((order) => (
+                {paged.map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium">{order.id.slice(0, 8)}</td>
                     <td className="px-4 py-3 text-sm">{order.supplier.name}</td>
@@ -142,6 +149,7 @@ export default function PurchasesPage() {
             </table>
           </div>
         )}
+        <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
       </div>
     </div>
   );

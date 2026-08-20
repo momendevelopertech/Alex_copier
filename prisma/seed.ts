@@ -63,10 +63,10 @@ async function main() {
     data: {
       id: 'company1',
       name: 'Jumla Ahlat',
-      nameAr: '???? ???? ????',
+      nameAr: 'جمال لأجهزة الأتمتة',
       taxNumber: '123-456-789',
       tradeRegister: 'TR-001',
-      address: '??????? ???????? - ???? ???? - ??????????',
+      address: 'شارع فريد ندا - وسط البلد - الإسكندرية',
       phone: '033-456-7890',
       email: 'info@jumla-ahlat.com',
     },
@@ -76,10 +76,10 @@ async function main() {
     data: {
       id: 'company2',
       name: 'Jumla Parts',
-      nameAr: '???? ???? ??? ????',
+      nameAr: 'جمال لقطع الغيار',
       taxNumber: '987-654-321',
       tradeRegister: 'TR-002',
-      address: '???? ?????? - ???? ????? - ??????????',
+      address: 'شارع الجيش - سيدي جابر - الإسكندرية',
       phone: '033-789-0123',
       email: 'info@jumla-parts.com',
     },
@@ -89,10 +89,10 @@ async function main() {
     data: {
       id: 'company3',
       name: 'Sectory',
-      nameAr: '???? ???????',
+      nameAr: 'سيكتوري',
       taxNumber: '456-789-123',
       tradeRegister: 'TR-003',
-      address: '???? ?????? - ????? - ??????????',
+      address: 'شارع الكورنيش - محطة الرمل - الإسكندرية',
       phone: '033-012-3456',
       email: 'info@sectory.com',
     },
@@ -101,18 +101,18 @@ async function main() {
   // -------------------------------------------
   // USERS
   // -------------------------------------------
-  console.log('?? Creating users...');
+  console.log('📋 Creating users...');
 
   const passwordHash = await bcrypt.hash('password123', 10);
 
   const users = [
-    { id: 'user-omar', name: '??? ???', email: 'omar@alexandria-copier.com', role: 'GENERAL_MANAGER' as const, companyId: company1.id },
-    { id: 'user-sarah', name: '???? ????', email: 'sarah@jmal-ahlat.com', role: 'COMPANY_MANAGER' as const, companyId: company1.id },
-    { id: 'user-ahmed', name: '???? ?????', email: 'ahmed@alexandria-copier.com', role: 'ACCOUNTANT' as const, companyId: company1.id },
-    { id: 'user-mohamed', name: '???? ???', email: 'mohamed@alexandria-copier.com', role: 'MAINTENANCE_MANAGER' as const, companyId: company1.id },
-    { id: 'user-ali', name: '??? ???', email: 'ali@alexandria-copier.com', role: 'WORKSHOP_MANAGER' as const, companyId: company1.id },
-    { id: 'user-khaled', name: '???? ???????', email: 'khaled@alexandria-copier.com', role: 'ENGINEER' as const, companyId: null },
-    { id: 'user-fatma', name: '????? ????', email: 'fatma@alexandria-copier.com', role: 'SALES_EMPLOYEE' as const, companyId: company1.id },
+    { id: 'user-omar', name: 'عمر أحمد', email: 'omar@alexandria-copier.com', role: 'GENERAL_MANAGER' as const, companyId: company1.id },
+    { id: 'user-sarah', name: 'سارة محمد', email: 'sarah@jmal-ahlat.com', role: 'COMPANY_MANAGER' as const, companyId: company1.id },
+    { id: 'user-ahmed', name: 'أحمد عبدالرحمن', email: 'ahmed@alexandria-copier.com', role: 'ACCOUNTANT' as const, companyId: company1.id },
+    { id: 'user-mohamed', name: 'محمد حسن', email: 'mohamed@alexandria-copier.com', role: 'MAINTENANCE_MANAGER' as const, companyId: company1.id },
+    { id: 'user-ali', name: 'علي خالد', email: 'ali@alexandria-copier.com', role: 'WORKSHOP_MANAGER' as const, companyId: company1.id },
+    { id: 'user-khaled', name: 'خالد إبراهيم', email: 'khaled@alexandria-copier.com', role: 'ENGINEER' as const, companyId: null },
+    { id: 'user-fatma', name: 'فاطمة عبدالله', email: 'fatma@alexandria-copier.com', role: 'SALES_EMPLOYEE' as const, companyId: company1.id },
   ];
 
   for (const u of users) {
@@ -133,21 +133,21 @@ async function main() {
   console.log('?? Creating customers...');
 
   const customersData = [
-    { id: 'cust-1', name: '???? ?????', companyName: '???? ?????', contactPerson: '???? ?????', phone: '010-1234-5678', whatsapp: '010-1234-5678', city: '??????????', governorate: '??????????', creditLimit: 50000, customerType: 'COMPANY' as const },
-    { id: 'cust-2', name: '???? ??????', companyName: '???? ??????', contactPerson: '???? ??????', phone: '011-2345-6789', city: '??????????', governorate: '??????????', creditLimit: 30000, customerType: 'COMPANY' as const },
-    { id: 'cust-3', name: '???? ??????', companyName: null, contactPerson: '??? ???', phone: '012-3456-7890', city: '???????', governorate: '???????', creditLimit: 20000, customerType: 'INDIVIDUAL' as const },
-    { id: 'cust-4', name: '???? ?????', companyName: '???? ?????', contactPerson: '??? ?????', phone: '015-4567-8901', city: '??????????', governorate: '??????????', creditLimit: 45000, customerType: 'COMPANY' as const },
-    { id: 'cust-5', name: '???? ?????', companyName: null, contactPerson: '???? ?????', phone: '010-5678-9012', city: '??????????', governorate: '??????????', creditLimit: 15000, customerType: 'INDIVIDUAL' as const },
-    { id: 'cust-6', name: '???? ??????', companyName: '???? ??????', contactPerson: '???? ??????', phone: '011-6789-0123', city: '???????', governorate: '???????', creditLimit: 60000, customerType: 'COMPANY' as const },
-    { id: 'cust-7', name: '???? ??????', companyName: null, contactPerson: '???? ??????', phone: '012-7890-1234', city: '??????????', governorate: '??????????', creditLimit: 10000, customerType: 'INDIVIDUAL' as const },
-    { id: 'cust-8', name: '???? ?????', companyName: '???? ?????', contactPerson: '???? ?????', phone: '015-8901-2345', city: '??????????', governorate: '??????????', creditLimit: 40000, customerType: 'COMPANY' as const },
-    { id: 'cust-9', name: '???? ??????', companyName: null, contactPerson: '???? ??????', phone: '010-9012-3456', city: '???????', governorate: '???????', creditLimit: 25000, customerType: 'INDIVIDUAL' as const },
-    { id: 'cust-10', name: '???? ??????', companyName: '???? ??????', contactPerson: '???? ??????', phone: '011-0123-4567', city: '??????????', governorate: '??????????', creditLimit: 35000, customerType: 'COMPANY' as const },
-    { id: 'cust-11', name: '???? ?????', companyName: null, contactPerson: '????? ?????', phone: '012-1234-5678', city: '??????????', governorate: '??????????', creditLimit: 12000, customerType: 'INDIVIDUAL' as const },
-    { id: 'cust-12', name: '???? ???????', companyName: '???? ???????', contactPerson: '???? ???????', phone: '015-2345-6789', city: '???????', governorate: '???????', creditLimit: 55000, customerType: 'COMPANY' as const },
-    { id: 'cust-13', name: '???? ??????', companyName: null, contactPerson: '???? ??????', phone: '010-3456-7890', city: '??????????', governorate: '??????????', creditLimit: 18000, customerType: 'INDIVIDUAL' as const },
-    { id: 'cust-14', name: '???? ??????', companyName: '???? ??????', contactPerson: '????? ??????', phone: '011-4567-8901', city: '??????????', governorate: '??????????', creditLimit: 42000, customerType: 'COMPANY' as const },
-    { id: 'cust-15', name: '???? ?????', companyName: null, contactPerson: '???? ?????', phone: '012-5678-9012', city: '??????????', governorate: '??????????', creditLimit: 22000, customerType: 'INDIVIDUAL' as const },
+    { id: 'cust-1', name: 'مكتب النور', companyName: 'مكتب النور', contactPerson: 'أحمد النور', phone: '010-1234-5678', whatsapp: '010-1234-5678', city: 'الإسكندرية', governorate: 'الإسكندرية', creditLimit: 50000, customerType: 'COMPANY' as const },
+    { id: 'cust-2', name: 'شركة الشروق', companyName: 'الشروق', contactPerson: 'محمد الشروق', phone: '011-2345-6789', city: 'الإسكندرية', governorate: 'الإسكندرية', creditLimit: 30000, customerType: 'COMPANY' as const },
+    { id: 'cust-3', name: 'مكتب السلام', companyName: null, contactPerson: 'حسن علي', phone: '012-3456-7890', city: 'القاهرة', governorate: 'القاهرة', creditLimit: 20000, customerType: 'INDIVIDUAL' as const },
+    { id: 'cust-4', name: 'شركة الفجر', companyName: 'الفجر', contactPerson: 'خالد الفجر', phone: '015-4567-8901', city: 'الإسكندرية', governorate: 'الإسكندرية', creditLimit: 45000, customerType: 'COMPANY' as const },
+    { id: 'cust-5', name: 'مكتب العدل', companyName: null, contactPerson: 'عادل محمود', phone: '010-5678-9012', city: 'الإسكندرية', governorate: 'الإسكندرية', creditLimit: 15000, customerType: 'INDIVIDUAL' as const },
+    { id: 'cust-6', name: 'شركة الأمان', companyName: 'الأمان', contactPerson: 'ياسر الأمان', phone: '011-6789-0123', city: 'القاهرة', governorate: 'القاهرة', creditLimit: 60000, customerType: 'COMPANY' as const },
+    { id: 'cust-7', name: 'مكتب النجاح', companyName: null, contactPerson: 'كريم النجاح', phone: '012-7890-1234', city: 'الإسكندرية', governorate: 'الإسكندرية', creditLimit: 10000, customerType: 'INDIVIDUAL' as const },
+    { id: 'cust-8', name: 'شركة الأعمال', companyName: 'الأعمال', contactPerson: 'وليد الأعمال', phone: '015-8901-2345', city: 'الإسكندرية', governorate: 'الإسكندرية', creditLimit: 40000, customerType: 'COMPANY' as const },
+    { id: 'cust-9', name: 'مكتب التواضع', companyName: null, contactPerson: 'سمير التواضع', phone: '010-9012-3456', city: 'القاهرة', governorate: 'القاهرة', creditLimit: 25000, customerType: 'INDIVIDUAL' as const },
+    { id: 'cust-10', name: 'شركة الإبداع', companyName: 'الإبداع', contactPerson: 'طارق الإبداع', phone: '011-0123-4567', city: 'الإسكندرية', governorate: 'الإسكندرية', creditLimit: 35000, customerType: 'COMPANY' as const },
+    { id: 'cust-11', name: 'مكتب الرائد', companyName: null, contactPerson: 'منى الرائد', phone: '012-1234-5678', city: 'الإسكندرية', governorate: 'الإسكندرية', creditLimit: 12000, customerType: 'INDIVIDUAL' as const },
+    { id: 'cust-12', name: 'شركة المستقبل', companyName: 'المستقبل', contactPerson: 'حاتم المستقبل', phone: '015-2345-6789', city: 'القاهرة', governorate: 'القاهرة', creditLimit: 55000, customerType: 'COMPANY' as const },
+    { id: 'cust-13', name: 'مكتب الأمل', companyName: null, contactPerson: 'ياسمين الأمل', phone: '010-3456-7890', city: 'الإسكندرية', governorate: 'الإسكندرية', creditLimit: 18000, customerType: 'INDIVIDUAL' as const },
+    { id: 'cust-14', name: 'شركة السمو', companyName: 'السمو', contactPerson: 'هدى السمو', phone: '011-4567-8901', city: 'الإسكندرية', governorate: 'الإسكندرية', creditLimit: 42000, customerType: 'COMPANY' as const },
+    { id: 'cust-15', name: 'مكتب النخبة', companyName: null, contactPerson: 'أحمد النخبة', phone: '012-5678-9012', city: 'الإسكندرية', governorate: 'الإسكندرية', creditLimit: 22000, customerType: 'INDIVIDUAL' as const },
   ];
 
   for (const c of customersData) {
@@ -160,31 +160,31 @@ async function main() {
   console.log('?? Creating customer locations...');
 
   const locationsData = [
-    { customerId: 'cust-1', name: '????? ???????', address: '???? ???? ???? - ?????', city: '??????????', phone: '033-111-2222' },
-    { customerId: 'cust-1', name: '????? ??????', address: '???? ???? - ???? ?????', city: '??????????', phone: '033-111-3333' },
-    { customerId: 'cust-2', name: '?????? ???????', address: '???? ?????? - ??????', city: '??????????', phone: '033-222-4444' },
-    { customerId: 'cust-2', name: '??? ???????', address: '???? ???????? - ???????', city: '??????????', phone: '033-222-5555' },
-    { customerId: 'cust-3', name: '??????', address: '???? ??????? - ??? ?????', city: '???????', phone: '02-333-6666' },
-    { customerId: 'cust-3', name: '??? ???????', address: '???? 9 - ???????', city: '???????', phone: '02-333-7777' },
-    { customerId: 'cust-4', name: '????? ???????', address: '???? ????? - ???? ????', city: '??????????', phone: '033-444-8888' },
-    { customerId: 'cust-4', name: '??? ???????', address: '???? ??????? - ???????', city: '??????????', phone: '033-444-9999' },
-    { customerId: 'cust-5', name: '??????', address: '???? ???????? - ????????', city: '??????????', phone: '033-555-0000' },
-    { customerId: 'cust-5', name: '??? ????', address: '???? ???? ???? - ????', city: '??????????', phone: '033-555-1111' },
-    { customerId: 'cust-6', name: '????? ???????', address: '???? ??????? - ??? ?????', city: '???????', phone: '02-666-2222' },
-    { customerId: 'cust-6', name: '??? ?????', address: '???? ??????? - ?????', city: '???????', phone: '02-666-3333' },
-    { customerId: 'cust-6', name: '??? ???????', address: '???? 9 - ???????', city: '???????', phone: '02-666-4444' },
-    { customerId: 'cust-7', name: '??????', address: '???? ???? ???? - ?????', city: '??????????', phone: '033-777-5555' },
-    { customerId: 'cust-8', name: '????? ???????', address: '???? ???????? - ???????', city: '??????????', phone: '033-888-6666' },
-    { customerId: 'cust-8', name: '??? ???? ???', address: '???? ???????? - ???? ???', city: '??????????', phone: '033-888-7777' },
-    { customerId: 'cust-9', name: '??????', address: '???? ????? - ??? ?????', city: '???????', phone: '02-999-8888' },
-    { customerId: 'cust-10', name: '????? ???????', address: '???? ?????? - ???? ?????', city: '??????????', phone: '033-000-9999' },
-    { customerId: 'cust-10', name: '??? ??????', address: '???? ???? - ??????', city: '??????????', phone: '033-000-0000' },
-    { customerId: 'cust-11', name: '??????', address: '???? ????? - ?????', city: '??????????', phone: '033-111-1111' },
-    { customerId: 'cust-12', name: '????? ???????', address: '???? ?????? - ??? ?????', city: '???????', phone: '02-222-2222' },
-    { customerId: 'cust-12', name: '??? ?????', address: '???? ????? - ?????', city: '???????', phone: '02-222-3333' },
-    { customerId: 'cust-13', name: '??????', address: '???? ???? - ????????', city: '??????????', phone: '033-333-4444' },
-    { customerId: 'cust-14', name: '????? ???????', address: '???? ?????? - ??????', city: '??????????', phone: '033-444-5555' },
-    { customerId: 'cust-15', name: '??????', address: '???? ???? - ????', city: '??????????', phone: '033-555-6666' },
+    { customerId: 'cust-1', name: 'فرع الإسكندرية', address: 'شارع فريد ندا - وسط البلد', city: 'الإسكندرية', phone: '033-111-2222' },
+    { customerId: 'cust-1', name: 'فرع سيدي جابر', address: 'شارع الجيش - سيدي جابر', city: 'الإسكندرية', phone: '033-111-3333' },
+    { customerId: 'cust-2', name: 'مكتب رأس التين', address: 'شارع الكورنيش - رأس التين', city: 'الإسكندرية', phone: '033-222-4444' },
+    { customerId: 'cust-2', name: 'فرع المنشية', address: 'شارع 9 أبريل - المنشية', city: 'الإسكندرية', phone: '033-222-5555' },
+    { customerId: 'cust-3', name: 'القاهرة', address: 'شارع التحرير - وسط البلد', city: 'القاهرة', phone: '02-333-6666' },
+    { customerId: 'cust-3', name: 'فرع المعادي', address: 'شارع 9 - المعادي', city: 'القاهرة', phone: '02-333-7777' },
+    { customerId: 'cust-4', name: 'فرع الإسماعيلية', address: 'شارع الجيش - سموحه', city: 'الإسكندرية', phone: '033-444-8888' },
+    { customerId: 'cust-4', name: 'فرع الهرم', address: 'شارع الإسكندرية - الهرم', city: 'الإسكندرية', phone: '033-444-9999' },
+    { customerId: 'cust-5', name: 'المعادي', address: 'شارع 9 أبريل - المعادي', city: 'الإسكندرية', phone: '033-555-0000' },
+    { customerId: 'cust-5', name: 'فرع وسط البلد', address: 'شارع فريد ندا - وسط البلد', city: 'الإسكندرية', phone: '033-555-1111' },
+    { customerId: 'cust-6', name: 'فرع التحرير', address: 'شارع التحرير - وسط البلد', city: 'القاهرة', phone: '02-666-2222' },
+    { customerId: 'cust-6', name: 'فرع الدقي', address: 'شارع التحرير - الدقي', city: 'القاهرة', phone: '02-666-3333' },
+    { customerId: 'cust-6', name: 'فرع المعادي', address: 'شارع 9 - المعادي', city: 'القاهرة', phone: '02-666-4444' },
+    { customerId: 'cust-7', name: 'الإسكندرية', address: 'شارع فريد ندا - وسط البلد', city: 'الإسكندرية', phone: '033-777-5555' },
+    { customerId: 'cust-8', name: 'فرع المنشية', address: 'شارع 9 أبريل - المنشية', city: 'الإسكندرية', phone: '033-888-6666' },
+    { customerId: 'cust-8', name: 'فرع سيدي جابر الجديد', address: 'شارع 9 أبريل - سيدي جابر', city: 'الإسكندرية', phone: '033-888-7777' },
+    { customerId: 'cust-9', name: 'المعادي', address: 'شارع الجيش - وسط البلد', city: 'القاهرة', phone: '02-999-8888' },
+    { customerId: 'cust-10', name: 'فرع الإسكندرية', address: 'شارع الكورنيش - سيدي جابر', city: 'الإسكندرية', phone: '033-000-9999' },
+    { customerId: 'cust-10', name: 'فرع رأس التين', address: 'شارع فريد - رأس التين', city: 'الإسكندرية', phone: '033-000-0000' },
+    { customerId: 'cust-11', name: 'الإسكندرية', address: 'شارع الجيش - المحطة', city: 'الإسكندرية', phone: '033-111-1111' },
+    { customerId: 'cust-12', name: 'فرع التحرير', address: 'شارع الكورنيش - وسط البلد', city: 'القاهرة', phone: '02-222-2222' },
+    { customerId: 'cust-12', name: 'فرع الدقي', address: 'شارع الجيش - الدقي', city: 'القاهرة', phone: '02-222-3333' },
+    { customerId: 'cust-13', name: 'الإسكندرية', address: 'شارع فريد - الإسكندرية', city: 'الإسكندرية', phone: '033-333-4444' },
+    { customerId: 'cust-14', name: 'فرع سيدي جابر', address: 'شارع الكورنيش - رأس التين', city: 'الإسكندرية', phone: '033-444-5555' },
+    { customerId: 'cust-15', name: 'الإسكندرية', address: 'شارع فريد - وسط البلد', city: 'الإسكندرية', phone: '033-555-6666' },
   ];
 
   const createdLocations: any[] = [];
@@ -210,11 +210,11 @@ async function main() {
   console.log('?? Creating suppliers...');
 
   const suppliersData = [
-    { id: 'sup-1', name: 'Ricoh Egypt', contactName: 'Eng. Hesham', phone: '02-2267-8901', email: 'sales@ricoh-egypt.com', address: '??????? - ???????', taxNumber: 'SUP-100-001', companyId: company1.id },
-    { id: 'sup-2', name: 'Canon Egypt', contactName: 'Mr. Tarek', phone: '02-2345-6789', email: 'info@canon-egypt.com', address: '??? ??????? - ???????', taxNumber: 'SUP-100-002', companyId: company1.id },
-    { id: 'sup-3', name: 'Xerox Egypt', contactName: 'Ms. Nadia', phone: '02-2456-7890', email: 'orders@xerox-egypt.com', address: '?????? ?????? - ???????', taxNumber: 'SUP-100-003', companyId: company1.id },
-    { id: 'sup-4', name: 'Sharp Egypt', contactName: 'Eng. Youssef', phone: '02-2567-8901', email: 'sales@sharp-egypt.com', address: '????? ??? - ???????', taxNumber: 'SUP-100-004', companyId: company2.id },
-    { id: 'sup-5', name: 'Konica Minolta', contactName: 'Mr. Ali', phone: '02-2678-9012', email: 'info@konica-minolta-eg.com', address: '??????????', taxNumber: 'SUP-100-005', companyId: company2.id },
+    { id: 'sup-1', name: 'Ricoh Egypt', contactName: 'Eng. Hesham', phone: '02-2267-8901', email: 'sales@ricoh-egypt.com', address: 'شارع فريد - الإسكندرية', taxNumber: 'SUP-100-001', companyId: company1.id },
+    { id: 'sup-2', name: 'Canon Egypt', contactName: 'Mr. Tarek', phone: '02-2345-6789', email: 'info@canon-egypt.com', address: 'شارع التحرير - الإسكندرية', taxNumber: 'SUP-100-002', companyId: company1.id },
+    { id: 'sup-3', name: 'Xerox Egypt', contactName: 'Ms. Nadia', phone: '02-2456-7890', email: 'orders@xerox-egypt.com', address: 'محطة الرمل - الإسكندرية', taxNumber: 'SUP-100-003', companyId: company1.id },
+    { id: 'sup-4', name: 'Sharp Egypt', contactName: 'Eng. Youssef', phone: '02-2567-8901', email: 'sales@sharp-egypt.com', address: 'شارع الجيش - الإسكندرية', taxNumber: 'SUP-100-004', companyId: company2.id },
+    { id: 'sup-5', name: 'Konica Minolta', contactName: 'Mr. Ali', phone: '02-2678-9012', email: 'info@konica-minolta-eg.com', address: 'الإسكندرية', taxNumber: 'SUP-100-005', companyId: company2.id },
   ];
 
   for (const sup of suppliersData) {
@@ -227,12 +227,12 @@ async function main() {
   console.log('?? Creating engineers...');
 
   const engineersData = [
-    { id: 'eng-1', name: '???? ???', phone: '010-1111-2222', email: 'ahmed.ali@alexandria-copier.com', baseSalary: 8000, transportAllowance: 2000, areas: ['?????', '???? ????'], skills: [{ model: 'Ricoh MP C3004', level: 3 }, { model: 'Canon imageRUNNER', level: 2 }] },
-    { id: 'eng-2', name: '???? ???', phone: '011-2222-3333', email: 'mohamed.hassan@alexandria-copier.com', baseSalary: 9000, transportAllowance: 2500, areas: ['??????', '???????'], skills: [{ model: 'Xerox VersaLink', level: 3 }, { model: 'Sharp MX', level: 2 }] },
-    { id: 'eng-3', name: '????? ???????', phone: '012-3333-4444', email: 'mahmoud.ibrahim@alexandria-copier.com', baseSalary: 8500, transportAllowance: 2200, areas: ['???????', '????????'], skills: [{ model: 'Konica Minolta bizhub', level: 3 }] },
-    { id: 'eng-4', name: '??? ????', phone: '015-4444-5555', email: 'hassan.khaled@alexandria-copier.com', baseSalary: 7500, transportAllowance: 1800, areas: ['???? ?????', '?????'], skills: [{ model: 'Ricoh MP C4504', level: 3 }] },
-    { id: 'eng-5', name: '??? ????', phone: '010-5555-6666', email: 'omar.saeed@alexandria-copier.com', baseSalary: 8000, transportAllowance: 2000, areas: ['????', '???? ???'], skills: [{ model: 'Canon imageRUNNER ADVANCE', level: 3 }] },
-    { id: 'eng-6', name: '???? ????', phone: '011-6666-7777', email: 'yasser.mohamed@alexandria-copier.com', baseSalary: 7000, transportAllowance: 1500, areas: ['????????', '??? ?????'], skills: [{ model: 'Xerox WorkCentre', level: 2 }] },
+    { id: 'eng-1', name: 'أحمد علي', phone: '010-1111-2222', email: 'ahmed.ali@alexandria-copier.com', baseSalary: 8000, transportAllowance: 2000, areas: ['الإسكندرية', 'وسط البلد'], skills: [{ model: 'Ricoh MP C3004', level: 3 }, { model: 'Canon imageRUNNER', level: 2 }] },
+    { id: 'eng-2', name: 'محمد حسن', phone: '011-2222-3333', email: 'mohamed.hassan@alexandria-copier.com', baseSalary: 9000, transportAllowance: 2500, areas: ['الرياض', 'الإسكندرية'], skills: [{ model: 'Xerox VersaLink', level: 3 }, { model: 'Sharp MX', level: 2 }] },
+    { id: 'eng-3', name: 'محمود إبراهيم', phone: '012-3333-4444', email: 'mahmoud.ibrahim@alexandria-copier.com', baseSalary: 8500, transportAllowance: 2200, areas: ['الإسكندرية', 'المعادي'], skills: [{ model: 'Konica Minolta bizhub', level: 3 }] },
+    { id: 'eng-4', name: 'حسن خالد', phone: '015-4444-5555', email: 'hassan.khaled@alexandria-copier.com', baseSalary: 7500, transportAllowance: 1800, areas: ['مكتب العدل', 'الجيش'], skills: [{ model: 'Ricoh MP C4504', level: 3 }] },
+    { id: 'eng-5', name: 'عمرو سعيد', phone: '010-5555-6666', email: 'omar.saeed@alexandria-copier.com', baseSalary: 8000, transportAllowance: 2000, areas: ['القاهرة', 'وسط البلد'], skills: [{ model: 'Canon imageRUNNER ADVANCE', level: 3 }] },
+    { id: 'eng-6', name: 'ياسر محمد', phone: '011-6666-7777', email: 'yasser.mohamed@alexandria-copier.com', baseSalary: 7000, transportAllowance: 1500, areas: ['المعادي', 'شارع الجيش'], skills: [{ model: 'Xerox WorkCentre', level: 2 }] },
   ];
 
   const createdEngineers: any[] = [];
@@ -258,13 +258,13 @@ async function main() {
   console.log('?? Creating investors...');
 
   const investor1 = await prisma.investor.create({
-    data: { name: '???? ?????? 1', phone: '010-7777-8888', email: 'ahmed.inv@example.com', ownershipPct: 40 },
+    data: { name: 'مستثمر أول', phone: '010-7777-8888', email: 'ahmed.inv@example.com', ownershipPct: 40 },
   });
   const investor2 = await prisma.investor.create({
-    data: { name: '???? ?????? 2', phone: '011-8888-9999', email: 'salem.inv@example.com', ownershipPct: 35 },
+    data: { name: 'مستثمر ثاني', phone: '011-8888-9999', email: 'salem.inv@example.com', ownershipPct: 35 },
   });
   const investor3 = await prisma.investor.create({
-    data: { name: '???? ?????? 3', phone: '012-9999-0000', email: 'khaled.inv@example.com', ownershipPct: 25 },
+    data: { name: 'مستثمر ثالث', phone: '012-9999-0000', email: 'khaled.inv@example.com', ownershipPct: 25 },
   });
 
   // -------------------------------------------
@@ -357,9 +357,9 @@ async function main() {
   // -------------------------------------------
   console.log('?? Creating warehouses...');
 
-  const wh1 = await prisma.warehouse.create({ data: { id: 'wh-1', name: '?????? ??????? - ???? ????', companyId: company1.id } });
-  const wh2 = await prisma.warehouse.create({ data: { id: 'wh-2', name: '?????? ??????? - ??? ????', companyId: company2.id } });
-  const wh3 = await prisma.warehouse.create({ data: { id: 'wh-3', name: '???? ??????', companyId: company3.id } });
+  const wh1 = await prisma.warehouse.create({ data: { id: 'wh-1', name: 'مستودع الإسكندرية - وسط البلد', companyId: company1.id } });
+  const wh2 = await prisma.warehouse.create({ data: { id: 'wh-2', name: 'مستودع الإسكندرية - سيدي جابر', companyId: company2.id } });
+  const wh3 = await prisma.warehouse.create({ data: { id: 'wh-3', name: 'ورشة العمل', companyId: company3.id } });
 
   // -------------------------------------------
   // MACHINES (25)
@@ -738,14 +738,14 @@ async function main() {
 
   const sr1 = await prisma.serviceRequest.create({
     data: {
-      id: 'sr-1', requestNumber: 'SR-2024-001', customerId: 'cust-1', locationId: createdLocations[0].id, machineId: 'mach-01', description: '???????? ???? ??? ???? ???', priority: 'URGENT', status: 'CLOSED', engineerId: 'eng-1', companyId: company1.id, customerRating: 5, ratingNotes: '???? ??????',
+      id: 'sr-1', requestNumber: 'SR-2024-001', customerId: 'cust-1', locationId: createdLocations[0].id, machineId: 'mach-01', description: 'خطأ في الوحدة أثناء التشغيل', priority: 'URGENT', status: 'CLOSED', engineerId: 'eng-1', companyId: company1.id, customerRating: 5, ratingNotes: 'خدمة ممتازة',
       problems: { create: [{ description: 'Drum unit needs replacement' }] },
     },
   });
 
   const sr2 = await prisma.serviceRequest.create({
     data: {
-      id: 'sr-2', requestNumber: 'SR-2024-002', customerId: 'cust-2', locationId: createdLocations[2].id, machineId: 'mach-02', description: '??????? ???? ?? ?????', priority: 'IMPORTANT', status: 'RESOLVED', engineerId: 'eng-4', companyId: company1.id, customerRating: 4, ratingNotes: '?? ????',
+      id: 'sr-2', requestNumber: 'SR-2024-002', customerId: 'cust-2', locationId: createdLocations[2].id, machineId: 'mach-02', description: '☓ وقوع في الورقة', priority: 'IMPORTANT', status: 'RESOLVED', engineerId: 'eng-4', companyId: company1.id, customerRating: 4, ratingNotes: 'جيد جدا',
       problems: { create: [{ description: 'Paper feed roller worn out' }, { description: 'Pickup roller needs cleaning' }] },
     },
   });
@@ -901,14 +901,14 @@ async function main() {
   console.log('?? Creating expenses...');
 
   const expensesData = [
-    { companyId: company1.id, category: 'RENT', description: '????? ?????? - ????? 2024', amount: 15000, paidBy: user1.id, date: new Date('2024-06-01') },
-    { companyId: company1.id, category: 'UTILITIES', description: '?????? ???????? ??????? - ?????', amount: 3500, paidBy: user3.id, date: new Date('2024-06-05') },
-    { companyId: company1.id, category: 'TRANSPORT', description: '?????? ????? ???????', amount: 2800, paidBy: user4.id, date: new Date('2024-06-10') },
-    { companyId: company1.id, category: 'MAINTENANCE', description: '????? ????eworkshop', amount: 4500, paidBy: user5.id, date: new Date('2024-06-12') },
-    { companyId: company1.id, category: 'SALARY', description: '????? ??????? - ?????', amount: 85000, paidBy: user1.id, date: new Date('2024-06-28') },
-    { companyId: company2.id, category: 'RENT', description: '????? ?????? - ????? 2024', amount: 8000, paidBy: user2.id, date: new Date('2024-06-01') },
-    { companyId: company2.id, category: 'UTILITIES', description: '?????? ??????? - ?????', amount: 2000, paidBy: user2.id, date: new Date('2024-06-05') },
-    { companyId: company1.id, category: 'OFFICE', description: '???????? ??????', amount: 1200, paidBy: user3.id, date: new Date('2024-06-15') },
+    { companyId: company1.id, category: 'RENT', description: 'إيجار المكتب - يونيو 2024', amount: 15000, paidBy: user1.id, date: new Date('2024-06-01') },
+    { companyId: company1.id, category: 'UTILITIES', description: 'فواتير الكهرباء والمياه - يونيو', amount: 3500, paidBy: user3.id, date: new Date('2024-06-05') },
+    { companyId: company1.id, category: 'TRANSPORT', description: 'مصاريف النقل للعملاء', amount: 2800, paidBy: user4.id, date: new Date('2024-06-10') },
+    { companyId: company1.id, category: 'MAINTENANCE', description: 'صيانة الورشةworkshop', amount: 4500, paidBy: user5.id, date: new Date('2024-06-12') },
+    { companyId: company1.id, category: 'SALARY', description: 'رواتب الموظفين - يونيو', amount: 85000, paidBy: user1.id, date: new Date('2024-06-28') },
+    { companyId: company2.id, category: 'RENT', description: 'إيجار المكتب - يونيو 2024', amount: 8000, paidBy: user2.id, date: new Date('2024-06-01') },
+    { companyId: company2.id, category: 'UTILITIES', description: 'فواتير الكهرباء - يونيو', amount: 2000, paidBy: user2.id, date: new Date('2024-06-05') },
+    { companyId: company1.id, category: 'OFFICE', description: 'مشتريات مكتبية', amount: 1200, paidBy: user3.id, date: new Date('2024-06-15') },
   ];
 
   for (const e of expensesData) {
@@ -961,16 +961,16 @@ async function main() {
   console.log('?? Creating accounts...');
 
   const accountsData = [
-    { id: 'acc-1', code: '1001', name: '???????', accountType: 'ASSET' as const, companyId: company1.id, balance: 250000 },
-    { id: 'acc-2', code: '1002', name: '?????', accountType: 'ASSET' as const, companyId: company1.id, balance: 1500000 },
-    { id: 'acc-3', code: '1100', name: '????????', accountType: 'ASSET' as const, companyId: company1.id, balance: 380000 },
-    { id: 'acc-4', code: '1200', name: '???????', accountType: 'ASSET' as const, companyId: company1.id, balance: 2200000 },
-    { id: 'acc-5', code: '2001', name: '????????', accountType: 'LIABILITY' as const, companyId: company1.id, balance: 850000 },
-    { id: 'acc-6', code: '3001', name: '??? ?????', accountType: 'EQUITY' as const, companyId: company1.id, balance: 3000000 },
-    { id: 'acc-7', code: '4001', name: '??????? ????????', accountType: 'REVENUE' as const, companyId: company1.id, balance: 1850000 },
-    { id: 'acc-8', code: '4002', name: '??????? ???????', accountType: 'REVENUE' as const, companyId: company1.id, balance: 240000 },
-    { id: 'acc-9', code: '5001', name: '????? ??????? ???????', accountType: 'EXPENSE' as const, companyId: company1.id, balance: 1200000 },
-    { id: 'acc-10', code: '5002', name: '?????? ???????', accountType: 'EXPENSE' as const, companyId: company1.id, balance: 120000 },
+    { id: 'acc-1', code: '1001', name: 'الصندوق', accountType: 'ASSET' as const, companyId: company1.id, balance: 250000 },
+    { id: 'acc-2', code: '1002', name: 'البنك', accountType: 'ASSET' as const, companyId: company1.id, balance: 1500000 },
+    { id: 'acc-3', code: '1100', name: 'المدينون', accountType: 'ASSET' as const, companyId: company1.id, balance: 380000 },
+    { id: 'acc-4', code: '1200', name: 'المخزون', accountType: 'ASSET' as const, companyId: company1.id, balance: 2200000 },
+    { id: 'acc-5', code: '2001', name: 'الدائنون', accountType: 'LIABILITY' as const, companyId: company1.id, balance: 850000 },
+    { id: 'acc-6', code: '3001', name: 'رأس المال', accountType: 'EQUITY' as const, companyId: company1.id, balance: 3000000 },
+    { id: 'acc-7', code: '4001', name: 'إيرادات المبيعات', accountType: 'REVENUE' as const, companyId: company1.id, balance: 1850000 },
+    { id: 'acc-8', code: '4002', name: 'إيرادات الصيانة', accountType: 'REVENUE' as const, companyId: company1.id, balance: 240000 },
+    { id: 'acc-9', code: '5001', name: 'تكلفة البضاعة المباعة', accountType: 'EXPENSE' as const, companyId: company1.id, balance: 1200000 },
+    { id: 'acc-10', code: '5002', name: 'مصاريف إدارية', accountType: 'EXPENSE' as const, companyId: company1.id, balance: 120000 },
   ];
 
   for (const a of accountsData) {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
+import Pagination from "@/components/Pagination";
 
 const TYPE_LABELS: Record<string, string> = {
   MAINTENANCE_ONLY: "صيانة فقط",
@@ -58,6 +59,8 @@ export default function ContractsPage() {
     value: "", billingCycle: "MONTHLY", visitLimit: "", costPerCopy: "",
     earlyTerminationFee: "", notes: "",
   });
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
 
   const fetchData = async () => {
     setLoading(true);
@@ -92,6 +95,10 @@ export default function ContractsPage() {
     await fetch(`/api/contracts/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: nextStatus }) });
     fetchData();
   };
+
+  const filtered = contracts;
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div dir="rtl">
@@ -159,7 +166,7 @@ export default function ContractsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {contracts.map((c) => (
+                {paged.map((c) => (
                   <tr key={c.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium">{c.contractNumber}</td>
                     <td className="px-4 py-3 text-sm">{c.customer.name}</td>
@@ -180,6 +187,7 @@ export default function ContractsPage() {
             </table>
           </div>
         )}
+        <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
       </div>
     </div>
   );

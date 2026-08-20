@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
+import Pagination from "@/components/Pagination";
 
 interface Company { id: string; name: string; }
 interface Customer { id: string; name: string; }
@@ -26,6 +27,8 @@ export default function SettlementsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ companyId: "", customerId: "", engineerId: "", amount: "", paymentMethod: "CASH", reason: "" });
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
 
   const fetchData = async () => {
     setLoading(true);
@@ -50,6 +53,10 @@ export default function SettlementsPage() {
     await fetch(`/api/settlements/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "VERIFIED" }) });
     fetchData();
   };
+
+  const filtered = settlements;
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div dir="rtl">
@@ -93,45 +100,48 @@ export default function SettlementsPage() {
         {loading ? <p className="text-gray-500">{t("common.loading")}</p>
         : settlements.length === 0 ? <p className="text-gray-500">{t("common.noData")}</p>
         : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("settlements.number")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.company")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("settlements.amount")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("settlements.paymentMethod")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("settlements.reason")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("settlements.status")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("settlements.collectedBy")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.date")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.actions")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {settlements.map((s) => (
-                  <tr key={s.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium">{s.settlementNumber}</td>
-                    <td className="px-4 py-3 text-sm">{s.company.name}</td>
-                    <td className="px-4 py-3 text-sm">{s.amount.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-sm">{PAYMENT_METHOD_LABELS[s.paymentMethod] || s.paymentMethod}</td>
-                    <td className="px-4 py-3 text-sm">{s.reason}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${s.status === "VERIFIED" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
-                        {s.status === "VERIFIED" && "✓ "}{STATUS_LABELS[s.status] || s.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm">{s.collector.name}</td>
-                    <td className="px-4 py-3 text-sm">{new Date(s.createdAt).toLocaleDateString("ar-EG")}</td>
-                    <td className="px-4 py-3 text-sm">
-                      {s.status === "INITIAL" && (<button onClick={() => handleVerify(s.id)} className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">{t("common.verify")}</button>)}
-                      {s.status === "VERIFIED" && s.verifier && (<span className="text-green-600 text-xs">{t("settlements.by")} {s.verifier.name}</span>)}
-                    </td>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("settlements.number")}</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.company")}</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("settlements.amount")}</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("settlements.paymentMethod")}</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("settlements.reason")}</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("settlements.status")}</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("settlements.collectedBy")}</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.date")}</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.actions")}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {paged.map((s) => (
+                    <tr key={s.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm font-medium">{s.settlementNumber}</td>
+                      <td className="px-4 py-3 text-sm">{s.company.name}</td>
+                      <td className="px-4 py-3 text-sm">{s.amount.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-sm">{PAYMENT_METHOD_LABELS[s.paymentMethod] || s.paymentMethod}</td>
+                      <td className="px-4 py-3 text-sm">{s.reason}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${s.status === "VERIFIED" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
+                          {s.status === "VERIFIED" && "✓ "}{STATUS_LABELS[s.status] || s.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">{s.collector.name}</td>
+                      <td className="px-4 py-3 text-sm">{new Date(s.createdAt).toLocaleDateString("ar-EG")}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {s.status === "INITIAL" && (<button onClick={() => handleVerify(s.id)} className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">{t("common.verify")}</button>)}
+                        {s.status === "VERIFIED" && s.verifier && (<span className="text-green-600 text-xs">{t("settlements.by")} {s.verifier.name}</span>)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
+          </>
         )}
       </div>
     </div>
