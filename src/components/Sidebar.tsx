@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useI18n } from "@/i18n/context";
+import { useSession, signOut } from "next-auth/react";
+import { hasPageAccess, type Page } from "@/lib/permissions";
 import {
   LayoutDashboard,
   Printer,
@@ -20,26 +22,31 @@ import {
   BarChart3,
   Settings,
   Building2,
+  Truck,
+  PieChart,
+  LogOut,
   Menu,
   X,
 } from "lucide-react";
 
-const navItems = [
-  { key: "navigation.dashboard", href: "/", icon: LayoutDashboard },
-  { key: "navigation.machines", href: "/machines", icon: Printer },
-  { key: "navigation.customers", href: "/customers", icon: Users },
-  { key: "navigation.engineers", href: "/engineers", icon: Wrench },
-  { key: "navigation.serviceRequests", href: "/service-requests", icon: AlertTriangle },
-  { key: "navigation.contracts", href: "/contracts", icon: FileText },
-  { key: "navigation.purchases", href: "/purchases", icon: ShoppingCart },
-  { key: "navigation.sales", href: "/sales", icon: DollarSign },
-  { key: "navigation.inventory", href: "/inventory", icon: Package },
-  { key: "navigation.workshop", href: "/workshop", icon: Cog },
-  { key: "navigation.finance", href: "/finance", icon: Wallet },
-  { key: "navigation.companies", href: "/companies", icon: Building2 },
-  { key: "navigation.settlements", href: "/settlements", icon: Receipt },
-  { key: "navigation.reports", href: "/reports", icon: BarChart3 },
-  { key: "navigation.settings", href: "/settings", icon: Settings },
+const navItems: { key: string; href: string; icon: typeof LayoutDashboard; page: Page }[] = [
+  { key: "navigation.dashboard", href: "/", icon: LayoutDashboard, page: "dashboard" },
+  { key: "navigation.machines", href: "/machines", icon: Printer, page: "machines" },
+  { key: "navigation.customers", href: "/customers", icon: Users, page: "customers" },
+  { key: "navigation.engineers", href: "/engineers", icon: Wrench, page: "engineers" },
+  { key: "navigation.serviceRequests", href: "/service-requests", icon: AlertTriangle, page: "serviceRequests" },
+  { key: "navigation.contracts", href: "/contracts", icon: FileText, page: "contracts" },
+  { key: "navigation.purchases", href: "/purchases", icon: ShoppingCart, page: "purchases" },
+  { key: "navigation.sales", href: "/sales", icon: DollarSign, page: "sales" },
+  { key: "navigation.inventory", href: "/inventory", icon: Package, page: "inventory" },
+  { key: "navigation.workshop", href: "/workshop", icon: Cog, page: "workshop" },
+  { key: "navigation.finance", href: "/finance", icon: Wallet, page: "finance" },
+  { key: "navigation.companies", href: "/companies", icon: Building2, page: "companies" },
+  { key: "navigation.settlements", href: "/settlements", icon: Receipt, page: "settlements" },
+  { key: "navigation.suppliers", href: "/suppliers", icon: Truck, page: "suppliers" },
+  { key: "navigation.investors", href: "/investors", icon: PieChart, page: "investors" },
+  { key: "navigation.reports", href: "/reports", icon: BarChart3, page: "reports" },
+  { key: "navigation.settings", href: "/settings", icon: Settings, page: "settings" },
 ];
 
 export default function Sidebar() {
@@ -47,11 +54,15 @@ export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const { t } = useI18n();
+  const { data: session } = useSession();
+  const userRole = (session?.user as { role?: string })?.role;
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
     return pathname.startsWith(href);
   };
+
+  const allowedNavItems = navItems.filter((item) => hasPageAccess(userRole, item.page));
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
@@ -77,7 +88,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4">
-        {navItems.map((item) => {
+        {allowedNavItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
           return (
@@ -97,6 +108,16 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      <div className="border-t border-gray-700 p-3">
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-colors w-full text-gray-300 hover:bg-red-600/20 hover:text-red-400"
+        >
+          <LogOut size={20} />
+          {!collapsed && <span className="text-sm">{t("navigation.logout")}</span>}
+        </button>
+      </div>
     </div>
   );
 

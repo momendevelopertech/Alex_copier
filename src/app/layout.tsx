@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cairo } from "next/font/google";
 import "./globals.css";
 import { I18nProvider } from "@/i18n/context";
+import { SessionProvider } from "next-auth/react";
 
 const cairo = Cairo({ subsets: ["arabic", "latin"] });
 
@@ -21,9 +22,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className={cairo.className} suppressHydrationWarning>
-        <I18nProvider>
-          {children}
-        </I18nProvider>
+        <SessionProvider>
+          <I18nProvider>
+            {children}
+          </I18nProvider>
+        </SessionProvider>
       </body>
     </html>
   );

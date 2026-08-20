@@ -1,7 +1,31 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
+  const token = await getToken({ req: request, secret: process.env.AUTH_SECRET });
+  const { pathname } = request.nextUrl;
+
+  // صفحاتпубличية
+  const publicPaths = ["/login", "/api/auth"];
+  const isPublic = publicPaths.some((p) => pathname.startsWith(p));
+
+  if (isPublic) {
+    // لو عايز يفتح login وهو مسجل دخول، رجعه للرئيسية
+    if (token && pathname === "/login") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    return NextResponse.next();
+  }
+
+  // لو مش مسجل دخول، رجعه لصفحة تسجيل الدخول
+  if (!token) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
   return NextResponse.next();
 }
 

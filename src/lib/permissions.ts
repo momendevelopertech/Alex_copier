@@ -1,0 +1,89 @@
+export type Role =
+  | "GENERAL_MANAGER"
+  | "COMPANY_MANAGER"
+  | "ACCOUNTANT"
+  | "MAINTENANCE_MANAGER"
+  | "WORKSHOP_MANAGER"
+  | "ENGINEER"
+  | "SALES_EMPLOYEE";
+
+export type Page =
+  | "dashboard"
+  | "machines"
+  | "customers"
+  | "engineers"
+  | "serviceRequests"
+  | "contracts"
+  | "purchases"
+  | "sales"
+  | "inventory"
+  | "workshop"
+  | "finance"
+  | "companies"
+  | "settlements"
+  | "reports"
+  | "settings"
+  | "suppliers"
+  | "investors";
+
+export const ROLE_PERMISSIONS: Record<Role, Page[]> = {
+  // المدير العام — يشوف كل حاجة (ادمن)
+  GENERAL_MANAGER: [
+    "dashboard", "machines", "customers", "engineers",
+    "serviceRequests", "contracts", "purchases", "sales",
+    "inventory", "workshop", "finance", "companies",
+    "settlements", "reports", "settings", "suppliers", "investors",
+  ],
+
+  // مدير الشركة — إدارة شاملة لشركته
+  COMPANY_MANAGER: [
+    "dashboard", "machines", "customers", "engineers",
+    "serviceRequests", "contracts", "purchases", "sales",
+    "inventory", "workshop", "finance", "settlements",
+    "reports", "suppliers",
+  ],
+
+  // المحاسب — المالية والفواتير والتقارير
+  ACCOUNTANT: [
+    "dashboard", "purchases", "sales", "finance",
+    "settlements", "reports", "companies",
+  ],
+
+  // مدير الصيانة — طلبات الصيانة والمهندسين والورشة
+  MAINTENANCE_MANAGER: [
+    "dashboard", "serviceRequests", "engineers",
+    "contracts", "workshop", "inventory", "machines",
+  ],
+
+  // مدير الورشة — الورشة والمخزون والengineers
+  WORKSHOP_MANAGER: [
+    "dashboard", "workshop", "inventory", "engineers", "machines",
+  ],
+
+  // المهندس — طلبات الصيانة المعينة عليه فقط
+  ENGINEER: [
+    "dashboard", "serviceRequests",
+  ],
+
+  // موظف المبيعات — العملاء والمبيعات والعقود
+  SALES_EMPLOYEE: [
+    "dashboard", "customers", "sales", "contracts", "machines",
+  ],
+};
+
+export const ROLE_LABELS_AR: Record<Role, string> = {
+  GENERAL_MANAGER: "المدير العام",
+  COMPANY_MANAGER: "مدير الشركة",
+  ACCOUNTANT: "المحاسب",
+  MAINTENANCE_MANAGER: "مدير الصيانة",
+  WORKSHOP_MANAGER: "مدير الورشة",
+  ENGINEER: "مهندس",
+  SALES_EMPLOYEE: "موظف مبيعات",
+};
+
+export function hasPageAccess(role: string | undefined, page: Page): boolean {
+  if (!role) return false;
+  const permissions = ROLE_PERMISSIONS[role as Role];
+  if (!permissions) return false;
+  return permissions.includes(page);
+}

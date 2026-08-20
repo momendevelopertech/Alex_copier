@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { Printer } from "lucide-react";
+import { Printer, Mail, Lock, LogIn, User, Shield } from "lucide-react";
 
 const testAccounts = [
-  { name: "عمر حسن", email: "omar@alex-copier.com", password: "password123", role: "المدير العام" },
-  { name: "سارة مدير الشركة", email: "sarah@jmal-ahlat.com", password: "password123", role: "مدير الشركة" },
-  { name: "أحمد المحاسب", email: "ahmed@alex-copier.com", password: "password123", role: "المحاسب" },
-  { name: "محمد الصيانة", email: "mohamed@alex-copier.com", password: "password123", role: "مدير الصيانة" },
-  { name: "علي الورشة", email: "ali@alex-copier.com", password: "password123", role: "مدير الورشة" },
-  { name: "خالد المهندس", email: "khaled@alex-copier.com", password: "password123", role: "مهندس" },
-  { name: "فاطمة المبيعات", email: "fatma@alex-copier.com", password: "password123", role: "موظف مبيعات" },
+  { name: "عمر حسن", email: "omar@alex-copier.com", password: "password123", role: "المدير العام", color: "bg-purple-100 text-purple-700" },
+  { name: "سارة مدير الشركة", email: "sarah@jmal-ahlat.com", password: "password123", role: "مدير الشركة", color: "bg-blue-100 text-blue-700" },
+  { name: "أحمد المحاسب", email: "ahmed@alex-copier.com", password: "password123", role: "المحاسب", color: "bg-green-100 text-green-700" },
+  { name: "محمد الصيانة", email: "mohamed@alex-copier.com", password: "password123", role: "مدير الصيانة", color: "bg-orange-100 text-orange-700" },
+  { name: "علي الورشة", email: "ali@alex-copier.com", password: "password123", role: "مدير الورشة", color: "bg-yellow-100 text-yellow-700" },
+  { name: "خالد المهندس", email: "khaled@alex-copier.com", password: "password123", role: "مهندس", color: "bg-cyan-100 text-cyan-700" },
+  { name: "فاطمة المبيعات", email: "fatma@alex-copier.com", password: "password123", role: "موظف مبيعات", color: "bg-pink-100 text-pink-700" },
 ];
 
 export default function LoginPage() {
@@ -60,103 +60,112 @@ export default function LoginPage() {
   };
 
   return (
-    <div dir="rtl" className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <div className="flex justify-center">
-            <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
-              <Printer size={32} className="text-white" />
+    <div dir="rtl" className="min-h-screen flex bg-gray-50">
+      {/* Right side — Logo + Form */}
+      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-8 lg:p-16">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-10">
+            <div className="flex justify-center mb-5">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/25">
+                <Printer size={40} className="text-white" />
+              </div>
             </div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">اليكس كوبير</h1>
+            <p className="text-gray-500">Alex Copier ERP System</p>
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">اليكس كوبير</h2>
-          <p className="mt-2 text-sm text-gray-600">تسجيل الدخول إلى حسابك</p>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+            <h2 className="text-xl font-bold text-gray-800 mb-1">تسجيل الدخول</h2>
+            <p className="text-sm text-gray-500 mb-6">أدخل بياناتك للدخول إلى النظام</p>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">البريد الإلكتروني</label>
+                <div className="relative">
+                  <input
+                    id="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right text-sm"
+                    placeholder="example@alex-copier.com"
+                  />
+                  <Mail size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">كلمة المرور</label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right text-sm"
+                    placeholder="••••••••"
+                  />
+                  <Lock size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                </div>
+              </div>
+
+              {error && (
+                <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-xl border border-red-200">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+              >
+                <LogIn size={18} />
+                {loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
+              </button>
+            </form>
+          </div>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6 bg-white p-8 rounded-xl shadow">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              البريد الإلكتروني
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right"
-              placeholder="example@domain.com"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              كلمة المرور
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right"
-              placeholder="••••••••"
-            />
-          </div>
-
-          {error && (
-            <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg">
-              {error}
+      {/* Left side — Test accounts */}
+      <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-gray-900 to-gray-800 p-16 flex-col justify-center">
+        <div className="max-w-lg mx-auto">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
+              <Shield size={24} className="text-blue-400" />
             </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
-          </button>
-        </form>
-
-        <div className="mt-8 bg-white rounded-xl shadow overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-            <h3 className="text-sm font-medium text-gray-700">حسابات تجريبية</h3>
+            <div>
+              <h2 className="text-2xl font-bold text-white">حسابات تجريبية</h2>
+              <p className="text-gray-400 text-sm">اختر أي حساب للدخول السريع</p>
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">الاسم</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">البريد</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">كلمة المرور</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">الدور</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">إجراء</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {testAccounts.map((account) => (
-                  <tr key={account.email} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-900">{account.name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{account.email}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{account.password}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                        {account.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleTestLogin(account.email, account.password)}
-                        disabled={loading}
-                        className="px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 disabled:opacity-50"
-                      >
-                        دخول
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+          <div className="space-y-3">
+            {testAccounts.map((account) => (
+              <button
+                key={account.email}
+                onClick={() => handleTestLogin(account.email, account.password)}
+                disabled={loading}
+                className="w-full flex items-center gap-4 bg-white/5 hover:bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl p-4 transition-all text-right disabled:opacity-50 group"
+              >
+                <div className="w-11 h-11 bg-white/10 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-white/20 transition-colors">
+                  <User size={20} className="text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="text-white font-medium text-sm">{account.name}</p>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${account.color}`}>
+                      {account.role}
+                    </span>
+                  </div>
+                  <p className="text-gray-400 text-xs truncate">{account.email}</p>
+                </div>
+                <LogIn size={18} className="text-gray-500 group-hover:text-blue-400 transition-colors flex-shrink-0" />
+              </button>
+            ))}
           </div>
         </div>
       </div>
