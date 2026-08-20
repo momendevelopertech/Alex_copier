@@ -62,7 +62,7 @@ async function main() {
   const company1 = await prisma.company.create({
     data: {
       id: 'company1',
-      name: 'Jumla Ahlat',
+      name: 'جمال لأجهزة الأتمتة',
       nameAr: 'جمال لأجهزة الأتمتة',
       taxNumber: '123-456-789',
       tradeRegister: 'TR-001',
@@ -75,7 +75,7 @@ async function main() {
   const company2 = await prisma.company.create({
     data: {
       id: 'company2',
-      name: 'Jumla Parts',
+      name: 'جمال لقطع الغيار',
       nameAr: 'جمال لقطع الغيار',
       taxNumber: '987-654-321',
       tradeRegister: 'TR-002',
@@ -88,7 +88,7 @@ async function main() {
   const company3 = await prisma.company.create({
     data: {
       id: 'company3',
-      name: 'Sectory',
+      name: 'سيكتوري',
       nameAr: 'سيكتوري',
       taxNumber: '456-789-123',
       tradeRegister: 'TR-003',
