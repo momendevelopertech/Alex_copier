@@ -1,19 +1,19 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Cairo } from "next/font/google";
 import "./globals.css";
 import { I18nProvider } from "@/i18n/context";
 
-const inter = Inter({ subsets: ["latin"] });
+const cairo = Cairo({ subsets: ["arabic", "latin"] });
 
 export const metadata: Metadata = {
-  title: "Alexandria Copier ERP",
-  description: "ERP System for Alexandria Copier - Machine Sales, Service & Maintenance Management",
+  title: "الكسندريا كوبير - نظام ERP",
+  description: "نظام إدارة مبيعات الآلات وخدمات الصيانة - شركةكسندريا كوبير",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ar" dir="rtl">
-      <body className={inter.className}>
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
+      <body className={cairo.className}>
         <I18nProvider>
           {children}
         </I18nProvider>

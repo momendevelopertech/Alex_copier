@@ -24,20 +24,20 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { key: "dashboard", href: "/", icon: LayoutDashboard },
-  { key: "machines", href: "/machines", icon: Printer },
-  { key: "customers", href: "/customers", icon: Users },
-  { key: "engineers", href: "/engineers", icon: Wrench },
-  { key: "serviceRequests", href: "/service-requests", icon: AlertTriangle },
-  { key: "contracts", href: "/contracts", icon: FileText },
-  { key: "purchases", href: "/purchases", icon: ShoppingCart },
-  { key: "sales", href: "/sales", icon: DollarSign },
-  { key: "inventory", href: "/inventory", icon: Package },
-  { key: "workshop", href: "/workshop", icon: Cog },
-  { key: "finance", href: "/finance", icon: Wallet },
-  { key: "settlements", href: "/settlements", icon: Receipt },
-  { key: "reports", href: "/reports", icon: BarChart3 },
-  { key: "settings", href: "/settings", icon: Settings },
+  { key: "navigation.dashboard", href: "/", icon: LayoutDashboard },
+  { key: "navigation.machines", href: "/machines", icon: Printer },
+  { key: "navigation.customers", href: "/customers", icon: Users },
+  { key: "navigation.engineers", href: "/engineers", icon: Wrench },
+  { key: "navigation.serviceRequests", href: "/service-requests", icon: AlertTriangle },
+  { key: "navigation.contracts", href: "/contracts", icon: FileText },
+  { key: "navigation.purchases", href: "/purchases", icon: ShoppingCart },
+  { key: "navigation.sales", href: "/sales", icon: DollarSign },
+  { key: "navigation.inventory", href: "/inventory", icon: Package },
+  { key: "navigation.workshop", href: "/workshop", icon: Cog },
+  { key: "navigation.finance", href: "/finance", icon: Wallet },
+  { key: "navigation.settlements", href: "/settlements", icon: Receipt },
+  { key: "navigation.reports", href: "/reports", icon: BarChart3 },
+  { key: "navigation.settings", href: "/settings", icon: Settings },
 ];
 
 export default function Sidebar() {
