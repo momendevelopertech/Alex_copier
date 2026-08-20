@@ -5,13 +5,13 @@ import { signIn } from "next-auth/react";
 import { Printer } from "lucide-react";
 
 const testAccounts = [
-  { name: "عمر حسن", email: "omar@alexandria-copier.com", password: "password123", role: "المدير العام" },
+  { name: "عمر حسن", email: "omar@alex-copier.com", password: "password123", role: "المدير العام" },
   { name: "سارة مدير الشركة", email: "sarah@jmal-ahlat.com", password: "password123", role: "مدير الشركة" },
-  { name: "أحمد المحاسب", email: "ahmed@alexandria-copier.com", password: "password123", role: "المحاسب" },
-  { name: "محمد الصيانة", email: "mohamed@alexandria-copier.com", password: "password123", role: "مدير الصيانة" },
-  { name: "علي الورشة", email: "ali@alexandria-copier.com", password: "password123", role: "مدير الورشة" },
-  { name: "خالد المهندس", email: "khaled@alexandria-copier.com", password: "password123", role: "مهندس" },
-  { name: "فاطمة المبيعات", email: "fatma@alexandria-copier.com", password: "password123", role: "موظف مبيعات" },
+  { name: "أحمد المحاسب", email: "ahmed@alex-copier.com", password: "password123", role: "المحاسب" },
+  { name: "محمد الصيانة", email: "mohamed@alex-copier.com", password: "password123", role: "مدير الصيانة" },
+  { name: "علي الورشة", email: "ali@alex-copier.com", password: "password123", role: "مدير الورشة" },
+  { name: "خالد المهندس", email: "khaled@alex-copier.com", password: "password123", role: "مهندس" },
+  { name: "فاطمة المبيعات", email: "fatma@alex-copier.com", password: "password123", role: "موظف مبيعات" },
 ];
 
 export default function LoginPage() {
@@ -68,7 +68,7 @@ export default function LoginPage() {
               <Printer size={32} className="text-white" />
             </div>
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">الكسندريا كوبير</h2>
+          <h2 className="mt-6 text-3xl font-bold text-gray-900">اليكس كوبير</h2>
           <p className="mt-2 text-sm text-gray-600">تسجيل الدخول إلى حسابك</p>
         </div>
 

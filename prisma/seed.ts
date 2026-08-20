@@ -106,13 +106,13 @@ async function main() {
   const passwordHash = await bcrypt.hash('password123', 10);
 
   const users = [
-    { id: 'user-omar', name: 'عمر أحمد', email: 'omar@alexandria-copier.com', role: 'GENERAL_MANAGER' as const, companyId: company1.id },
+    { id: 'user-omar', name: 'عمر أحمد', email: 'omar@alex-copier.com', role: 'GENERAL_MANAGER' as const, companyId: company1.id },
     { id: 'user-sarah', name: 'سارة محمد', email: 'sarah@jmal-ahlat.com', role: 'COMPANY_MANAGER' as const, companyId: company1.id },
-    { id: 'user-ahmed', name: 'أحمد عبدالرحمن', email: 'ahmed@alexandria-copier.com', role: 'ACCOUNTANT' as const, companyId: company1.id },
-    { id: 'user-mohamed', name: 'محمد حسن', email: 'mohamed@alexandria-copier.com', role: 'MAINTENANCE_MANAGER' as const, companyId: company1.id },
-    { id: 'user-ali', name: 'علي خالد', email: 'ali@alexandria-copier.com', role: 'WORKSHOP_MANAGER' as const, companyId: company1.id },
-    { id: 'user-khaled', name: 'خالد إبراهيم', email: 'khaled@alexandria-copier.com', role: 'ENGINEER' as const, companyId: null },
-    { id: 'user-fatma', name: 'فاطمة عبدالله', email: 'fatma@alexandria-copier.com', role: 'SALES_EMPLOYEE' as const, companyId: company1.id },
+    { id: 'user-ahmed', name: 'أحمد عبدالرحمن', email: 'ahmed@alex-copier.com', role: 'ACCOUNTANT' as const, companyId: company1.id },
+    { id: 'user-mohamed', name: 'محمد حسن', email: 'mohamed@alex-copier.com', role: 'MAINTENANCE_MANAGER' as const, companyId: company1.id },
+    { id: 'user-ali', name: 'علي خالد', email: 'ali@alex-copier.com', role: 'WORKSHOP_MANAGER' as const, companyId: company1.id },
+    { id: 'user-khaled', name: 'خالد إبراهيم', email: 'khaled@alex-copier.com', role: 'ENGINEER' as const, companyId: null },
+    { id: 'user-fatma', name: 'فاطمة عبدالله', email: 'fatma@alex-copier.com', role: 'SALES_EMPLOYEE' as const, companyId: company1.id },
   ];
 
   for (const u of users) {
@@ -227,12 +227,12 @@ async function main() {
   console.log('?? Creating engineers...');
 
   const engineersData = [
-    { id: 'eng-1', name: 'أحمد علي', phone: '010-1111-2222', email: 'ahmed.ali@alexandria-copier.com', baseSalary: 8000, transportAllowance: 2000, areas: ['الإسكندرية', 'وسط البلد'], skills: [{ model: 'Ricoh MP C3004', level: 3 }, { model: 'Canon imageRUNNER', level: 2 }] },
-    { id: 'eng-2', name: 'محمد حسن', phone: '011-2222-3333', email: 'mohamed.hassan@alexandria-copier.com', baseSalary: 9000, transportAllowance: 2500, areas: ['الرياض', 'الإسكندرية'], skills: [{ model: 'Xerox VersaLink', level: 3 }, { model: 'Sharp MX', level: 2 }] },
-    { id: 'eng-3', name: 'محمود إبراهيم', phone: '012-3333-4444', email: 'mahmoud.ibrahim@alexandria-copier.com', baseSalary: 8500, transportAllowance: 2200, areas: ['الإسكندرية', 'المعادي'], skills: [{ model: 'Konica Minolta bizhub', level: 3 }] },
-    { id: 'eng-4', name: 'حسن خالد', phone: '015-4444-5555', email: 'hassan.khaled@alexandria-copier.com', baseSalary: 7500, transportAllowance: 1800, areas: ['مكتب العدل', 'الجيش'], skills: [{ model: 'Ricoh MP C4504', level: 3 }] },
-    { id: 'eng-5', name: 'عمرو سعيد', phone: '010-5555-6666', email: 'omar.saeed@alexandria-copier.com', baseSalary: 8000, transportAllowance: 2000, areas: ['القاهرة', 'وسط البلد'], skills: [{ model: 'Canon imageRUNNER ADVANCE', level: 3 }] },
-    { id: 'eng-6', name: 'ياسر محمد', phone: '011-6666-7777', email: 'yasser.mohamed@alexandria-copier.com', baseSalary: 7000, transportAllowance: 1500, areas: ['المعادي', 'شارع الجيش'], skills: [{ model: 'Xerox WorkCentre', level: 2 }] },
+    { id: 'eng-1', name: 'أحمد علي', phone: '010-1111-2222', email: 'ahmed.ali@alex-copier.com', baseSalary: 8000, transportAllowance: 2000, areas: ['الإسكندرية', 'وسط البلد'], skills: [{ model: 'Ricoh MP C3004', level: 3 }, { model: 'Canon imageRUNNER', level: 2 }] },
+    { id: 'eng-2', name: 'محمد حسن', phone: '011-2222-3333', email: 'mohamed.hassan@alex-copier.com', baseSalary: 9000, transportAllowance: 2500, areas: ['الرياض', 'الإسكندرية'], skills: [{ model: 'Xerox VersaLink', level: 3 }, { model: 'Sharp MX', level: 2 }] },
+    { id: 'eng-3', name: 'محمود إبراهيم', phone: '012-3333-4444', email: 'mahmoud.ibrahim@alex-copier.com', baseSalary: 8500, transportAllowance: 2200, areas: ['الإسكندرية', 'المعادي'], skills: [{ model: 'Konica Minolta bizhub', level: 3 }] },
+    { id: 'eng-4', name: 'حسن خالد', phone: '015-4444-5555', email: 'hassan.khaled@alex-copier.com', baseSalary: 7500, transportAllowance: 1800, areas: ['مكتب العدل', 'الجيش'], skills: [{ model: 'Ricoh MP C4504', level: 3 }] },
+    { id: 'eng-5', name: 'عمرو سعيد', phone: '010-5555-6666', email: 'omar.saeed@alex-copier.com', baseSalary: 8000, transportAllowance: 2000, areas: ['القاهرة', 'وسط البلد'], skills: [{ model: 'Canon imageRUNNER ADVANCE', level: 3 }] },
+    { id: 'eng-6', name: 'ياسر محمد', phone: '011-6666-7777', email: 'yasser.mohamed@alex-copier.com', baseSalary: 7000, transportAllowance: 1500, areas: ['المعادي', 'شارع الجيش'], skills: [{ model: 'Xerox WorkCentre', level: 2 }] },
   ];
 
   const createdEngineers: any[] = [];

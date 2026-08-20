@@ -6,8 +6,8 @@ import { I18nProvider } from "@/i18n/context";
 const cairo = Cairo({ subsets: ["arabic", "latin"] });
 
 export const metadata: Metadata = {
-  title: "الكسندريا كوبير - نظام ERP",
-  description: "نظام إدارة مبيعات الآلات وخدمات الصيانة - شركةكسندريا كوبير",
+  title: "اليكس كوبير - نظام ERP",
+  description: "نظام إدارة مبيعات الآلات وخدمات الصيانة - اليكس كوبير",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

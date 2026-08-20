@@ -56,8 +56,8 @@ export default function Sidebar() {
       <div className="flex items-center justify-between p-4 border-b border-gray-700">
         {!collapsed && (
           <div>
-            <h1 className="text-white text-lg font-bold">الكسندريا كوبير</h1>
-            <p className="text-gray-400 text-xs">Alexandria Copier</p>
+            <h1 className="text-white text-lg font-bold">اليكس كوبير</h1>
+            <p className="text-gray-400 text-xs">Alex Copier</p>
           </div>
         )}
         <button
