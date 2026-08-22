@@ -45,6 +45,7 @@
     ,"expensesThisMonth": "Expenses"
     ,"collectedThisMonth": "Verified collections"
     ,"serviceQueue": "Service queue"
+    ,"loadingDashboard": "Opening your dashboard..."
     ,"maintenanceStatus": "Maintenance status"
     ,"machinesInService": "Devices in service"
     ,"updatedAt": "Updated"

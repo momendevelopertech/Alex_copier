@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
 import Link from "next/link";
+import PrinterLoader from "@/components/PrinterLoader";
 import type {
   AlertKind,
   DashboardPayload,
@@ -129,8 +130,8 @@ export default function Dashboard() {
 
   if (!data) {
     return (
-      <div dir="rtl" className="py-16 text-center text-gray-400">
-        {t("common.loading")}
+      <div dir="rtl" className="min-h-[60vh] flex items-center justify-center">
+        <PrinterLoader label={t("dashboard.loadingDashboard")} />
       </div>
     );
   }

@@ -45,6 +45,7 @@
     ,"expensesThisMonth": "المصروفات"
     ,"collectedThisMonth": "تحصيلات مؤكدة"
     ,"serviceQueue": "طابور الصيانة"
+    ,"loadingDashboard": "جاري فتح لوحة التحكم..."
     ,"maintenanceStatus": "حالة الصيانة"
     ,"machinesInService": "أجهزة تحت الصيانة"
     ,"updatedAt": "آخر تحديث"

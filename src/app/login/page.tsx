@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Printer, Mail, Lock, LogIn, User, Shield } from "lucide-react";
+import PrinterLoader from "@/components/PrinterLoader";
 
 const testAccounts = [
   { name: "عمر حسن", email: "omar@alex-copier.com", password: "password123", role: "المدير العام", color: "bg-purple-100 text-purple-700" },
@@ -15,6 +17,7 @@ const testAccounts = [
 ];
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -34,7 +37,8 @@ export default function LoginPage() {
     if (result?.error) {
       setError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
     } else {
-      window.location.href = "/";
+      router.push("/");
+      return;
     }
 
     setLoading(false);
@@ -53,7 +57,8 @@ export default function LoginPage() {
     if (result?.error) {
       setError("فشل تسجيل الدخول للحساب التجريبي");
     } else {
-      window.location.href = "/";
+      router.push("/");
+      return;
     }
 
     setLoading(false);
@@ -61,6 +66,7 @@ export default function LoginPage() {
 
   return (
     <div dir="rtl" className="min-h-screen flex flex-col lg:flex-row bg-gray-50">
+      {loading && <PrinterLoader fullScreen label="جاري تسجيل الدخول..." />}
       {/* Right side — Logo + Form */}
       <div className="w-full lg:w-1/2 flex flex-col items-center justify-center px-4 py-8 sm:p-8 lg:p-16">
         <div className="w-full max-w-md">
