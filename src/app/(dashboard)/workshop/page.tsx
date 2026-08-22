@@ -34,10 +34,12 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default function WorkshopPage() {
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
   const [machines, setMachines] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(true);
   const [scrapTarget, setScrapTarget] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [scrapForm, setScrapForm] = useState<ScrapForm>({
     reason: "",
     approvedBy: "",
@@ -71,10 +73,11 @@ export default function WorkshopPage() {
   };
 
   return (
-    <div dir="rtl">
+    <div dir={dir}>
       <h1 className="text-xl sm:text-2xl font-bold mb-6">{t("workshop.title")}</h1>
 
       <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="mb-4 grid gap-3 md:grid-cols-2"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("machines.serialNumber")} / ${t("machines.model")}...`} className="border rounded-lg px-4 py-2" /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded-lg px-4 py-2"><option value="">{t("machines.status")} ({t("common.selectOption")})</option>{Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
         {loading ? (
           <p className="text-gray-500">{t("common.loading")}</p>
         ) : (
@@ -92,7 +95,7 @@ export default function WorkshopPage() {
                 </tr>
               </thead>
               <tbody>
-                {machines.map((machine) => (
+                {machines.filter(machine => (!statusFilter || machine.status === statusFilter) && [machine.serialNumber, machine.manufacturer, machine.model, machine.notes].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())).map((machine) => (
                   <tr key={machine.id} className="border-t border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm">{machine.serialNumber}</td>
                     <td className="px-4 py-3 text-sm">{machine.manufacturer}</td>
@@ -114,7 +117,7 @@ export default function WorkshopPage() {
                     </td>
                   </tr>
                 ))}
-                {machines.length === 0 && (
+                {machines.filter(machine => (!statusFilter || machine.status === statusFilter) && [machine.serialNumber, machine.manufacturer, machine.model, machine.notes].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())).length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-4 py-8 text-center text-gray-400">{t("common.noData")}</td>
                   </tr>

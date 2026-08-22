@@ -34,8 +34,33 @@
     "createServiceRequest": "Create Service Request",
     "newSale": "New Sale",
     "addCustomer": "Add Customer"
+    ,"monthlyPerformance": "This month by company"
+    ,"openRequests": "Open requests"
+    ,"urgentRequests": "Urgent requests"
+    ,"unassignedRequests": "Unassigned requests"
+    ,"visitsThisMonth": "Visits this month"
+    ,"engineerWorkload": "Technician workload"
+    ,"salesThisMonth": "Sales"
+    ,"purchasesThisMonth": "Purchases"
+    ,"expensesThisMonth": "Expenses"
+    ,"collectedThisMonth": "Verified collections"
+    ,"serviceQueue": "Service queue"
+    ,"maintenanceStatus": "Maintenance status"
+    ,"machinesInService": "Devices in service"
+    ,"updatedAt": "Updated"
+    ,"engineer": "Technician"
+    ,"assignedOpen": "Assigned (open)"
+    ,"visitsCol": "Visits this month"
+    ,"daysLeft": "days left"
+    ,"alerts": {
+      "URGENT_REQUESTS": "Open urgent/emergency requests",
+      "UNASSIGNED_REQUESTS": "Requests not assigned to a technician",
+      "OVERDUE_INSTALLMENTS": "Overdue installments",
+      "CONTRACTS_EXPIRING": "Contracts expiring within 30 days"
+    }
   },
   "common": {
+    "retry": "Retry",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -93,6 +118,31 @@
     "IN_WAREHOUSE": "In Warehouse",
     "SCRAPPED": "Scrapped"
   },
+  "machineDetails": {
+    "view": "View lifecycle",
+    "overview": "Machine overview",
+    "customer": "Customer & location",
+    "warranty": "Warranty",
+    "contracts": "Maintenance contracts",
+    "service": "Service history",
+    "meter": "Meter history",
+    "timeline": "Lifecycle timeline",
+    "noWarranty": "No warranty recorded",
+    "noContracts": "No maintenance contracts",
+    "noService": "No service requests",
+    "noMeters": "No meter readings",
+    "currentMeter": "Current meter",
+    "expires": "Expires",
+    "covered": "Covered",
+    "notCovered": "Expired / not covered",
+    "location": "Location",
+    "openRequests": "Open requests",
+    "visits": "Visits",
+    "request": "Service request",
+    "assignedTo": "Assigned to",
+    "created": "Created",
+    "ownership": "Ownership / commercial history"
+  },
   "customers": {
     "title": "Customers",
     "name": "Name",
@@ -116,7 +166,14 @@
     "locationAddress": "Address",
     "locationCity": "City",
     "locationGovernorate": "Governorate",
-    "locationPhone": "Phone"
+    "locationPhone": "Phone",
+    "overview": "Customer overview",
+    "machines": "Machines",
+    "serviceHistory": "Service requests",
+    "contracts": "Contracts",
+    "sales": "Sales orders",
+    "openRequests": "Open service requests",
+    "outstandingBalance": "Outstanding balance"
   },
   "suppliers": {
     "title": "Suppliers",
@@ -208,7 +265,8 @@
     "terminated": "Terminated",
     "suspended": "Suspended",
     "terminate": "Terminate",
-    "activate": "Activate"
+    "activate": "Activate",
+    "coveredMachines": "Covered machines"
   },
   "purchases": {
     "title": "Purchases",

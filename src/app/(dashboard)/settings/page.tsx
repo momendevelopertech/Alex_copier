@@ -13,10 +13,11 @@ interface User {
 }
 
 export default function SettingsPage() {
-  const { t, locale, setLocale } = useI18n();
+  const { t, locale, setLocale, dir } = useI18n();
   const [activeTab, setActiveTab] = useState<"language" | "users">("language");
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (activeTab === "users") {
@@ -47,7 +48,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div dir="rtl">
+    <div dir={dir}>
       <h1 className="text-xl sm:text-2xl font-bold mb-6">{t("settings.title")}</h1>
 
       <div className="flex gap-2 mb-6">
@@ -100,6 +101,7 @@ export default function SettingsPage() {
 
       {activeTab === "users" && (
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="p-4 border-b"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("settings.users")}...`} className="w-full rounded-lg border px-4 py-2 md:max-w-md" /></div>
           {loading ? (
             <div className="p-8 text-center text-gray-400">{t("common.loading")}</div>
           ) : (
@@ -114,7 +116,7 @@ export default function SettingsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {users.map((user) => (
+                  {users.filter(user => [user.name, user.email, user.role].join(" ").toLowerCase().includes(search.toLowerCase())).map((user) => (
                     <tr key={user.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium">{user.name}</td>
                       <td className="px-4 py-3 text-sm">{user.email}</td>
@@ -128,7 +130,7 @@ export default function SettingsPage() {
                       </td>
                     </tr>
                   ))}
-                  {users.length === 0 && (
+                  {users.filter(user => [user.name, user.email, user.role].join(" ").toLowerCase().includes(search.toLowerCase())).length === 0 && (
                     <tr>
                       <td colSpan={4} className="px-4 py-8 text-center text-gray-400">{t("common.noData")}</td>
                     </tr>

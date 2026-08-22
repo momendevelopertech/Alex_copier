@@ -15,6 +15,7 @@ interface Supplier {
   isActive: boolean;
   createdAt: string;
 }
+interface Company { id: string; name: string; }
 
 const emptyForm = {
   name: "",
@@ -27,8 +28,9 @@ const emptyForm = {
 };
 
 export default function SuppliersPage() {
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -36,9 +38,10 @@ export default function SuppliersPage() {
 
   const fetchSuppliers = async () => {
     setLoading(true);
-    const res = await fetch("/api/suppliers");
+    const [res, companyRes] = await Promise.all([fetch("/api/suppliers"), fetch("/api/companies")]);
     const data = await res.json();
     setSuppliers(data);
+    setCompanies(await companyRes.json());
     setLoading(false);
   };
 
@@ -76,7 +79,7 @@ export default function SuppliersPage() {
   };
 
   return (
-    <div dir="rtl">
+    <div dir={dir}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("suppliers.title")}</h1>
         <button
@@ -134,13 +137,12 @@ export default function SuppliersPage() {
               onChange={(e) => setField("taxNumber", e.target.value)}
               className="border rounded-lg px-4 py-2 w-full"
             />
-            <input
-              type="text"
-              placeholder="معرّف الشركة"
+            <select
               value={form.companyId}
               onChange={(e) => setField("companyId", e.target.value)}
               className="border rounded-lg px-4 py-2 w-full"
-            />
+              required
+            ><option value="">{t("companies.selectCompany")}</option>{companies.map(company => <option key={company.id} value={company.id}>{company.name}</option>)}</select>
             <button
               type="submit"
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"

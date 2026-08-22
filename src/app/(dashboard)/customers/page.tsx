@@ -31,6 +31,11 @@ interface Customer {
   isActive: boolean;
   locations: CustomerLocation[];
   createdAt: string;
+  machines?: { id: string; serialNumber: string; manufacturer?: string | null; model?: string | null; currentStatus: string }[];
+  serviceRequests?: { id: string; requestNumber: string; status: string; priority: string; createdAt: string; machine?: { serialNumber: string } | null }[];
+  contracts?: { id: string; contractNumber: string; status: string; endDate: string; value: number }[];
+  orders?: { id: string; total: number; status: string; orderDate: string }[];
+  ledgers?: { balance: number }[];
 }
 
 const emptyForm = {
@@ -50,7 +55,7 @@ const emptyForm = {
 };
 
 export default function CustomersPage() {
-  const { t } = useI18n();
+  const { t, dir, locale } = useI18n();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -108,6 +113,13 @@ export default function CustomersPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const openDetails = async (id: string) => {
+    const res = await fetch(`/api/customers/${id}`);
+    if (res.ok) setSelected(await res.json());
+  };
+  const date = (value: string) => new Date(value).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-GB");
+  const isOpen = (status: string) => !["RESOLVED", "CLOSED"].includes(status);
+
   const TYPE_BADGES: Record<string, string> = {
     INDIVIDUAL: "bg-blue-100 text-blue-800",
     COMPANY: "bg-purple-100 text-purple-800",
@@ -119,7 +131,7 @@ export default function CustomersPage() {
   };
 
   return (
-    <div dir="rtl">
+    <div dir={dir}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("customers.title")}</h1>
         <button
@@ -267,6 +279,14 @@ export default function CustomersPage() {
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5 mb-6">
+            <Summary label={t("customers.machines")} value={selected.machines?.length || 0} />
+            <Summary label={t("customers.openRequests")} value={selected.serviceRequests?.filter(r => isOpen(r.status)).length || 0} />
+            <Summary label={t("customers.contracts")} value={selected.contracts?.filter(c => c.status === "ACTIVE").length || 0} />
+            <Summary label={t("customers.sales")} value={selected.orders?.length || 0} />
+            <Summary label={t("customers.outstandingBalance")} value={(selected.ledgers || []).reduce((total, ledger) => total + ledger.balance, 0).toLocaleString()} />
+          </div>
+
           {selected.locations.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold mb-2">{t("customers.locations")}</h3>
@@ -296,6 +316,21 @@ export default function CustomersPage() {
               </div>
             </div>
           )}
+
+          <div className="grid gap-4 mt-5 lg:grid-cols-2">
+            <CustomerPanel title={t("customers.machines")}>
+              {selected.machines?.length ? selected.machines.map(machine => <div key={machine.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><span className="font-medium">{machine.serialNumber}</span><span>{[machine.manufacturer, machine.model].filter(Boolean).join(" ") || "—"} · {machine.currentStatus}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
+            </CustomerPanel>
+            <CustomerPanel title={t("customers.serviceHistory")}>
+              {selected.serviceRequests?.length ? selected.serviceRequests.slice(0, 6).map(request => <div key={request.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><span className="font-medium">{request.requestNumber}</span><span>{request.machine?.serialNumber || "—"} · {request.status} · {date(request.createdAt)}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
+            </CustomerPanel>
+            <CustomerPanel title={t("customers.contracts")}>
+              {selected.contracts?.length ? selected.contracts.map(contract => <div key={contract.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><span className="font-medium">{contract.contractNumber}</span><span>{contract.status} · {date(contract.endDate)}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
+            </CustomerPanel>
+            <CustomerPanel title={t("customers.sales")}>
+              {selected.orders?.length ? selected.orders.slice(0, 6).map(order => <div key={order.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><span>{date(order.orderDate)}</span><span>{order.total.toLocaleString()} · {order.status}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
+            </CustomerPanel>
+          </div>
 
           <div className="mt-4 flex gap-2">
             <button
@@ -352,7 +387,7 @@ export default function CustomersPage() {
                   <tr
                     key={customer.id}
                     className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => setSelected(customer)}
+                    onClick={() => openDetails(customer.id)}
                   >
                     <td className="px-4 py-3 text-sm font-medium">{customer.name}</td>
                     <td className="px-4 py-3 text-sm">{customer.companyName || "—"}</td>
@@ -394,4 +429,12 @@ export default function CustomersPage() {
       </div>
     </div>
   );
+}
+
+function Summary({ label, value }: { label: string; value: string | number }) {
+  return <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">{label}</p><p className="mt-1 text-lg font-bold text-slate-900">{value}</p></div>;
+}
+
+function CustomerPanel({ title, children }: { title: string; children: React.ReactNode }) {
+  return <section className="rounded-xl border border-gray-200 p-4"><h3 className="mb-2 font-semibold">{title}</h3>{children}</section>;
 }

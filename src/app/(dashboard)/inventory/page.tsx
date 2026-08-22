@@ -8,9 +8,11 @@ interface InventoryItem {
   productId: string;
   warehouseId: string;
   quantity: number;
-  productName?: string;
-  warehouseName?: string;
+  product?: { id: string; name: string; sku?: string | null; productType: string };
+  warehouse?: { id: string; name: string };
 }
+interface Warehouse { id: string; name: string; }
+interface Product { id: string; name: string; sku?: string | null; productType: string; }
 
 interface StockMovementForm {
   warehouseId: string;
@@ -45,8 +47,12 @@ const MOVEMENT_LABELS: Record<string, string> = {
 };
 
 export default function InventoryPage() {
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [search, setSearch] = useState("");
+  const [warehouseFilter, setWarehouseFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<StockMovementForm>({
     warehouseId: "",
@@ -58,10 +64,12 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
 
   const fetchInventory = () => {
-    fetch("/api/inventory")
+    fetch("/api/inventory?catalog=true")
       .then((r) => r.json())
       .then((data) => {
-        setInventory(Array.isArray(data) ? data : []);
+        setInventory(Array.isArray(data.inventory) ? data.inventory : []);
+        setWarehouses(Array.isArray(data.warehouses) ? data.warehouses : []);
+        setProducts(Array.isArray(data.products) ? data.products : []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -73,18 +81,23 @@ export default function InventoryPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch("/api/inventory/movements", {
+    const response = await fetch("/api/inventory", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      alert(data.error || t("common.error"));
+      return;
+    }
     setForm({ warehouseId: "", productId: "", quantity: 1, movementType: "PURCHASE_IN", notes: "" });
     setShowForm(false);
     fetchInventory();
   };
 
   return (
-    <div dir="rtl">
+    <div dir={dir}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl font-bold">{t("inventory.title")}</h1>
         <button
@@ -100,24 +113,22 @@ export default function InventoryPage() {
           <h2 className="text-lg font-semibold mb-4">{t("inventory.stockMovement")}</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("inventory.warehouseId")}</label>
-              <input
-                type="text"
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("inventory.warehouse")}</label>
+              <select
                 value={form.warehouseId}
                 onChange={(e) => setForm({ ...form, warehouseId: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
-              />
+              ><option value="">{t("common.selectOption")}</option>{warehouses.map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}</select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("inventory.productId")}</label>
-              <input
-                type="text"
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("inventory.product")}</label>
+              <select
                 value={form.productId}
                 onChange={(e) => setForm({ ...form, productId: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
-              />
+              ><option value="">{t("common.selectOption")}</option>{products.map(product => <option key={product.id} value={product.id}>{product.name}{product.sku ? ` · ${product.sku}` : ""}</option>)}</select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t("inventory.quantity")}</label>
@@ -164,6 +175,10 @@ export default function InventoryPage() {
       )}
 
       <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="mb-4 grid gap-3 md:grid-cols-2">
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("inventory.product")} أو SKU...`} className="border rounded-lg px-4 py-2" />
+          <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className="border rounded-lg px-4 py-2"><option value="">{t("inventory.warehouse")} ({t("common.selectOption")})</option>{warehouses.map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}</select>
+        </div>
         {loading ? (
           <p className="text-gray-500">{t("common.loading")}</p>
         ) : (
@@ -177,10 +192,10 @@ export default function InventoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {inventory.map((item) => (
+                {inventory.filter(item => (!warehouseFilter || item.warehouseId === warehouseFilter) && [item.product?.name, item.product?.sku, item.warehouse?.name].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())).map((item) => (
                   <tr key={item.id} className="border-t border-gray-100 hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm">{item.productName || item.productId}</td>
-                    <td className="px-4 py-3 text-sm">{item.warehouseName || item.warehouseId}</td>
+                    <td className="px-4 py-3 text-sm">{item.product?.name || item.productId}</td>
+                    <td className="px-4 py-3 text-sm">{item.warehouse?.name || item.warehouseId}</td>
                     <td className="px-4 py-3 text-sm">
                       <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${item.quantity > 10 ? "bg-green-100 text-green-800" : item.quantity > 0 ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}>
                         {item.quantity}
@@ -188,7 +203,7 @@ export default function InventoryPage() {
                     </td>
                   </tr>
                 ))}
-                {inventory.length === 0 && (
+                {inventory.filter(item => (!warehouseFilter || item.warehouseId === warehouseFilter) && [item.product?.name, item.product?.sku, item.warehouse?.name].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())).length === 0 && (
                   <tr>
                     <td colSpan={3} className="px-4 py-8 text-center text-gray-400">{t("common.noData")}</td>
                   </tr>

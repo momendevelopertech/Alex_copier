@@ -1,22 +1,33 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth-helpers";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requireAuth();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const { id } = await params;
     const machine = await prisma.machine.findUnique({
       where: { id },
       include: {
-        history: true,
-        meterReadings: true,
+        history: { include: { customer: true }, orderBy: { date: "desc" } },
+        meterReadings: { orderBy: { readingDate: "desc" } },
         currentOwner: true,
         product: true,
-        customerLocation: true,
-        serviceRequests: true,
-        contracts: true,
+        customerLocation: { include: { customer: true } },
+        serviceRequests: {
+          include: {
+            customer: true,
+            location: true,
+            engineer: true,
+            visits: { include: { engineer: true }, orderBy: { visitedAt: "desc" } },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+        contracts: { include: { contract: { include: { customer: true } } } },
         scrapOrder: true,
         warranty: true,
       },

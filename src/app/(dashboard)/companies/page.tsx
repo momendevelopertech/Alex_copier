@@ -24,10 +24,11 @@ const COMPANY_ICONS: Record<string, string> = {
 };
 
 export default function CompaniesPage() {
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
   const [companies, setCompanies] = useState<CompanyData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     fetch("/api/companies")
@@ -47,11 +48,11 @@ export default function CompaniesPage() {
   const selected = companies.find((c) => c.id === selectedId);
 
   if (loading) {
-    return <div dir="rtl" className="text-gray-500 text-center py-10">{t("common.loading")}</div>;
+    return <div dir={dir} className="text-gray-500 text-center py-10">{t("common.loading")}</div>;
   }
 
   return (
-    <div dir="rtl">
+    <div dir={dir}>
       <div className="mb-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("companies.title")}</h1>
         <p className="text-gray-500 mt-1">{t("companies.overview")}</p>
@@ -78,8 +79,10 @@ export default function CompaniesPage() {
         </div>
       </div>
 
+      <div className="mb-5"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("common.company")}...`} className="w-full rounded-lg border px-4 py-2 md:max-w-md" /></div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {companies.map((company) => (
+        {companies.filter(company => [company.name, company.nameAr].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())).map((company) => (
           <div
             key={company.id}
             onClick={() => setSelectedId(selectedId === company.id ? null : company.id)}

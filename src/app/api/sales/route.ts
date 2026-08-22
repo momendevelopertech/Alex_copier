@@ -26,14 +26,27 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const user = await requireAuth();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const body = await request.json();
     const { items, installments, ...data } = body;
 
-    const total = items?.reduce(
+    if (!data.companyId || !data.customerId || !data.orderType || !data.paymentMethod || !Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ error: "A sale requires a customer, company, payment method, and at least one item" }, { status: 400 });
+    }
+    if (items.some((item: { productId?: string; quantity?: number; unitPrice?: number }) => !item.productId || !Number.isInteger(item.quantity) || (item.quantity ?? 0) <= 0 || !Number.isFinite(item.unitPrice) || (item.unitPrice ?? -1) < 0)) {
+      return NextResponse.json({ error: "Invalid sales items" }, { status: 400 });
+    }
+
+    const subtotal = items.reduce(
       (sum: number, item: { quantity: number; unitPrice: number; discount?: number }) =>
         sum + item.quantity * item.unitPrice - (item.discount ?? 0),
       0
-    ) ?? 0;
+    );
+    const discount = Math.max(0, Number(data.discount) || 0);
+    const orderDiscount = data.discountType === "PERCENTAGE" ? subtotal * Math.min(discount, 100) / 100 : Math.min(discount, subtotal);
+    const taxable = subtotal - orderDiscount;
+    const total = Math.round((taxable + taxable * Math.max(0, Number(data.taxRate) || 0) / 100) * 100) / 100;
 
     const salesOrder = await prisma.salesOrder.create({
       data: {

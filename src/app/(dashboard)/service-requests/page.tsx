@@ -21,9 +21,9 @@ const STATUS_LABELS: Record<string, string> = {
   CLOSED: "مغلق",
 };
 
-interface Customer { id: string; name: string; }
+interface Customer { id: string; name: string; locations?: Location[]; }
 interface Engineer { id: string; name: string; }
-interface Machine { id: string; serialNumber: string; }
+interface Machine { id: string; serialNumber: string; model?: string | null; currentOwnerId?: string | null; customerLocationId?: string | null; }
 interface Location { id: string; name: string; }
 interface ProblemDetail { id: string; description: string; }
 
@@ -65,14 +65,17 @@ const statusColors: Record<string, string> = {
 };
 
 export default function ServiceRequestsPage() {
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [engineers, setEngineers] = useState<Engineer[]>([]);
+  const [machines, setMachines] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [assignEngineerId, setAssignEngineerId] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [form, setForm] = useState({
     customerId: "",
     locationId: "",
@@ -85,14 +88,16 @@ export default function ServiceRequestsPage() {
 
   const fetchData = async () => {
     setLoading(true);
-    const [reqRes, custRes, engRes] = await Promise.all([
+    const [reqRes, custRes, engRes, machineRes] = await Promise.all([
       fetch("/api/service-requests"),
       fetch("/api/customers"),
       fetch("/api/engineers"),
+      fetch("/api/machines"),
     ]);
     setRequests(await reqRes.json());
     setCustomers(await custRes.json());
     setEngineers(await engRes.json());
+    setMachines(await machineRes.json());
     setLoading(false);
   };
 
@@ -143,12 +148,12 @@ export default function ServiceRequestsPage() {
     );
   };
 
-  const filtered = requests;
+  const filtered = requests.filter(request => (!statusFilter || request.status === statusFilter) && [request.requestNumber, request.description, request.customer.name, request.machine?.serialNumber, request.engineer?.name].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase()));
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <div dir="rtl">
+    <div dir={dir}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("serviceRequests.title")}</h1>
         <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
@@ -163,7 +168,14 @@ export default function ServiceRequestsPage() {
               <option value="">{t("serviceRequests.selectCustomer")}</option>
               {customers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
             </select>
-            <input type="text" placeholder={t("serviceRequests.machineId")} value={form.machineId} onChange={(e) => setForm({ ...form, machineId: e.target.value })} className="border rounded-lg px-4 py-2" />
+            <select value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value, machineId: "" })} className="border rounded-lg px-4 py-2">
+              <option value="">{t("machineDetails.location")} ({t("common.selectOption")})</option>
+              {customers.find(customer => customer.id === form.customerId)?.locations?.map(location => <option key={location.id} value={location.id}>{location.name}</option>)}
+            </select>
+            <select value={form.machineId} onChange={(e) => setForm({ ...form, machineId: e.target.value })} className="border rounded-lg px-4 py-2">
+              <option value="">{t("serviceRequests.machine")} ({t("common.selectOption")})</option>
+              {machines.filter(machine => machine.currentOwnerId === form.customerId && (!form.locationId || machine.customerLocationId === form.locationId)).map(machine => <option key={machine.id} value={machine.id}>{machine.serialNumber}{machine.model ? ` · ${machine.model}` : ""}</option>)}
+            </select>
             <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} className="border rounded-lg px-4 py-2">
               <option value="NORMAL">{PRIORITY_LABELS.NORMAL}</option>
               <option value="IMPORTANT">{PRIORITY_LABELS.IMPORTANT}</option>
@@ -180,6 +192,7 @@ export default function ServiceRequestsPage() {
       )}
 
       <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="mb-4 grid gap-3 md:grid-cols-2"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("serviceRequests.requestNumber")} / ${t("serviceRequests.customer")}...`} className="border rounded-lg px-4 py-2" /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded-lg px-4 py-2"><option value="">{t("serviceRequests.status")} ({t("common.selectOption")})</option>{Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
         {loading ? (
           <p className="text-gray-500">{t("common.loading")}</p>
         ) : requests.length === 0 ? (

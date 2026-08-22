@@ -25,10 +25,10 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { currentOwnerId, ...data } = body;
+    const { currentOwnerId, companyId, ...data } = body;
 
     const machine = await prisma.machine.create({
-      data,
+      data: { ...data, currentOwnerId: currentOwnerId || null },
       include: {
         history: true,
         meterReadings: true,
@@ -37,13 +37,15 @@ export async function POST(request: Request) {
       },
     });
 
-    if (currentOwnerId) {
+    // Ownership is part of the machine's lifecycle.  Only create a history
+    // event when the caller has a real company context for the event.
+    if (currentOwnerId && companyId) {
       await prisma.machineOwnerHistory.create({
         data: {
           machineId: machine.id,
           transactionType: "SALE",
           customerId: currentOwnerId,
-          companyId: data.companyId || "",
+          companyId,
         },
       });
     }

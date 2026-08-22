@@ -29,13 +29,15 @@ const statusColors: Record<string, string> = {
 };
 
 export default function PurchasesPage() {
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [form, setForm] = useState({ companyId: "", supplierId: "", notes: "" });
   const [itemRows, setItemRows] = useState<ItemRow[]>([{ productId: "", quantity: "", unitPrice: "" }]);
   const [page, setPage] = useState(1);
@@ -54,7 +56,7 @@ export default function PurchasesPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const filtered = orders;
+  const filtered = orders.filter(order => (!statusFilter || order.status === statusFilter) && [order.id, order.supplier.name, order.company?.name].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase()));
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -78,7 +80,7 @@ export default function PurchasesPage() {
   };
 
   return (
-    <div dir="rtl">
+    <div dir={dir}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("purchases.title")}</h1>
         <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">{t("purchases.addOrder")}</button>
@@ -124,6 +126,7 @@ export default function PurchasesPage() {
       )}
 
       <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="mb-4 grid gap-3 md:grid-cols-2"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("purchases.orderNumber")} / ${t("purchases.supplier")}...`} className="border rounded-lg px-4 py-2" /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded-lg px-4 py-2"><option value="">{t("common.status")} ({t("common.selectOption")})</option>{Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
         {loading ? <p className="text-gray-500">{t("common.loading")}</p>
         : orders.length === 0 ? <p className="text-gray-500">{t("common.noData")}</p>
         : (

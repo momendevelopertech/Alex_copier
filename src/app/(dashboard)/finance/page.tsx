@@ -10,11 +10,13 @@ interface Expense {
 }
 
 export default function FinancePage() {
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [search, setSearch] = useState("");
+  const [companyFilter, setCompanyFilter] = useState("");
   const [form, setForm] = useState({ companyId: "", category: "", description: "", amount: "" });
 
   const fetchData = async () => {
@@ -37,7 +39,7 @@ export default function FinancePage() {
   };
 
   return (
-    <div dir="rtl">
+    <div dir={dir}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("finance.expenses")}</h1>
         <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">{t("finance.newExpense")}</button>
@@ -62,8 +64,9 @@ export default function FinancePage() {
       )}
 
       <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="mb-4 grid gap-3 md:grid-cols-2"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("finance.category")} / ${t("common.description")}...`} className="border rounded-lg px-4 py-2" /><select value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)} className="border rounded-lg px-4 py-2"><option value="">{t("common.company")} ({t("common.selectOption")})</option>{companies.map(company => <option key={company.id} value={company.id}>{company.name}</option>)}</select></div>
         {loading ? <p className="text-gray-500">{t("common.loading")}</p>
-        : expenses.length === 0 ? <p className="text-gray-500">{t("common.noData")}</p>
+        : expenses.filter(expense => (!companyFilter || expense.companyId === companyFilter) && [expense.category, expense.description, expense.company?.name].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())).length === 0 ? <p className="text-gray-500">{t("common.noData")}</p>
         : (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -77,7 +80,7 @@ export default function FinancePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {expenses.map((expense) => (
+                {expenses.filter(expense => (!companyFilter || expense.companyId === companyFilter) && [expense.category, expense.description, expense.company?.name].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())).map((expense) => (
                   <tr key={expense.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm">{new Date(expense.date || expense.createdAt).toLocaleDateString("ar-EG")}</td>
                     <td className="px-4 py-3 text-sm">{expense.category}</td>

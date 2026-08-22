@@ -34,8 +34,33 @@
     "createServiceRequest": "إنشاء طلب خدمة",
     "newSale": "عملية بيع جديدة",
     "addCustomer": "إضافة عميل"
+    ,"monthlyPerformance": "أداء الشركات هذا الشهر"
+    ,"openRequests": "طلبات مفتوحة"
+    ,"urgentRequests": "طلبات عاجلة"
+    ,"unassignedRequests": "طلبات غير مسندة"
+    ,"visitsThisMonth": "زيارات هذا الشهر"
+    ,"engineerWorkload": "حِمل الفنيين"
+    ,"salesThisMonth": "المبيعات"
+    ,"purchasesThisMonth": "المشتريات"
+    ,"expensesThisMonth": "المصروفات"
+    ,"collectedThisMonth": "تحصيلات مؤكدة"
+    ,"serviceQueue": "طابور الصيانة"
+    ,"maintenanceStatus": "حالة الصيانة"
+    ,"machinesInService": "أجهزة تحت الصيانة"
+    ,"updatedAt": "آخر تحديث"
+    ,"engineer": "الفني"
+    ,"assignedOpen": "مسندة (مفتوحة)"
+    ,"visitsCol": "زيارات الشهر"
+    ,"daysLeft": "يوم متبقٍ"
+    ,"alerts": {
+      "URGENT_REQUESTS": "طلبات عاجلة/طارئة مفتوحة",
+      "UNASSIGNED_REQUESTS": "طلبات لم يُسند لها فني",
+      "OVERDUE_INSTALLMENTS": "أقساط متأخرة عن السداد",
+      "CONTRACTS_EXPIRING": "عقود تنتهي خلال 30 يومًا"
+    }
   },
   "common": {
+    "retry": "إعادة المحاولة",
     "save": "حفظ",
     "cancel": "إلغاء",
     "delete": "حذف",
@@ -93,6 +118,31 @@
     "IN_WAREHOUSE": "في المستودع",
     "SCRAPPED": "مهمل"
   },
+  "machineDetails": {
+    "view": "عرض سجل دورة الحياة",
+    "overview": "نظرة عامة على الجهاز",
+    "customer": "العميل والموقع",
+    "warranty": "الضمان",
+    "contracts": "عقود الصيانة",
+    "service": "سجل الصيانة",
+    "meter": "سجل العدادات",
+    "timeline": "التسلسل الزمني للجهاز",
+    "noWarranty": "لا يوجد ضمان مسجل",
+    "noContracts": "لا توجد عقود صيانة",
+    "noService": "لا توجد طلبات صيانة",
+    "noMeters": "لا توجد قراءات عداد",
+    "currentMeter": "قراءة العداد الحالية",
+    "expires": "ينتهي في",
+    "covered": "مشمولة بالضمان",
+    "notCovered": "منتهٍ / غير مشمول",
+    "location": "الموقع",
+    "openRequests": "طلبات مفتوحة",
+    "visits": "الزيارات",
+    "request": "طلب صيانة",
+    "assignedTo": "مسند إلى",
+    "created": "تاريخ التسجيل",
+    "ownership": "سجل الملكية والتعاملات"
+  },
   "customers": {
     "title": "العملاء",
     "name": "الاسم",
@@ -116,7 +166,14 @@
     "locationAddress": "العنوان",
     "locationCity": "المدينة",
     "locationGovernorate": "المحافظة",
-    "locationPhone": "الهاتف"
+    "locationPhone": "الهاتف",
+    "overview": "نظرة عامة على العميل",
+    "machines": "الأجهزة",
+    "serviceHistory": "طلبات الصيانة",
+    "contracts": "العقود",
+    "sales": "أوامر البيع",
+    "openRequests": "طلبات الصيانة المفتوحة",
+    "outstandingBalance": "الرصيد المستحق"
   },
   "suppliers": {
     "title": "الموردون",
@@ -208,7 +265,8 @@
     "terminated": "ملغي",
     "suspended": "موقوف",
     "terminate": "إلغاء",
-    "activate": "تفعيل"
+    "activate": "تفعيل",
+    "coveredMachines": "الأجهزة المشمولة بالعقد"
   },
   "purchases": {
     "title": "المشتريات",

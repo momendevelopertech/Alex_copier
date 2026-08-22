@@ -39,29 +39,36 @@ interface SalesOrder {
   discountType: string; taxRate: number; paymentMethod: string; paymentStatus: string;
   notes: string | null; orderDate: string; createdAt: string; customer: Customer; company?: Company; items: SalesItem[];
 }
+interface ItemRow { productId: string; quantity: string; unitPrice: string; discount: string; }
 
 export default function SalesPage() {
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [form, setForm] = useState({ companyId: "", customerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", discount: "", discountType: "FIXED", taxRate: "", notes: "" });
+  const [itemRows, setItemRows] = useState<ItemRow[]>([{ productId: "", quantity: "", unitPrice: "", discount: "" }]);
+  const [search, setSearch] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
 
-  const filtered = orders;
+  const filtered = orders.filter(order => (!paymentFilter || order.paymentStatus === paymentFilter) && [order.customer.name, order.id, order.orderType].join(" ").toLowerCase().includes(search.toLowerCase()));
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const fetchData = async () => {
     setLoading(true);
-    const [sRes, cRes, coRes] = await Promise.all([fetch("/api/sales"), fetch("/api/customers"), fetch("/api/companies")]);
+    const [sRes, cRes, coRes, inventoryRes] = await Promise.all([fetch("/api/sales"), fetch("/api/customers"), fetch("/api/companies"), fetch("/api/inventory?catalog=true")]);
     setOrders(await sRes.json());
     setCustomers(await cRes.json());
     setCompanies(await coRes.json());
+    const inventoryData = await inventoryRes.json();
+    setProducts(Array.isArray(inventoryData.products) ? inventoryData.products : []);
     setLoading(false);
   };
 
@@ -69,18 +76,22 @@ export default function SalesPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch("/api/sales", {
+    const items = itemRows.filter(row => row.productId && row.quantity && row.unitPrice).map(row => ({ productId: row.productId, quantity: Number(row.quantity), unitPrice: Number(row.unitPrice), discount: Number(row.discount) || 0 }));
+    if (!items.length) return;
+    const response = await fetch("/api/sales", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, discount: parseFloat(form.discount) || 0, taxRate: parseFloat(form.taxRate) || 0, items: [] }),
+      body: JSON.stringify({ ...form, discount: parseFloat(form.discount) || 0, taxRate: parseFloat(form.taxRate) || 0, orderDate: new Date().toISOString(), items }),
     });
+    if (!response.ok) { alert((await response.json().catch(() => ({}))).error || t("common.error")); return; }
     setForm({ companyId: "", customerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", discount: "", discountType: "FIXED", taxRate: "", notes: "" });
+    setItemRows([{ productId: "", quantity: "", unitPrice: "", discount: "" }]);
     setShowForm(false);
     fetchData();
   };
 
   return (
-    <div dir="rtl">
+    <div dir={dir}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("sales.title")}</h1>
         <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">{t("sales.addOrder")}</button>
@@ -116,6 +127,10 @@ export default function SalesPage() {
             </div>
             <input type="number" placeholder={t("sales.taxRate")} value={form.taxRate} onChange={(e) => setForm({ ...form, taxRate: e.target.value })} className="border rounded-lg px-4 py-2" />
             <textarea placeholder={t("common.notes")} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="border rounded-lg px-4 py-2" rows={2} />
+            <div className="md:col-span-2 rounded-lg border border-slate-200 p-4">
+              <div className="mb-3 flex items-center justify-between"><h3 className="font-medium">{t("sales.items")}</h3><button type="button" onClick={() => setItemRows([...itemRows, { productId: "", quantity: "", unitPrice: "", discount: "" }])} className="text-sm text-blue-600 hover:underline">{t("purchases.addRow")}</button></div>
+              <div className="space-y-2">{itemRows.map((row, index) => <div key={index} className="grid gap-2 sm:grid-cols-[1fr_100px_130px_120px_auto]"><select value={row.productId} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, productId: e.target.value } : item))} className="border rounded-lg px-3 py-2" required><option value="">{t("purchases.selectProduct")}</option>{products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</select><input type="number" min="1" required placeholder={t("sales.qty")} value={row.quantity} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, quantity: e.target.value } : item))} className="border rounded-lg px-3 py-2" /><input type="number" min="0" step="0.01" required placeholder={t("sales.unitPrice")} value={row.unitPrice} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, unitPrice: e.target.value } : item))} className="border rounded-lg px-3 py-2" /><input type="number" min="0" step="0.01" placeholder={t("sales.discount")} value={row.discount} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, discount: e.target.value } : item))} className="border rounded-lg px-3 py-2" />{itemRows.length > 1 && <button type="button" onClick={() => setItemRows(itemRows.filter((_, i) => i !== index))} className="text-red-600">×</button>}</div>)}</div>
+            </div>
             <div className="md:col-span-2 flex gap-2">
               <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">{t("common.save")}</button>
               <button type="button" onClick={() => setShowForm(false)} className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">{t("common.cancel")}</button>
@@ -125,6 +140,7 @@ export default function SalesPage() {
       )}
 
       <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="mb-4 grid gap-3 md:grid-cols-2"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("sales.customer")} / ${t("sales.orderNumber")}...`} className="border rounded-lg px-4 py-2" /><select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)} className="border rounded-lg px-4 py-2"><option value="">{t("sales.paymentStatus")} ({t("common.selectOption")})</option>{Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
         {loading ? <p className="text-gray-500">{t("common.loading")}</p>
         : orders.length === 0 ? <p className="text-gray-500">{t("common.noData")}</p>
         : (

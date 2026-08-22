@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useI18n } from "@/i18n/context";
 
 interface Contract {
   id: string;
   contractNumber: string;
-  customerId?: string;
-  customerName?: string;
-  type?: string;
+  customer?: { name: string };
+  contractType?: string;
   value: number;
   status: string;
 }
@@ -16,9 +15,9 @@ interface Contract {
 interface Engineer {
   id: string;
   name: string;
-  areas?: string[];
-  skills?: string[];
-  salary: number;
+  areas?: { areaName: string }[];
+  skills?: { modelType: string }[];
+  baseSalary: number;
   commissionRate?: number;
 }
 
@@ -34,12 +33,13 @@ const reportCards = [
 ];
 
 export default function ReportsPage() {
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [engineers, setEngineers] = useState<Engineer[]>([]);
   const [loadingContracts, setLoadingContracts] = useState(false);
   const [loadingEngineers, setLoadingEngineers] = useState(false);
+  const [search, setSearch] = useState("");
 
   const toggleCard = (key: string) => {
     if (expanded === key) {
@@ -72,11 +72,13 @@ export default function ReportsPage() {
   };
 
   return (
-    <div dir="rtl">
+    <div dir={dir}>
       <h1 className="text-xl sm:text-2xl font-bold mb-6">{t("reports.title")}</h1>
 
+      <div className="mb-5"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("reports.title")}...`} className="w-full rounded-lg border px-4 py-2 md:max-w-md" /></div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {reportCards.map((card) => (
+        {reportCards.filter(card => [t(`reports.${card.key}`), t(`reports.${card.desc}`)].join(" ").toLowerCase().includes(search.toLowerCase())).map((card) => (
           <div key={card.key}>
             <button
               onClick={() => toggleCard(card.key)}
@@ -107,24 +109,18 @@ export default function ReportsPage() {
                       </thead>
                       <tbody>
                         {contracts.map((c) => {
-                          const estimatedCosts = c.value * 0.6;
-                          const estimatedProfit = c.value - estimatedCosts;
                           return (
                             <tr key={c.id} className="border-t border-gray-100 hover:bg-gray-50">
                               <td className="px-4 py-3 text-sm font-medium">{c.contractNumber}</td>
-                              <td className="px-4 py-3 text-sm">{c.customerName || c.customerId}</td>
-                              <td className="px-4 py-3 text-sm">{c.type || "-"}</td>
+                              <td className="px-4 py-3 text-sm">{c.customer?.name || "—"}</td>
+                              <td className="px-4 py-3 text-sm">{c.contractType || "—"}</td>
                               <td className="px-4 py-3 text-sm">{c.value.toLocaleString()}</td>
                               <td className="px-4 py-3 text-sm">
                                 <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                   {c.status}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 text-sm">
-                                <span className={`font-medium ${estimatedProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
-                                  {estimatedProfit.toLocaleString()}
-                                </span>
-                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-500">—</td>
                             </tr>
                           );
                         })}
@@ -163,19 +159,19 @@ export default function ReportsPage() {
                             <td className="px-4 py-3 text-sm font-medium">{eng.name}</td>
                             <td className="px-4 py-3 text-sm">
                               {(eng.areas || []).map((a) => (
-                                <span key={a} className="inline-flex px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800 mx-1 mb-1">
-                                  {a}
+                                <span key={a.areaName} className="inline-flex px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800 mx-1 mb-1">
+                                  {a.areaName}
                                 </span>
                               ))}
                             </td>
                             <td className="px-4 py-3 text-sm">
                               {(eng.skills || []).map((s) => (
-                                <span key={s} className="inline-flex px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-800 mx-1 mb-1">
-                                  {s}
+                                <span key={s.modelType} className="inline-flex px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-800 mx-1 mb-1">
+                                  {s.modelType}
                                 </span>
                               ))}
                             </td>
-                            <td className="px-4 py-3 text-sm">{eng.salary.toLocaleString()}</td>
+                            <td className="px-4 py-3 text-sm">{eng.baseSalary.toLocaleString()}</td>
                             <td className="px-4 py-3 text-sm">{eng.commissionRate != null ? `${eng.commissionRate}%` : "-"}</td>
                           </tr>
                         ))}

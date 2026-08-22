@@ -39,6 +39,7 @@ const statusColors: Record<string, string> = {
 };
 
 interface Customer { id: string; name: string; }
+interface Machine { id: string; serialNumber: string; model: string | null; currentOwnerId: string | null; }
 interface ContractMachine { id: string; machineId: string; machine: { id: string; serialNumber: string; model: string | null }; }
 interface Contract {
   id: string; contractNumber: string; customerId: string; contractType: string; status: string;
@@ -49,24 +50,28 @@ interface Contract {
 }
 
 export default function ContractsPage() {
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [machines, setMachines] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [form, setForm] = useState({
     customerId: "", contractType: "MAINTENANCE_ONLY", startDate: "", endDate: "",
     value: "", billingCycle: "MONTHLY", visitLimit: "", costPerCopy: "",
-    earlyTerminationFee: "", notes: "",
+    earlyTerminationFee: "", notes: "", machineIds: [] as string[],
   });
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
 
   const fetchData = async () => {
     setLoading(true);
-    const [cRes, custRes] = await Promise.all([fetch("/api/contracts"), fetch("/api/customers")]);
+    const [cRes, custRes, machineRes] = await Promise.all([fetch("/api/contracts"), fetch("/api/customers"), fetch("/api/machines")]);
     setContracts(await cRes.json());
     setCustomers(await custRes.json());
+    setMachines(await machineRes.json());
     setLoading(false);
   };
 
@@ -85,7 +90,7 @@ export default function ContractsPage() {
         earlyTerminationFee: form.earlyTerminationFee ? parseFloat(form.earlyTerminationFee) : undefined,
       }),
     });
-    setForm({ customerId: "", contractType: "MAINTENANCE_ONLY", startDate: "", endDate: "", value: "", billingCycle: "MONTHLY", visitLimit: "", costPerCopy: "", earlyTerminationFee: "", notes: "" });
+    setForm({ customerId: "", contractType: "MAINTENANCE_ONLY", startDate: "", endDate: "", value: "", billingCycle: "MONTHLY", visitLimit: "", costPerCopy: "", earlyTerminationFee: "", notes: "", machineIds: [] });
     setShowForm(false);
     fetchData();
   };
@@ -96,12 +101,12 @@ export default function ContractsPage() {
     fetchData();
   };
 
-  const filtered = contracts;
+  const filtered = contracts.filter(contract => (!statusFilter || contract.status === statusFilter) && [contract.contractNumber, contract.customer.name, contract.contractType].join(" ").toLowerCase().includes(search.toLowerCase()));
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <div dir="rtl">
+    <div dir={dir}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("contracts.title")}</h1>
         <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">{t("contracts.addContract")}</button>
@@ -137,6 +142,13 @@ export default function ContractsPage() {
             <input type="number" placeholder={t("contracts.visitLimit")} value={form.visitLimit} onChange={(e) => setForm({ ...form, visitLimit: e.target.value })} className="border rounded-lg px-4 py-2" />
             <input type="number" placeholder={t("contracts.costPerCopy")} value={form.costPerCopy} onChange={(e) => setForm({ ...form, costPerCopy: e.target.value })} className="border rounded-lg px-4 py-2" />
             <input type="number" placeholder={t("contracts.earlyTerminationFee")} value={form.earlyTerminationFee} onChange={(e) => setForm({ ...form, earlyTerminationFee: e.target.value })} className="border rounded-lg px-4 py-2" />
+            {form.customerId && <div className="md:col-span-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="mb-2 text-sm font-medium text-slate-700">{t("contracts.coveredMachines")}</p>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {machines.filter(machine => machine.currentOwnerId === form.customerId).map(machine => <label key={machine.id} className="flex cursor-pointer items-center gap-2 rounded-md bg-white px-3 py-2 text-sm"><input type="checkbox" checked={form.machineIds.includes(machine.id)} onChange={(e) => setForm({ ...form, machineIds: e.target.checked ? [...form.machineIds, machine.id] : form.machineIds.filter(id => id !== machine.id) })} /><span>{machine.serialNumber}{machine.model ? ` · ${machine.model}` : ""}</span></label>)}
+                {machines.filter(machine => machine.currentOwnerId === form.customerId).length === 0 && <p className="text-sm text-slate-500">{t("common.noData")}</p>}
+              </div>
+            </div>}
             <textarea placeholder={t("common.notes")} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="border rounded-lg px-4 py-2 md:col-span-3" rows={2} />
             <div className="md:col-span-3 flex gap-2">
               <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">{t("common.save")}</button>
@@ -147,6 +159,7 @@ export default function ContractsPage() {
       )}
 
       <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="mb-4 grid gap-3 md:grid-cols-2"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("contracts.contractNumber")} / ${t("serviceRequests.customer")}...`} className="border rounded-lg px-4 py-2" /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded-lg px-4 py-2"><option value="">{t("common.status")} ({t("common.selectOption")})</option>{Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
         {loading ? <p className="text-gray-500">{t("common.loading")}</p>
         : contracts.length === 0 ? <p className="text-gray-500">{t("common.noData")}</p>
         : (
