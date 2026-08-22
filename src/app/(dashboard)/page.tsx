@@ -3,28 +3,79 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
 import Link from "next/link";
+import type {
+  AlertKind,
+  DashboardPayload,
+} from "@/lib/dashboard";
 
-interface DashboardStats {
-  totalMachines: number;
-  totalCustomers: number;
-  activeContracts: number;
-  pendingServiceRequests: number;
-  totalRevenue: number;
-}
+const PRIORITY_LABELS: Record<string, string> = {
+  NORMAL: "عادي",
+  IMPORTANT: "مهم",
+  URGENT: "عاجل",
+  EMERGENCY: "طارئ",
+};
 
-interface RecentItem {
-  id: string;
-  title: string;
-  date: string;
-}
+const STATUS_LABELS: Record<string, string> = {
+  NEW: "جديد",
+  ASSIGNED: "تم التعيين",
+  VISITED: "تمت الزيارة",
+  RESOLVED: "تم الحل",
+  NOT_RESOLVED: "لم يتم الحل",
+  REASSIGNED: "إعادة التعيين",
+  CLOSED: "مغلق",
+};
 
-const statCards = [
-  { key: "totalMachines", label: "dashboard.totalMachines", color: "bg-blue-500", icon: "📦" },
-  { key: "totalCustomers", label: "dashboard.totalCustomers", color: "bg-green-500", icon: "👥" },
-  { key: "activeContracts", label: "dashboard.activeContracts", color: "bg-purple-500", icon: "📋" },
-  { key: "pendingServiceRequests", label: "dashboard.pendingServiceRequests", color: "bg-amber-500", icon: "⏳" },
-  { key: "totalRevenue", label: "dashboard.totalRevenue", color: "bg-emerald-500", icon: "💰" },
-];
+const priorityColors: Record<string, string> = {
+  NORMAL: "bg-gray-100 text-gray-800",
+  IMPORTANT: "bg-yellow-100 text-yellow-800",
+  URGENT: "bg-orange-100 text-orange-800",
+  EMERGENCY: "bg-red-100 text-red-800",
+};
+
+const statusColors: Record<string, string> = {
+  NEW: "bg-blue-100 text-blue-800",
+  ASSIGNED: "bg-purple-100 text-purple-800",
+  VISITED: "bg-yellow-100 text-yellow-800",
+  NOT_RESOLVED: "bg-red-100 text-red-800",
+  REASSIGNED: "bg-indigo-100 text-indigo-800",
+};
+
+const MACHINE_STATUSES = [
+  "IN_WAREHOUSE",
+  "SOLD",
+  "RENTED",
+  "UNDER_MAINTENANCE",
+  "UNDER_INSPECTION",
+  "SCRAPPED",
+] as const;
+
+const machineStatusChip: Record<string, string> = {
+  IN_WAREHOUSE: "bg-blue-50 text-blue-700 border-blue-200",
+  SOLD: "bg-green-50 text-green-700 border-green-200",
+  RENTED: "bg-teal-50 text-teal-700 border-teal-200",
+  UNDER_MAINTENANCE: "bg-orange-50 text-orange-700 border-orange-300",
+  UNDER_INSPECTION: "bg-yellow-50 text-yellow-700 border-yellow-300",
+  SCRAPPED: "bg-gray-100 text-gray-600 border-gray-200",
+};
+
+const ALERT_META: Record<AlertKind, { labelKey: string; className: string }> = {
+  URGENT_REQUESTS: {
+    labelKey: "dashboard.alerts.URGENT_REQUESTS",
+    className: "border-red-200 bg-red-50 text-red-800",
+  },
+  OVERDUE_INSTALLMENTS: {
+    labelKey: "dashboard.alerts.OVERDUE_INSTALLMENTS",
+    className: "border-red-200 bg-red-50 text-red-800",
+  },
+  UNASSIGNED_REQUESTS: {
+    labelKey: "dashboard.alerts.UNASSIGNED_REQUESTS",
+    className: "border-amber-200 bg-amber-50 text-amber-800",
+  },
+  CONTRACTS_EXPIRING: {
+    labelKey: "dashboard.alerts.CONTRACTS_EXPIRING",
+    className: "border-amber-200 bg-amber-50 text-amber-800",
+  },
+};
 
 const quickActions = [
   { label: "dashboard.addMachine", href: "/machines", color: "bg-blue-50 text-blue-700 hover:bg-blue-100" },
@@ -33,122 +84,270 @@ const quickActions = [
   { label: "dashboard.addCustomer", href: "/customers", color: "bg-purple-50 text-purple-700 hover:bg-purple-100" },
 ];
 
+const fmt = (value: number) => value.toLocaleString();
+
 export default function Dashboard() {
   const { t } = useI18n();
-  const [stats, setStats] = useState<DashboardStats>({
-    totalMachines: 0,
-    totalCustomers: 0,
-    activeContracts: 0,
-    pendingServiceRequests: 0,
-    totalRevenue: 0,
-  });
-  const [recentRequests, setRecentRequests] = useState<RecentItem[]>([]);
-  const [recentSales, setRecentSales] = useState<RecentItem[]>([]);
+  const [data, setData] = useState<DashboardPayload | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    Promise.allSettled([
-      fetch("/api/machines").then((r) => r.json()),
-      fetch("/api/customers").then((r) => r.json()),
-      fetch("/api/contracts").then((r) => r.json()),
-      fetch("/api/service-requests").then((r) => r.json()),
-      fetch("/api/sales").then((r) => r.json()),
-    ]).then((results) => {
-      const machines = results[0].status === "fulfilled" ? results[0].value : [];
-      const customers = results[1].status === "fulfilled" ? results[1].value : [];
-      const contracts = results[2].status === "fulfilled" ? results[2].value : [];
-      const serviceRequests = results[3].status === "fulfilled" ? results[3].value : [];
-      const sales = results[4].status === "fulfilled" ? results[4].value : [];
-
-      const machinesArr = Array.isArray(machines) ? machines : [];
-      const customersArr = Array.isArray(customers) ? customers : [];
-      const contractsArr = Array.isArray(contracts) ? contracts : [];
-      const requestsArr = Array.isArray(serviceRequests) ? serviceRequests : [];
-      const salesArr = Array.isArray(sales) ? sales : [];
-
-      const activeContracts = contractsArr.filter((c: { status?: string }) => c.status === "ACTIVE").length;
-      const pendingRequests = requestsArr.filter((r: { status?: string }) => r.status === "PENDING").length;
-      const totalRevenue = salesArr.reduce((sum: number, s: { total?: number; amount?: number }) => sum + (s.total || s.amount || 0), 0);
-
-      setStats({
-        totalMachines: machinesArr.length,
-        totalCustomers: customersArr.length,
-        activeContracts,
-        pendingServiceRequests: pendingRequests,
-        totalRevenue,
+    let cancelled = false;
+    fetch("/api/dashboard")
+      .then((res) => {
+        if (!res.ok) throw new Error("request failed");
+        return res.json();
+      })
+      .then((payload: DashboardPayload) => {
+        if (!cancelled) setData(payload);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
       });
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
 
-      setRecentRequests(
-        requestsArr.slice(-5).reverse().map((r: { id?: string; _id?: string; title?: string; description?: string; createdAt?: string }) => ({
-          id: r.id || r._id || "",
-          title: r.title || r.description || "-",
-          date: r.createdAt || "",
-        }))
-      );
+  if (failed) {
+    return (
+      <div dir="rtl" className="text-center py-16">
+        <p className="text-red-600 mb-4">{t("common.error")}</p>
+        <button
+          onClick={() => {
+            setFailed(false);
+            setReloadKey((key) => key + 1);
+          }}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          {t("common.retry")}
+        </button>
+      </div>
+    );
+  }
 
-      setRecentSales(
-        salesArr.slice(-5).reverse().map((s: { id?: string; _id?: string; customerName?: string; createdAt?: string; total?: number; amount?: number }) => ({
-          id: s.id || s._id || "",
-          title: `${s.customerName || "-"} - ${(s.total || s.amount || 0).toLocaleString()}`,
-          date: s.createdAt || "",
-        }))
-      );
-    });
-  }, []);
+  if (!data) {
+    return (
+      <div dir="rtl" className="py-16 text-center text-gray-400">
+        {t("common.loading")}
+      </div>
+    );
+  }
+
+  const kpis = [
+    { key: "openRequests", value: data.kpis.openRequests, href: "/service-requests", color: "bg-blue-500" },
+    { key: "urgentRequests", value: data.kpis.urgentRequests, href: "/service-requests", color: "bg-red-500" },
+    { key: "unassignedRequests", value: data.kpis.unassignedRequests, href: "/service-requests", color: "bg-amber-500" },
+    { key: "visitsThisMonth", value: data.kpis.visitsThisMonth, href: "/service-requests", color: "bg-cyan-500" },
+    { key: "activeContracts", value: data.kpis.activeContracts, href: "/contracts", color: "bg-purple-500" },
+    { key: "machinesInService", value: data.kpis.machinesInService, href: "/machines", color: "bg-orange-500" },
+  ];
+
+  const maxLoad = Math.max(1, ...data.engineerWorkload.map((row) => row.openAssigned + row.visitsThisMonth));
 
   return (
     <div dir="rtl">
-      <h1 className="text-2xl font-bold mb-6">{t("dashboard.title")}</h1>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+        <h1 className="text-2xl font-bold">{t("dashboard.title")}</h1>
+        <span className="text-xs text-gray-400">
+          {t("dashboard.updatedAt")}: {new Date(data.generatedAt).toLocaleString("ar-EG")}
+        </span>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {statCards.map((card) => (
-          <div key={card.key} className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 ${card.color} rounded-lg flex items-center justify-center text-white text-xl`}>
-                {card.icon}
-              </div>
-              <div>
-                <p className="text-gray-500 text-sm">{t(card.label)}</p>
-                <p className="text-2xl font-bold">
-                  {card.key === "totalRevenue" ? `$${(stats[card.key as keyof DashboardStats] as number).toLocaleString()}` : stats[card.key as keyof DashboardStats]}
-                </p>
-              </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        {kpis.map((kpi) => (
+          <Link key={kpi.key} href={kpi.href} className="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition">
+            <p className="text-gray-500 text-xs mb-1">{t(`dashboard.${kpi.key}`)}</p>
+            <div className={`inline-block min-w-[2.5rem] px-2 py-0.5 rounded-md ${kpi.color} text-white`}>
+              <span className="text-2xl font-bold">{fmt(kpi.value)}</span>
             </div>
-          </div>
+          </Link>
         ))}
+      </div>
+
+      {data.alerts.length > 0 && (
+        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+          <h2 className="text-lg font-semibold mb-4">تنبيهات مهمة</h2>
+          <ul className="space-y-3">
+            {data.alerts.map((alert) => {
+              const meta = ALERT_META[alert.kind];
+              return (
+                <li key={alert.kind}>
+                  <Link
+                    href={alert.href}
+                    className={`block border rounded-lg px-4 py-3 transition hover:brightness-95 ${meta.className}`}
+                  >
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="font-medium">
+                        {t(meta.labelKey)} ({fmt(alert.count)})
+                      </span>
+                      {typeof alert.totalAmount === "number" && alert.totalAmount > 0 && (
+                        <span className="text-sm font-bold">{fmt(alert.totalAmount)}</span>
+                      )}
+                    </div>
+                    {alert.details && alert.details.length > 0 && (
+                      <ul className="mt-2 space-y-1 text-sm opacity-90">
+                        {alert.details.map((contract) => (
+                          <li key={contract.id} className="flex items-center justify-between gap-4 flex-wrap">
+                            <span>
+                              {contract.contractNumber}
+                              {contract.customerName ? ` — ${contract.customerName}` : ""}
+                            </span>
+                            <span className={contract.daysLeft <= 7 ? "font-bold" : ""}>
+                              {contract.daysLeft} {t("dashboard.daysLeft")}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      <div className="bg-white rounded-xl shadow-md p-6 mb-8 overflow-x-auto">
+        <h2 className="text-lg font-semibold mb-4">{t("dashboard.monthlyPerformance")}</h2>
+        {data.companies.length === 0 ? (
+          <p className="text-gray-400 text-sm">{t("common.noData")}</p>
+        ) : (
+          <table className="w-full text-right min-w-[640px]">
+            <thead>
+              <tr className="border-b border-gray-200 text-gray-500 text-sm">
+                <th className="pb-2 px-2 font-medium">{t("companies.title")}</th>
+                <th className="pb-2 px-2 font-medium">{t("dashboard.salesThisMonth")}</th>
+                <th className="pb-2 px-2 font-medium">{t("dashboard.purchasesThisMonth")}</th>
+                <th className="pb-2 px-2 font-medium">{t("dashboard.expensesThisMonth")}</th>
+                <th className="pb-2 px-2 font-medium">{t("dashboard.collectedThisMonth")}</th>
+                <th className="pb-2 px-2 font-medium">{t("dashboard.openRequests")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.companies.map((company) => (
+                <tr key={company.id} className="border-b border-gray-50 last:border-0">
+                  <td className="py-3 px-2 font-medium whitespace-nowrap">{company.name}</td>
+                  <td className="py-3 px-2 text-green-700 font-medium">{fmt(company.sales)}</td>
+                  <td className="py-3 px-2 text-red-700">{fmt(company.purchases)}</td>
+                  <td className="py-3 px-2 text-orange-700">{fmt(company.expenses)}</td>
+                  <td className="py-3 px-2 text-emerald-700 font-medium">{fmt(company.collected)}</td>
+                  <td className="py-3 px-2">{fmt(company.openRequests)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-lg font-semibold mb-4">{t("dashboard.recentServiceRequests")}</h2>
-          {recentRequests.length === 0 ? (
-            <p className="text-gray-400 text-sm">{t("common.noData")}</p>
-          ) : (
-            <ul className="space-y-3">
-              {recentRequests.map((item) => (
-                <li key={item.id} className="flex items-center justify-between border-b border-gray-50 pb-2">
-                  <span className="text-sm">{item.title}</span>
-                  <span className="text-xs text-gray-400">{item.date ? new Date(item.date).toLocaleDateString("ar-EG") : ""}</span>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">{t("dashboard.maintenanceStatus")}</h2>
+            <Link href="/machines" className="text-sm text-blue-600 hover:underline">{t("machines.title")} ←</Link>
+          </div>
+          <ul className="space-y-2">
+            {MACHINE_STATUSES.map((status) => {
+              const count = data.machineStatuses[status] ?? 0;
+              const active = status === "UNDER_MAINTENANCE" || status === "UNDER_INSPECTION";
+              return (
+                <li
+                  key={status}
+                  className={`flex items-center justify-between border rounded-lg px-3 py-2 ${machineStatusChip[status]} ${active && count > 0 ? "ring-2 ring-offset-1 ring-orange-300" : ""}`}
+                >
+                  <span className="text-sm">{t(`machines.${status}`)}</span>
+                  <span className="font-bold">{fmt(count)}</span>
                 </li>
-              ))}
-            </ul>
-          )}
+              );
+            })}
+          </ul>
         </div>
 
         <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-lg font-semibold mb-4">{t("dashboard.recentSales")}</h2>
-          {recentSales.length === 0 ? (
+          <h2 className="text-lg font-semibold mb-4">{t("dashboard.engineerWorkload")}</h2>
+          {data.engineerWorkload.length === 0 ? (
             <p className="text-gray-400 text-sm">{t("common.noData")}</p>
           ) : (
-            <ul className="space-y-3">
-              {recentSales.map((item) => (
-                <li key={item.id} className="flex items-center justify-between border-b border-gray-50 pb-2">
-                  <span className="text-sm">{item.title}</span>
-                  <span className="text-xs text-gray-400">{item.date ? new Date(item.date).toLocaleDateString("ar-EG") : ""}</span>
-                </li>
-              ))}
-            </ul>
+            <table className="w-full text-right">
+              <thead>
+                <tr className="border-b border-gray-200 text-gray-500 text-sm">
+                  <th className="pb-2 font-medium">{t("dashboard.engineer")}</th>
+                  <th className="pb-2 font-medium">{t("dashboard.assignedOpen")}</th>
+                  <th className="pb-2 font-medium">{t("dashboard.visitsCol")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.engineerWorkload.slice(0, 10).map((row) => {
+                  const total = row.openAssigned + row.visitsThisMonth;
+                  const pressure = total / maxLoad;
+                  const barColor =
+                    row.openAssigned >= 5 ? "bg-red-500" : row.openAssigned >= 3 ? "bg-amber-500" : "bg-blue-500";
+                  return (
+                    <tr key={row.engineerId} className="border-b border-gray-50 last:border-0">
+                      <td className="py-2 font-medium whitespace-nowrap">{row.name}</td>
+                      <td className="py-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-full max-w-[120px] h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div className={`h-full ${barColor}`} style={{ width: `${Math.max(4, Math.round(pressure * 100))}%` }} />
+                          </div>
+                          <span className="font-bold">{fmt(row.openAssigned)}</span>
+                        </div>
+                      </td>
+                      <td className="py-2 text-gray-600">{fmt(row.visitsThisMonth)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           )}
         </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-md p-6 mb-8 overflow-x-auto">
+        <h2 className="text-lg font-semibold mb-4">{t("dashboard.serviceQueue")}</h2>
+        {data.recentRequests.length === 0 ? (
+          <p className="text-gray-400 text-sm">{t("common.noData")}</p>
+        ) : (
+          <table className="w-full text-right min-w-[720px]">
+            <thead>
+              <tr className="border-b border-gray-200 text-gray-500 text-sm">
+                <th className="pb-2 px-2 font-medium">#</th>
+                <th className="pb-2 px-2 font-medium">{t("common.description")}</th>
+                <th className="pb-2 px-2 font-medium">{t("serviceRequests.customer")}</th>
+                <th className="pb-2 px-2 font-medium">{t("machines.serialNumber")}</th>
+                <th className="pb-2 px-2 font-medium">{t("serviceRequests.priority")}</th>
+                <th className="pb-2 px-2 font-medium">{t("serviceRequests.status")}</th>
+                <th className="pb-2 px-2 font-medium">{t("dashboard.engineer")}</th>
+                <th className="pb-2 px-2 font-medium">{t("common.date")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.recentRequests.map((request) => (
+                <tr key={request.id} className="border-b border-gray-50 last:border-0">
+                  <td className="py-2 px-2 text-xs text-gray-500">{request.requestNumber}</td>
+                  <td className="py-2 px-2 text-sm max-w-[220px] truncate">{request.description}</td>
+                  <td className="py-2 px-2 text-sm whitespace-nowrap">{request.customerName}</td>
+                  <td className="py-2 px-2 text-xs text-gray-600">{request.machineSerial ?? "—"}</td>
+                  <td className="py-2 px-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${priorityColors[request.priority] || ""}`}>
+                      {PRIORITY_LABELS[request.priority] || request.priority}
+                    </span>
+                  </td>
+                  <td className="py-2 px-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[request.status] || "bg-gray-100 text-gray-800"}`}>
+                      {STATUS_LABELS[request.status] || request.status}
+                    </span>
+                  </td>
+                  <td className="py-2 px-2 text-sm whitespace-nowrap">{request.engineerName ?? "—"}</td>
+                  <td className="py-2 px-2 text-xs text-gray-400 whitespace-nowrap">
+                    {new Date(request.createdAt).toLocaleDateString("ar-EG")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow-md p-6">
