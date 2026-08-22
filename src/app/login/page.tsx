@@ -60,21 +60,21 @@ export default function LoginPage() {
   };
 
   return (
-    <div dir="rtl" className="min-h-screen flex bg-gray-50">
+    <div dir="rtl" className="min-h-screen flex flex-col lg:flex-row bg-gray-50">
       {/* Right side — Logo + Form */}
-      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-8 lg:p-16">
+      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center px-4 py-8 sm:p-8 lg:p-16">
         <div className="w-full max-w-md">
-          <div className="text-center mb-10">
-            <div className="flex justify-center mb-5">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/25">
-                <Printer size={40} className="text-white" />
+          <div className="text-center mb-6 sm:mb-10">
+            <div className="flex justify-center mb-4 sm:mb-5">
+              <div className="w-14 h-14 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/25">
+                <Printer className="h-7 w-7 sm:h-10 sm:w-10 text-white" />
               </div>
             </div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">اليكس كوبير</h1>
-            <p className="text-gray-500">Alex Copier ERP System</p>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">اليكس كوبير</h1>
+            <p className="text-gray-500 text-sm sm:text-base">Alex Copier ERP System</p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 sm:p-8">
             <h2 className="text-xl font-bold text-gray-800 mb-1">تسجيل الدخول</h2>
             <p className="text-sm text-gray-500 mb-6">أدخل بياناتك للدخول إلى النظام</p>
 
@@ -88,7 +88,7 @@ export default function LoginPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right text-sm"
+                    className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right text-base sm:text-sm"
                     placeholder="example@alex-copier.com"
                   />
                   <Mail size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -104,7 +104,7 @@ export default function LoginPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right text-sm"
+                    className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right text-base sm:text-sm"
                     placeholder="••••••••"
                   />
                   <Lock size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -131,15 +131,15 @@ export default function LoginPage() {
       </div>
 
       {/* Left side — Test accounts */}
-      <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-gray-900 to-gray-800 p-16 flex-col justify-center">
-        <div className="max-w-lg mx-auto">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
-              <Shield size={24} className="text-blue-400" />
+      <div className="w-full lg:w-1/2 bg-gradient-to-br from-gray-900 to-gray-800 px-4 py-8 sm:p-8 lg:p-16 flex flex-col justify-center">
+        <div className="max-w-lg w-full mx-auto">
+          <div className="flex items-center gap-3 mb-6 sm:mb-8">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm shrink-0">
+              <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-white">حسابات تجريبية</h2>
-              <p className="text-gray-400 text-sm">اختر أي حساب للدخول السريع</p>
+              <h2 className="text-xl sm:text-2xl font-bold text-white">حسابات تجريبية</h2>
+              <p className="text-gray-400 text-xs sm:text-sm">اختر أي حساب للدخول السريع</p>
             </div>
           </div>
 

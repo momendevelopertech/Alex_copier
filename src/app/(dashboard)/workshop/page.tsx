@@ -72,7 +72,7 @@ export default function WorkshopPage() {
 
   return (
     <div dir="rtl">
-      <h1 className="text-2xl font-bold mb-6">{t("workshop.title")}</h1>
+      <h1 className="text-xl sm:text-2xl font-bold mb-6">{t("workshop.title")}</h1>
 
       <div className="bg-white rounded-xl shadow-md p-6">
         {loading ? (

@@ -81,8 +81,8 @@ export default function SalesPage() {
 
   return (
     <div dir="rtl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">{t("sales.title")}</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("sales.title")}</h1>
         <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">{t("sales.addOrder")}</button>
       </div>
 

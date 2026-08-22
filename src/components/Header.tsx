@@ -27,10 +27,10 @@ export default function Header({ title }: { title: string }) {
   }, []);
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-      <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
+    <header className="bg-white shadow-sm border-b border-gray-200 py-4 pr-16 pl-4 sm:pl-6 lg:px-6 flex items-center justify-between gap-2">
+      <h2 className="text-lg sm:text-xl font-semibold text-gray-800 truncate">{title}</h2>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1 sm:gap-3 shrink-0">
         <button
           onClick={() => setLocale(locale === "ar" ? "en" : "ar")}
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
@@ -52,8 +52,8 @@ export default function Header({ title }: { title: string }) {
             <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
               <User size={16} className="text-white" />
             </div>
-            <div className="hidden sm:block text-right">
-              <p className="text-sm font-medium text-gray-700 leading-tight">{userName}</p>
+            <div className="text-right min-w-0">
+              <p className="text-sm font-medium text-gray-700 leading-tight truncate max-w-[100px] sm:max-w-none">{userName}</p>
               {roleLabel && <p className="text-xs text-gray-400 leading-tight">{roleLabel}</p>}
             </div>
             <ChevronDown size={16} className={`text-gray-400 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />

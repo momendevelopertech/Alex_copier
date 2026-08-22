@@ -25,13 +25,13 @@ export default function Pagination({ currentPage, totalPages, onPageChange, tota
   }
 
   return (
-    <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white rounded-xl shadow-sm">
+    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between mt-4 px-4 py-3 bg-white rounded-xl shadow-sm">
       {totalItems != null && pageSize != null && (
-        <span className="text-sm text-gray-500">
+        <span className="text-xs sm:text-sm text-gray-500 text-center">
           عرض {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, totalItems)} من {totalItems}
         </span>
       )}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-wrap justify-center">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}

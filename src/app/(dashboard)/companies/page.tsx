@@ -53,7 +53,7 @@ export default function CompaniesPage() {
   return (
     <div dir="rtl">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">{t("companies.title")}</h1>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("companies.title")}</h1>
         <p className="text-gray-500 mt-1">{t("companies.overview")}</p>
       </div>
 
