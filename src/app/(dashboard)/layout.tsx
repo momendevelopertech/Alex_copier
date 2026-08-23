@@ -2,6 +2,7 @@
 
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
+import UIProvider from "@/components/UIProvider";
 import { useI18n } from "@/i18n/context";
 import { usePathname } from "next/navigation";
 
@@ -37,7 +38,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <Header title={t(titleKey)} />
-        <main className="flex-1 p-4 sm:p-6 overflow-auto">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 overflow-auto">
+          <UIProvider>{children}</UIProvider>
+        </main>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Fragment, useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
@@ -6,26 +6,29 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
+import { Plus, Save, X } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
+import { useToast } from "@/components/UIProvider";
+import { apiErrorMessage } from "@/lib/api-client";
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  CASH: "نقدي",
-  CREDIT: "آجل",
-  INSTALLMENT: "أقساط",
-  MIXED: "مختلط",
+  CASH: "Ù†Ù‚Ø¯ÙŠ",
+  CREDIT: "Ø¢Ø¬Ù„",
+  INSTALLMENT: "Ø£Ù‚Ø³Ø§Ø·",
+  MIXED: "Ù…Ø®ØªÙ„Ø·",
 };
 
 const PAYMENT_STATUS_LABELS: Record<string, string> = {
-  PENDING: "معلق",
-  PARTIAL: "جزئي",
-  PAID: "مدفوع",
-  OVERDUE: "متأخر",
+  PENDING: "Ù…Ø¹Ù„Ù‚",
+  PARTIAL: "Ø¬Ø²Ø¦ÙŠ",
+  PAID: "Ù…Ø¯ÙÙˆØ¹",
+  OVERDUE: "Ù…ØªØ£Ø®Ø±",
 };
 
 const ORDER_TYPE_LABELS: Record<string, string> = {
-  MACHINE_SALE: "بيع جهاز",
-  SPARE_PART_SALE: "بيع قطع غيار",
+  MACHINE_SALE: "Ø¨ÙŠØ¹ Ø¬Ù‡Ø§Ø²",
+  SPARE_PART_SALE: "Ø¨ÙŠØ¹ Ù‚Ø·Ø¹ ØºÙŠØ§Ø±",
 };
 
 const paymentStatusColors: Record<string, string> = {
@@ -48,6 +51,8 @@ interface ItemRow { productId: string; quantity: string; unitPrice: string; disc
 
 export default function SalesPage() {
   const { t, dir } = useI18n();
+  
+  const { success: toastSuccess, error: toastError } = useToast();
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -124,24 +129,26 @@ export default function SalesPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     const items = itemRows.filter(row => row.productId && row.quantity && row.unitPrice).map(row => ({ productId: row.productId, quantity: Number(row.quantity), unitPrice: Number(row.unitPrice), discount: Number(row.discount) || 0 }));
-    if (!items.length) return;
+    if (!items.length) { toastError(t("errors.INVALID_SALE_ITEMS")); return; }
     const response = await fetch("/api/sales", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...form, discount: parseFloat(form.discount) || 0, taxRate: parseFloat(form.taxRate) || 0, orderDate: new Date().toISOString(), items }),
     });
-    if (!response.ok) { alert((await response.json().catch(() => ({}))).error || t("common.error")); return; }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) { toastError(apiErrorMessage(data, t)); return; }
     setForm({ companyId: "", customerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", discount: "", discountType: "FIXED", taxRate: "", notes: "" });
     setItemRows([{ productId: "", quantity: "", unitPrice: "", discount: "" }]);
     setShowForm(false);
     fetchData();
+    toastSuccess(t("common.savedSuccessfully"));
   };
 
   return (
     <div dir={dir}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("sales.title")}</h1>
-        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">{t("sales.addOrder")}</button>
+        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"><Plus size={16} />{t("sales.addOrder")}</button>
       </div>
 
       {showForm && (
@@ -175,12 +182,12 @@ export default function SalesPage() {
             <input type="number" placeholder={t("sales.taxRate")} value={form.taxRate} onChange={(e) => setForm({ ...form, taxRate: e.target.value })} className="border rounded-lg px-4 py-2" />
             <textarea placeholder={t("common.notes")} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="border rounded-lg px-4 py-2" rows={2} />
             <div className="md:col-span-2 rounded-lg border border-slate-200 p-4">
-              <div className="mb-3 flex items-center justify-between"><h3 className="font-medium">{t("sales.items")}</h3><button type="button" onClick={() => setItemRows([...itemRows, { productId: "", quantity: "", unitPrice: "", discount: "" }])} className="text-sm text-blue-600 hover:underline">{t("purchases.addRow")}</button></div>
-              <div className="space-y-2">{itemRows.map((row, index) => <div key={index} className="grid gap-2 sm:grid-cols-[1fr_100px_130px_120px_auto]"><select value={row.productId} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, productId: e.target.value } : item))} className="border rounded-lg px-3 py-2" required><option value="">{t("purchases.selectProduct")}</option>{products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</select><input type="number" min="1" required placeholder={t("sales.qty")} value={row.quantity} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, quantity: e.target.value } : item))} className="border rounded-lg px-3 py-2" /><input type="number" min="0" step="0.01" required placeholder={t("sales.unitPrice")} value={row.unitPrice} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, unitPrice: e.target.value } : item))} className="border rounded-lg px-3 py-2" /><input type="number" min="0" step="0.01" placeholder={t("sales.discount")} value={row.discount} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, discount: e.target.value } : item))} className="border rounded-lg px-3 py-2" />{itemRows.length > 1 && <button type="button" onClick={() => setItemRows(itemRows.filter((_, i) => i !== index))} className="text-red-600">×</button>}</div>)}</div>
+              <div className="mb-3 flex items-center justify-between"><h3 className="font-medium">{t("sales.items")}</h3><button type="button" onClick={() => setItemRows([...itemRows, { productId: "", quantity: "", unitPrice: "", discount: "" }])} className="text-sm text-blue-600 hover:underline"><Plus size={16} />{t("purchases.addRow")}</button></div>
+              <div className="space-y-2">{itemRows.map((row, index) => <div key={index} className="grid gap-2 sm:grid-cols-[1fr_100px_130px_120px_auto]"><select value={row.productId} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, productId: e.target.value } : item))} className="border rounded-lg px-3 py-2" required><option value="">{t("purchases.selectProduct")}</option>{products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</select><input type="number" min="1" required placeholder={t("sales.qty")} value={row.quantity} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, quantity: e.target.value } : item))} className="border rounded-lg px-3 py-2" /><input type="number" min="0" step="0.01" required placeholder={t("sales.unitPrice")} value={row.unitPrice} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, unitPrice: e.target.value } : item))} className="border rounded-lg px-3 py-2" /><input type="number" min="0" step="0.01" placeholder={t("sales.discount")} value={row.discount} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, discount: e.target.value } : item))} className="border rounded-lg px-3 py-2" />{itemRows.length > 1 && <button type="button" onClick={() => setItemRows(itemRows.filter((_, i) => i !== index))} className="text-red-600">Ã—</button>}</div>)}</div>
             </div>
             <div className="md:col-span-2 flex gap-2">
-              <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">{t("common.save")}</button>
-              <button type="button" onClick={() => setShowForm(false)} className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">{t("common.cancel")}</button>
+              <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"><Save size={16} />{t("common.save")}</button>
+              <button type="button" onClick={() => setShowForm(false)} className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 inline-flex items-center gap-2"><X size={16} />{t("common.cancel")}</button>
             </div>
           </form>
         </div>
@@ -189,9 +196,9 @@ export default function SalesPage() {
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
           <SearchInput value={search} onChange={setSearch} placeholder={t("sales.searchPlaceholder")} />
-          <FilterSelect value={paymentFilter} onChange={(v) => { setPaymentFilter(v); setPage(1); }} options={Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("sales.paymentStatus")} — ${t("common.all")}`} className="md:w-40" />
-          <FilterSelect value={typeFilter} onChange={(v) => { setTypeFilter(v); setPage(1); }} options={Object.entries(ORDER_TYPE_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("sales.typeFilter")} — ${t("common.all")}`} className="md:w-40" />
-          <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} — ${t("common.all")}`} className="md:w-40" />
+          <FilterSelect value={paymentFilter} onChange={(v) => { setPaymentFilter(v); setPage(1); }} options={Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("sales.paymentStatus")} â€” ${t("common.all")}`} className="md:w-40" />
+          <FilterSelect value={typeFilter} onChange={(v) => { setTypeFilter(v); setPage(1); }} options={Object.entries(ORDER_TYPE_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("sales.typeFilter")} â€” ${t("common.all")}`} className="md:w-40" />
+          <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} â€” ${t("common.all")}`} className="md:w-40" />
           <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={(v) => { setDateFrom(v); setPage(1); }} onToChange={(v) => { setDateTo(v); setPage(1); }} />
           {hasActiveFilters && (
             <button onClick={() => { setSearch(""); setPaymentFilter(""); setTypeFilter(""); setCompanyFilter(""); setDateFrom(""); setDateTo(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
@@ -231,7 +238,7 @@ export default function SalesPage() {
                   <Fragment key={order.id}>
                     <tr className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium">{order.id.slice(0, 8)}</td>
-                      <td className="px-4 py-3 text-sm">{order.company?.name || companies.find(c => c.id === order.companyId)?.name || "—"}</td>
+                      <td className="px-4 py-3 text-sm">{order.company?.name || companies.find(c => c.id === order.companyId)?.name || "â€”"}</td>
                       <td className="px-4 py-3 text-sm">{order.customer.name}</td>
                       <td className="px-4 py-3 text-sm">{ORDER_TYPE_LABELS[order.orderType] || order.orderType}</td>
                       <td className="px-4 py-3 text-sm">{order.total.toLocaleString()}</td>

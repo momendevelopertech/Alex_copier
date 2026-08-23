@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -6,9 +6,11 @@ import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
+import { Plus, Trash2, Upload, X } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import ImportDialog from "@/components/ImportDialog";
 import PrinterLoader from "@/components/PrinterLoader";
+import { useConfirm, useToast } from "@/components/UIProvider";
 import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 
 interface Machine {
@@ -47,12 +49,12 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  SOLD: "مباع",
-  RENTED: "مؤجر",
-  IN_WAREHOUSE: "في المستودع",
-  UNDER_MAINTENANCE: "تحت الصيانة",
-  UNDER_INSPECTION: "تحت الفحص",
-  SCRAPPED: "مهمل",
+  SOLD: "Ù…Ø¨Ø§Ø¹",
+  RENTED: "Ù…Ø¤Ø¬Ø±",
+  IN_WAREHOUSE: "ÙÙŠ Ø§Ù„Ù…Ø³ØªÙˆØ¯Ø¹",
+  UNDER_MAINTENANCE: "ØªØ­Øª Ø§Ù„ØµÙŠØ§Ù†Ø©",
+  UNDER_INSPECTION: "ØªØ­Øª Ø§Ù„ÙØ­Øµ",
+  SCRAPPED: "Ù…Ù‡Ù…Ù„",
 };
 
 const emptyForm = {
@@ -69,6 +71,9 @@ const emptyForm = {
 
 export default function MachinesPage() {
   const { t, dir, locale } = useI18n();
+  const confirmAction = useConfirm();
+const { success: toastSuccess } = useToast();
+  
   const [machines, setMachines] = useState<Machine[]>([]);
   const urlParams = useUrlParams(["serial"]);
   const [search, setSearchInput] = useSearchWithDefault(urlParams.serial ?? "");
@@ -151,10 +156,11 @@ export default function MachinesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("هل أنت متأكد من الحذف؟")) return;
-    await fetch(`/api/machines/${id}`, { method: "DELETE" });
-    fetchMachines();
-  };
+      if (!(await confirmAction({ message: t("common.deleteConfirm") }))) return;
+      await fetch(`/api/machines/${id}`, { method: "DELETE" });
+      fetchMachines();
+      toastSuccess(t("common.deletedSuccessfully"));
+    };
 
   const setField = (field: string, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -176,9 +182,9 @@ export default function MachinesPage() {
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("machines.title")}</h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
         >
-          {showForm ? t("common.cancel") : t("machines.addMachine")}
+          {showForm ? (<><X size={16} />{t("common.cancel")}</>) : (<><Plus size={16} />{t("machines.addMachine")}</>)}
         </button>
       </div>
 
@@ -214,7 +220,7 @@ export default function MachinesPage() {
                 checked={form.isColor}
                 onChange={(e) => setField("isColor", e.target.checked)}
               />
-              <span>ملون</span>
+              <span>Ù…Ù„ÙˆÙ†</span>
             </label>
             <select
               value={form.paperSize}
@@ -227,21 +233,21 @@ export default function MachinesPage() {
             </select>
             <input
               type="date"
-              placeholder="تاريخ الشراء"
+              placeholder="ØªØ§Ø±ÙŠØ® Ø§Ù„Ø´Ø±Ø§Ø¡"
               value={form.purchaseDate}
               onChange={(e) => setField("purchaseDate", e.target.value)}
               className="border rounded-lg px-4 py-2 w-full"
             />
             <input
               type="number"
-              placeholder="سعر الشراء"
+              placeholder="Ø³Ø¹Ø± Ø§Ù„Ø´Ø±Ø§Ø¡"
               value={form.purchasePrice}
               onChange={(e) => setField("purchasePrice", e.target.value)}
               className="border rounded-lg px-4 py-2 w-full"
             />
             <input
               type="text"
-              placeholder="معرّف المالك الحالي"
+              placeholder="Ù…Ø¹Ø±Ù‘Ù Ø§Ù„Ù…Ø§Ù„Ùƒ Ø§Ù„Ø­Ø§Ù„ÙŠ"
               value={form.currentOwnerId}
               onChange={(e) => setField("currentOwnerId", e.target.value)}
               className="border rounded-lg px-4 py-2 w-full"
@@ -255,7 +261,7 @@ export default function MachinesPage() {
             />
             <button
               type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
             >
               {t("common.save")}
             </button>
@@ -273,7 +279,7 @@ export default function MachinesPage() {
           value={statusFilter}
           onChange={(v) => { setStatusFilter(v); setPage(1); }}
           options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))}
-          allLabel={`${t("machines.status")} — ${t("common.all")}`}
+          allLabel={`${t("machines.status")} â€” ${t("common.all")}`}
           className="md:w-44"
         />
         {hasActiveFilters && (
@@ -290,7 +296,7 @@ export default function MachinesPage() {
             onClick={() => setShowImport(true)}
             className="border border-blue-600 text-blue-700 hover:bg-blue-50 px-3 py-2 rounded-lg text-sm font-medium"
           >
-            {t("common.import")}
+            <Upload size={14} className="inline-block me-1" />{t("common.import")}
           </button>
         </div>
       </div>
@@ -304,8 +310,8 @@ export default function MachinesPage() {
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("machines.manufacturer")}</th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("machines.model")}</th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("machines.status")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">حجم الورق</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">المالك الحالي</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Ø­Ø¬Ù… Ø§Ù„ÙˆØ±Ù‚</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Ø§Ù„Ù…Ø§Ù„Ùƒ Ø§Ù„Ø­Ø§Ù„ÙŠ</th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.date")}</th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.actions")}</th>
               </tr>
@@ -341,7 +347,7 @@ export default function MachinesPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm">{machine.paperSize}</td>
-                    <td className="px-4 py-3 text-sm">{machine.currentOwner?.name || "—"}</td>
+                    <td className="px-4 py-3 text-sm">{machine.currentOwner?.name || "â€”"}</td>
                     <td className="px-4 py-3 text-sm">
                       {new Date(machine.createdAt).toLocaleDateString("ar-EG")}
                     </td>
@@ -356,7 +362,7 @@ export default function MachinesPage() {
                         onClick={() => handleDelete(machine.id)}
                         className="text-red-600 hover:text-red-800 text-sm"
                       >
-                        {t("common.delete")}
+                        <Trash2 size={14} className="inline-block me-1" />{t("common.delete")}
                       </button>
                     </td>
                   </tr>
@@ -391,10 +397,10 @@ export default function MachinesPage() {
             ) : (
               <div className="space-y-6 p-5 sm:p-7">
                 <section className="grid gap-4 md:grid-cols-4">
-                  <Info label={t("machines.manufacturer")} value={selected.manufacturer || "—"} />
-                  <Info label={t("machines.model")} value={selected.model || "—"} />
+                  <Info label={t("machines.manufacturer")} value={selected.manufacturer || "â€”"} />
+                  <Info label={t("machines.model")} value={selected.model || "â€”"} />
                   <Info label={t("machines.status")} value={STATUS_LABELS[selected.currentStatus] || selected.currentStatus} />
-                  <Info label={t("machineDetails.currentMeter")} value={selected.meterReadings[0]?.reading?.toLocaleString() || "—"} />
+                  <Info label={t("machineDetails.currentMeter")} value={selected.meterReadings[0]?.reading?.toLocaleString() || "â€”"} />
                 </section>
 
                 <section className="grid gap-4 lg:grid-cols-2">
@@ -407,9 +413,9 @@ export default function MachinesPage() {
                         {selected.currentOwner?.phone && <span className="ms-2 text-sm text-slate-600" dir="ltr">{selected.currentOwner.phone}</span>}
                       </>
                     ) : (
-                      <p className="font-semibold">—</p>
+                      <p className="font-semibold">â€”</p>
                     )}
-                    <p className="mt-1 text-sm text-slate-600">{t("machineDetails.location")}: {selected.customerLocation?.name || "—"}</p>
+                    <p className="mt-1 text-sm text-slate-600">{t("machineDetails.location")}: {selected.customerLocation?.name || "â€”"}</p>
                     {selected.customerLocation?.address && <p className="text-sm text-slate-500">{selected.customerLocation.address}</p>}
                   </Panel>
                   <Panel title={t("machineDetails.warranty")}>
@@ -422,15 +428,15 @@ export default function MachinesPage() {
 
                 <section className="grid gap-4 lg:grid-cols-2">
                   <Panel title={t("machineDetails.contracts")}>
-                    {selected.contracts.length ? <div className="space-y-2">{selected.contracts.map(({ id, contract }) => <Link key={id} href={`/contracts?focus=${contract.id}`} className="flex justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm hover:bg-slate-100"><span className="font-medium text-blue-600">{contract.contractNumber}</span><span>{contract.status} · {date(contract.endDate)}</span></Link>)}</div> : <Empty text={t("machineDetails.noContracts")} />}
+                    {selected.contracts.length ? <div className="space-y-2">{selected.contracts.map(({ id, contract }) => <Link key={id} href={`/contracts?focus=${contract.id}`} className="flex justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm hover:bg-slate-100"><span className="font-medium text-blue-600">{contract.contractNumber}</span><span>{contract.status} Â· {date(contract.endDate)}</span></Link>)}</div> : <Empty text={t("machineDetails.noContracts")} />}
                   </Panel>
                   <Panel title={t("machineDetails.meter")}>
-                    {selected.meterReadings.length ? <div className="space-y-2">{selected.meterReadings.slice(0, 5).map(reading => <div key={reading.id} className="flex justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm"><span className="font-medium">{reading.reading.toLocaleString()}</span><span>{date(reading.readingDate)} · {reading.source}</span></div>)}</div> : <Empty text={t("machineDetails.noMeters")} />}
+                    {selected.meterReadings.length ? <div className="space-y-2">{selected.meterReadings.slice(0, 5).map(reading => <div key={reading.id} className="flex justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm"><span className="font-medium">{reading.reading.toLocaleString()}</span><span>{date(reading.readingDate)} Â· {reading.source}</span></div>)}</div> : <Empty text={t("machineDetails.noMeters")} />}
                   </Panel>
                 </section>
 
-                <Panel title={`${t("machineDetails.service")} · ${selected.serviceRequests.filter(r => isOpen(r.status)).length} ${t("machineDetails.openRequests")}`}>
-                  {selected.serviceRequests.length ? <div className="space-y-3">{selected.serviceRequests.map(request => <Link key={request.id} href={`/service-requests?focus=${request.id}`} className="block rounded-lg border border-slate-200 p-3 hover:bg-slate-50"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold text-blue-600">{request.requestNumber}</span><span className="rounded-full bg-slate-100 px-2 py-1 text-xs">{request.status}</span></div><p className="mt-1 text-sm text-slate-600">{t("machineDetails.assignedTo")}: {request.engineer?.name || "—"} · {date(request.createdAt)}</p>{request.visits.length > 0 && <p className="mt-1 text-sm text-slate-500">{t("machineDetails.visits")}: {request.visits.length}</p>}</Link>)}</div> : <Empty text={t("machineDetails.noService")} />}
+                <Panel title={`${t("machineDetails.service")} Â· ${selected.serviceRequests.filter(r => isOpen(r.status)).length} ${t("machineDetails.openRequests")}`}>
+                  {selected.serviceRequests.length ? <div className="space-y-3">{selected.serviceRequests.map(request => <Link key={request.id} href={`/service-requests?focus=${request.id}`} className="block rounded-lg border border-slate-200 p-3 hover:bg-slate-50"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold text-blue-600">{request.requestNumber}</span><span className="rounded-full bg-slate-100 px-2 py-1 text-xs">{request.status}</span></div><p className="mt-1 text-sm text-slate-600">{t("machineDetails.assignedTo")}: {request.engineer?.name || "â€”"} Â· {date(request.createdAt)}</p>{request.visits.length > 0 && <p className="mt-1 text-sm text-slate-500">{t("machineDetails.visits")}: {request.visits.length}</p>}</Link>)}</div> : <Empty text={t("machineDetails.noService")} />}
                 </Panel>
 
                 <Panel title={t("machineDetails.timeline")}>
@@ -438,8 +444,8 @@ export default function MachinesPage() {
                     { id: "created", at: selected.createdAt, title: t("machineDetails.created"), detail: selected.serialNumber },
                     ...selected.history.map(event => ({ id: event.id, at: event.date, title: event.transactionType, detail: event.customer?.name || event.notes || "" })),
                     ...selected.serviceRequests.map(request => ({ id: request.id, at: request.createdAt, title: `${t("machineDetails.request")} ${request.requestNumber}`, detail: request.status })),
-                    ...selected.serviceRequests.flatMap(request => request.visits.map(visit => ({ id: visit.id, at: visit.visitedAt, title: `${t("machineDetails.visits")} · ${visit.engineer.name}`, detail: visit.resolved ? t("common.resolve") : "" }))),
-                  ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).map(event => <div key={event.id} className="relative"><span className="absolute -start-[21px] top-1.5 size-2.5 rounded-full bg-blue-500"/><p className="font-medium text-sm">{event.title}</p><p className="text-xs text-slate-500">{date(event.at)} {event.detail && `· ${event.detail}`}</p></div>)}</div>
+                    ...selected.serviceRequests.flatMap(request => request.visits.map(visit => ({ id: visit.id, at: visit.visitedAt, title: `${t("machineDetails.visits")} Â· ${visit.engineer.name}`, detail: visit.resolved ? t("common.resolve") : "" }))),
+                  ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).map(event => <div key={event.id} className="relative"><span className="absolute -start-[21px] top-1.5 size-2.5 rounded-full bg-blue-500"/><p className="font-medium text-sm">{event.title}</p><p className="text-xs text-slate-500">{date(event.at)} {event.detail && `Â· ${event.detail}`}</p></div>)}</div>
                 </Panel>
               </div>
             )}
@@ -451,7 +457,7 @@ export default function MachinesPage() {
         open={showImport}
         onClose={() => setShowImport(false)}
         entity="machines"
-        title={`${t("common.import")} — ${t("machines.title")}`}
+        title={`${t("common.import")} â€” ${t("machines.title")}`}
         onImported={fetchMachines}
       />
     </div>

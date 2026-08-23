@@ -35,10 +35,10 @@ export async function POST(request: Request) {
     const { items, installments, ...data } = body;
 
     if (!data.companyId || !data.customerId || !data.orderType || !data.paymentMethod || !Array.isArray(items) || items.length === 0) {
-      return NextResponse.json({ error: "A sale requires a customer, company, payment method, and at least one item" }, { status: 400 });
+      return NextResponse.json({ error: "بيانات البيع غير مكتملة (عميل وشركة وطريقة دفع وبند واحد على الأقل)", code: "SALE_FIELDS_REQUIRED" }, { status: 400 });
     }
     if (items.some((item: { productId?: string; quantity?: number; unitPrice?: number }) => !item.productId || !Number.isInteger(item.quantity) || (item.quantity ?? 0) <= 0 || !Number.isFinite(item.unitPrice) || (item.unitPrice ?? -1) < 0)) {
-      return NextResponse.json({ error: "Invalid sales items" }, { status: 400 });
+      return NextResponse.json({ error: "بنود البيع غير صالحة", code: "INVALID_SALE_ITEMS" }, { status: 400 });
     }
 
     const subtotal = items.reduce(

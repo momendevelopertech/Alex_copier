@@ -64,12 +64,35 @@ export async function POST(request: Request) {
       const authed = await requireAuth();
       return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
     }
-        const body = await request.json();
+    const body = await request.json();
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    if (!name) {
+      return NextResponse.json({ error: "اسم الشركة مطلوب", code: "NAME_REQUIRED" }, { status: 400 });
+    }
+
+    const optionalText = (value: unknown): string | null =>
+      typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+
     const company = await prisma.company.create({
-      data: body,
+      data: {
+        name,
+        nameAr: optionalText(body.nameAr),
+        taxNumber: optionalText(body.taxNumber),
+        tradeRegister: optionalText(body.tradeRegister),
+        address: optionalText(body.address),
+        phone: optionalText(body.phone),
+        email: optionalText(body.email),
+      },
     });
     return NextResponse.json(company, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to create company" }, { status: 500 });
+    if (typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "P2002") {
+      return NextResponse.json(
+        { error: "اسم الشركة مستخدم بالفعل", code: "DUPLICATE_COMPANY_NAME" },
+        { status: 409 },
+      );
+    }
+    console.error("[companies] POST failed:", error);
+    return NextResponse.json({ error: "Failed to create company", code: "CREATE_FAILED" }, { status: 500 });
   }
 }

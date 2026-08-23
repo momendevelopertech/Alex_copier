@@ -40,18 +40,18 @@ export async function POST(request: Request) {
     const { areas, skills, ...data } = body;
 
     if (!data.name || String(data.name).trim() === "") {
-      return NextResponse.json({ error: "اسم المهندس مطلوب" }, { status: 400 });
+      return NextResponse.json({ error: "اسم المهندس مطلوب", code: "NAME_REQUIRED" }, { status: 400 });
     }
 
     let userId: string | null = null;
     if (typeof data.userId === "string" && data.userId !== "") {
       const linkedUser = await prisma.user.findUnique({ where: { id: data.userId } });
-      if (!linkedUser) return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 400 });
+      if (!linkedUser) return NextResponse.json({ error: "المستخدم غير موجود", code: "USER_NOT_FOUND" }, { status: 400 });
       if (linkedUser.role !== "ENGINEER") {
-        return NextResponse.json({ error: "الحساب المرتبط يجب أن يكون بدور مهندس" }, { status: 400 });
+        return NextResponse.json({ error: "الحساب المرتبط يجب أن يكون بدور مهندس", code: "LINKED_USER_MUST_BE_ENGINEER" }, { status: 400 });
       }
       const taken = await prisma.engineer.findUnique({ where: { userId: linkedUser.id } });
-      if (taken) return NextResponse.json({ error: "هذا الحساب مرتبط بمهندس آخر" }, { status: 409 });
+      if (taken) return NextResponse.json({ error: "هذا الحساب مرتبط بمهندس آخر", code: "ACCOUNT_ALREADY_LINKED" }, { status: 409 });
       userId = linkedUser.id;
     }
 

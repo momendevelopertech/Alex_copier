@@ -1,6 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth-helpers";
+import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
+
+async function guardMutations() {
+  const actor = await requirePageAccess("customers");
+  if (actor) return { actor };
+  const authed = await requireAuth();
+  return {
+    actor: null,
+    response: NextResponse.json(
+      { error: authed ? "Forbidden" : "Unauthorized", code: authed ? "FORBIDDEN" : "UNAUTHORIZED" },
+      { status: authed ? 403 : 401 },
+    ),
+  };
+}
 
 export async function GET(
   request: Request,
@@ -37,10 +50,22 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { actor, response } = await guardMutations();
+    if (!actor && response) return response;
     const { id } = await params;
     const body = await request.json();
+
+    if ("name" in body && (typeof body.name !== "string" || body.name.trim() === "")) {
+      return NextResponse.json({ error: "اسم العميل مطلوب", code: "NAME_REQUIRED" }, { status: 400 });
+    }
+    for (const field of [
+      "name", "companyName", "contactPerson", "phone", "whatsapp",
+      "email", "address", "city", "governorate", "taxNumber", "tradeRegister", "paymentTerms",
+    ] as const) {
+      if (field in body && typeof body[field] === "string") {
+        body[field] = body[field].trim() === "" ? null : body[field].trim();
+      }
+    }
 
     const customer = await prisma.customer.update({
       where: { id },
@@ -53,7 +78,8 @@ export async function PUT(
 
     return NextResponse.json(customer);
   } catch (error) {
-    return NextResponse.json({ error: "Failed to update customer" }, { status: 500 });
+    console.error("[customers] PUT failed:", error);
+    return NextResponse.json({ error: "Failed to update customer", code: "UPDATE_FAILED" }, { status: 500 });
   }
 }
 
@@ -62,12 +88,26 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { actor, response } = await guardMutations();
+    if (!actor && response) return response;
     const { id } = await params;
+
+    const [machinesCount, requestsCount, contractsCount] = await Promise.all([
+      prisma.machine.count({ where: { currentOwnerId: id } }),
+      prisma.serviceRequest.count({ where: { customerId: id } }),
+      prisma.contract.count({ where: { customerId: id } }),
+    ]);
+    if (machinesCount + requestsCount + contractsCount > 0) {
+      return NextResponse.json(
+        { error: "لا يمكن حذف عميل مرتبط بماكينات أو عقود أو طلبات صيانة", code: "CUSTOMER_IN_USE" },
+        { status: 409 },
+      );
+    }
+
     await prisma.customer.delete({ where: { id } });
     return NextResponse.json({ message: "Customer deleted" });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to delete customer" }, { status: 500 });
+    console.error("[customers] DELETE failed:", error);
+    return NextResponse.json({ error: "Failed to delete customer", code: "DELETE_FAILED" }, { status: 500 });
   }
 }

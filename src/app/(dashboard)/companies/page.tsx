@@ -3,11 +3,19 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
 import PrinterLoader from "@/components/PrinterLoader";
+import { apiErrorMessage } from "@/lib/api-client";
+import { useToast, useConfirm } from "@/components/UIProvider";
+import { Pencil, Plus, Save, Trash2, X } from "lucide-react";
 
 interface CompanyData {
   id: string;
   name: string;
   nameAr: string | null;
+  taxNumber?: string | null;
+  tradeRegister?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
   totalSales: number;
   totalPurchases: number;
   totalSettlements: number;
@@ -24,14 +32,31 @@ const COMPANY_ICONS: Record<string, string> = {
   "شركة القطاعي": "⚡",
 };
 
+const emptyForm = {
+  name: "",
+  nameAr: "",
+  taxNumber: "",
+  tradeRegister: "",
+  address: "",
+  phone: "",
+  email: "",
+};
+
 export default function CompaniesPage() {
   const { t, dir } = useI18n();
   const [companies, setCompanies] = useState<CompanyData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const { success: toastSuccess, error: toastError } = useToast();
+  const confirmAction = useConfirm();
 
-  useEffect(() => {
+  const fetchCompanies = () => {
     fetch("/api/companies")
       .then((r) => r.json())
       .then((data) => {
@@ -39,6 +64,10 @@ export default function CompaniesPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchCompanies();
   }, []);
 
   const totalSales = companies.reduce((s, c) => s + c.totalSales, 0);
@@ -47,6 +76,66 @@ export default function CompaniesPage() {
   const totalNetProfit = companies.reduce((s, c) => s + c.netProfit, 0);
 
   const selected = companies.find((c) => c.id === selectedId);
+
+  const openCreate = () => {
+    setForm(emptyForm);
+    setEditingId(null);
+    setError("");
+    setShowForm(!showForm);
+  };
+
+  const openEdit = (company: CompanyData) => {
+    setForm({
+      name: company.name,
+      nameAr: company.nameAr || "",
+      taxNumber: company.taxNumber || "",
+      tradeRegister: company.tradeRegister || "",
+      address: company.address || "",
+      phone: company.phone || "",
+      email: company.email || "",
+    });
+    setEditingId(company.id);
+    setError("");
+    setShowForm(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(editingId ? `/api/companies/${editingId}` : "/api/companies", {
+        method: editingId ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setError(apiErrorMessage(data, t));
+        return;
+      }
+      setShowForm(false);
+      setForm(emptyForm);
+      setEditingId(null);
+      fetchCompanies();
+      toastSuccess(t("common.savedSuccessfully"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!(await confirmAction({ message: t("companies.deleteConfirm") }))) return;
+    const res = await fetch(`/api/companies/${id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      toastError(apiErrorMessage(data, t));
+      return;
+    }
+    setSelectedId(null);
+    fetchCompanies();
+    toastSuccess(t("common.deletedSuccessfully"));
+  };
 
   if (loading) {
     return (
@@ -58,10 +147,79 @@ export default function CompaniesPage() {
 
   return (
     <div dir={dir}>
-      <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("companies.title")}</h1>
-        <p className="text-gray-500 mt-1">{t("companies.overview")}</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("companies.title")}</h1>
+          <p className="text-gray-500 mt-1">{t("companies.overview")}</p>
+        </div>
+        <button
+          onClick={openCreate}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
+        >
+          {showForm && !editingId ? (<><X size={16} />{t("common.cancel")}</>) : (<><Plus size={16} />{t("companies.addCompany")}</>)}
+        </button>
       </div>
+
+      {(error) && (
+        <div
+          className={`mb-4 flex items-center justify-between rounded-xl border px-4 py-3 text-sm ${
+            error ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-800"
+          }`}
+          role="status"
+        >
+          <span>{error}</span>
+          <button onClick={() => { setError(""); }} aria-label={t("common.close")} className="text-inherit">✕</button>
+        </div>
+      )}
+
+      {showForm && (
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">
+            {editingId ? t("companies.editCompany") : t("companies.addCompany")}
+          </h2>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {(
+              [
+                ["name", t("companies.legalName")],
+                ["nameAr", t("companies.tradeName")],
+                ["taxNumber", t("companies.taxNumber")],
+                ["tradeRegister", t("companies.tradeRegister")],
+                ["phone", t("common.phone")],
+                ["email", t("customers.email")],
+              ] as const
+            ).map(([field, label]) => (
+              <div key={field}>
+                <label className="mb-1 block text-sm font-medium">{label}</label>
+                <input
+                  type={field === "email" ? "email" : "text"}
+                  value={form[field]}
+                  onChange={(e) => setForm({ ...form, [field]: e.target.value })}
+                  className="w-full rounded-lg border px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
+                  required={field === "name"}
+                />
+              </div>
+            ))}
+            <div className="md:col-span-2 lg:col-span-3">
+              <label className="mb-1 block text-sm font-medium">{t("customers.address")}</label>
+              <input
+                type="text"
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+                className="w-full rounded-lg border px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+            <div className="md:col-span-2 lg:col-span-3 flex justify-end">
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {<Save size={16} />}{<Save size={16} />}{saving ? t("common.saving") : t("common.save")}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-xl shadow-md p-5 border-r-4 border-blue-500">
@@ -142,7 +300,15 @@ export default function CompaniesPage() {
         <div className="bg-white rounded-xl shadow-md p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold">{selected.name} — تفاصيل</h2>
-            <button onClick={() => setSelectedId(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+            <div className="flex items-center gap-3">
+              <button onClick={() => openEdit(selected)} className="text-blue-600 hover:text-blue-800 text-sm">
+                <Pencil size={14} className="inline-block me-1" />{t("common.edit")}
+              </button>
+              <button onClick={() => handleDelete(selected.id)} className="text-red-600 hover:text-red-800 text-sm">
+                <Trash2 size={14} className="inline-block me-1" />{t("common.delete")}
+              </button>
+              <button onClick={() => setSelectedId(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="border rounded-lg p-4">

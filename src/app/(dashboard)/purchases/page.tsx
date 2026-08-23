@@ -6,6 +6,7 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
+import { Plus, Save, X } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 
@@ -124,7 +125,7 @@ export default function PurchasesPage() {
     <div dir={dir}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("purchases.title")}</h1>
-        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">{t("purchases.addOrder")}</button>
+        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"><Plus size={16} />{t("purchases.addOrder")}</button>
       </div>
 
       {showForm && (
@@ -144,7 +145,7 @@ export default function PurchasesPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="font-medium">{t("purchases.items")}</h3>
-                <button type="button" onClick={addRow} className="text-blue-600 hover:underline text-sm">{t("purchases.addRow")}</button>
+                <button type="button" onClick={addRow} className="text-blue-600 hover:underline text-sm"><Plus size={16} />{t("purchases.addRow")}</button>
               </div>
               {itemRows.map((row, idx) => (
                 <div key={idx} className="flex gap-2 items-center">
@@ -159,8 +160,8 @@ export default function PurchasesPage() {
               ))}
             </div>
             <div className="flex gap-2">
-              <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">{t("common.save")}</button>
-              <button type="button" onClick={() => setShowForm(false)} className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">{t("common.cancel")}</button>
+              <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"><Save size={16} />{t("common.save")}</button>
+              <button type="button" onClick={() => setShowForm(false)} className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 inline-flex items-center gap-2"><X size={16} />{t("common.cancel")}</button>
             </div>
           </form>
         </div>

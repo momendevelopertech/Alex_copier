@@ -6,6 +6,9 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
+import { Plus, Save, Trash2, X } from "lucide-react";
+import { useConfirm, useToast } from "@/components/UIProvider";
+import { apiErrorMessage } from "@/lib/api-client";
 
 interface EngineerArea {
   id: string;
@@ -60,6 +63,8 @@ const emptyForm = {
 
 export default function EngineersPage() {
   const { t, dir, locale } = useI18n();
+  const confirmAction = useConfirm();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [engineers, setEngineers] = useState<Engineer[]>([]);
   const [linkableUsers, setLinkableUsers] = useState<LinkableUser[]>([]);
   const [search, setSearch] = useState("");
@@ -68,8 +73,7 @@ export default function EngineersPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Engineer | null>(null);
   const [linkDraft, setLinkDraft] = useState<{ engineerId: string; userId: string }>({ engineerId: "", userId: "" });
-  const [savingLink, setSavingLink] = useState(false);
-  const [banner, setBanner] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+const [savingLink, setSavingLink] = useState(false);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
 
@@ -184,13 +188,14 @@ export default function EngineersPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t("engineers.deleteConfirm"))) return;
+    if (!(await confirmAction({ message: t("engineers.deleteConfirm") }))) return;
     const res = await fetch(`/api/engineers/${id}`, { method: "DELETE" });
     if (res.ok) {
       const payload = await res.json().catch(() => null);
-      if (payload?.deactivated) {
-        setBanner({ kind: "success", text: payload.message });
-      }
+      toastSuccess(payload?.deactivated ? payload.message : t("common.deletedSuccessfully"));
+    } else {
+      const payload = await res.json().catch(() => null);
+      toastError(apiErrorMessage(payload, t));
     }
     fetchEngineers();
     setSelected(null);
@@ -207,11 +212,11 @@ export default function EngineersPage() {
       });
       const payload = await res.json().catch(() => null);
       if (res.ok) {
-        setBanner({ kind: "success", text: t("engineers.accountLinked") });
+        toastSuccess(t("engineers.accountLinked"));
         await fetchEngineers();
         await fetchLinkableUsers();
       } else {
-        setBanner({ kind: "error", text: payload?.error ?? t("common.error") });
+        toastError(apiErrorMessage(payload, t));
       }
     } finally {
       setSavingLink(false);
@@ -229,24 +234,13 @@ export default function EngineersPage() {
 
   return (
     <div dir={dir}>
-      {banner && (
-        <div className={`mb-4 flex items-center justify-between rounded-lg border px-4 py-3 text-sm ${
-          banner.kind === "success"
-            ? "border-green-200 bg-green-50 text-green-800"
-            : "border-red-200 bg-red-50 text-red-700"
-        }`}>
-          <span>{banner.text}</span>
-          <button onClick={() => setBanner(null)} className="text-lg leading-none">×</button>
-        </div>
-      )}
-
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("engineers.title")}</h1>
         <button
           onClick={() => { setShowForm(!showForm); setSelected(null); }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
         >
-          {showForm ? t("common.cancel") : t("engineers.addEngineer")}
+          {showForm ? (<><X size={16} />{t("common.cancel")}</>) : (<><Plus size={16} />{t("engineers.addEngineer")}</>)}
         </button>
       </div>
 
@@ -316,7 +310,7 @@ export default function EngineersPage() {
             />
             <button
               type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
             >
               {t("common.save")}
             </button>
@@ -365,7 +359,7 @@ export default function EngineersPage() {
               disabled={savingLink || detailLinkUserId === (selected.user?.id ?? "")}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed justify-self-start"
             >
-              {savingLink ? t("common.loading") : t("common.save")}
+              {<Save size={14} className="inline-block me-1" />}{<Save size={14} className="inline-block me-1" />}{savingLink ? t("common.loading") : t("common.save")}
             </button>
           </div>
 
@@ -400,7 +394,7 @@ export default function EngineersPage() {
               onClick={() => handleDelete(selected.id)}
               className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 text-sm"
             >
-              {t("common.delete")}
+              <Trash2 size={14} className="inline-block me-1" />{t("common.delete")}
             </button>
           </div>
         </div>
@@ -489,7 +483,7 @@ export default function EngineersPage() {
                         title={t("common.delete")}
                         aria-label={t("common.delete")}
                       >
-                        {t("common.delete")}
+                        <Trash2 size={14} className="inline-block me-1" />{t("common.delete")}
                       </button>
                     </td>
                   </tr>

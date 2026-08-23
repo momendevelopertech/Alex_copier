@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     const actor = await requirePageAccess("serviceRequests");
     if (!actor) {
       const authed = await requireAuth();
-      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
+      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized", code: authed ? "FORBIDDEN" : "UNAUTHORIZED" }, { status: authed ? 403 : 401 });
     }
 
     const body = await request.json();
@@ -60,14 +60,14 @@ export async function POST(request: Request) {
 
     const customerId = typeof data.customerId === "string" ? data.customerId : "";
     if (!customerId || !data.description || String(data.description).trim() === "") {
-      return NextResponse.json({ error: "العميل ووصف المشكلة مطلوبان" }, { status: 400 });
+      return NextResponse.json({ error: "العميل ووصف المشكلة مطلوبان", code: "REQUEST_FIELDS_REQUIRED" }, { status: 400 });
     }
     const customer = await prisma.customer.findUnique({ where: { id: customerId }, select: { id: true } });
     if (!customer) {
-      return NextResponse.json({ error: "العميل غير موجود" }, { status: 400 });
+      return NextResponse.json({ error: "العميل غير موجود", code: "CUSTOMER_NOT_FOUND" }, { status: 400 });
     }
     if (data.priority && !["NORMAL", "IMPORTANT", "URGENT", "EMERGENCY"].includes(data.priority)) {
-      return NextResponse.json({ error: "قيمة الأولوية غير صالحة" }, { status: 400 });
+      return NextResponse.json({ error: "قيمة الأولوية غير صالحة", code: "INVALID_PRIORITY" }, { status: 400 });
     }
 
     const requestNumber = `SR-${Date.now()}`;
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
       companyId = firstCompany?.id ?? null;
     }
     if (!companyId) {
-      return NextResponse.json({ error: "لا توجد شركة مرتبطة بالطلب" }, { status: 400 });
+      return NextResponse.json({ error: "لا توجد شركة مرتبطة بالطلب", code: "COMPANY_REQUIRED" }, { status: 400 });
     }
 
     const serviceRequest = await prisma.serviceRequest.create({

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
@@ -6,6 +6,8 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
+import { Plus, Trash2, X } from "lucide-react";
+import { useConfirm, useToast } from "@/components/UIProvider";
 
 interface Investor {
   id: string;
@@ -26,6 +28,8 @@ const emptyForm = {
 
 export default function InvestorsPage() {
   const { t, dir } = useI18n();
+  const confirmAction = useConfirm();
+  const { success: toastSuccess } = useToast();
   const [investors, setInvestors] = useState<Investor[]>([]);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -92,9 +96,10 @@ export default function InvestorsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("هل أنت متأكد من الحذف؟")) return;
+    if (!(await confirmAction({ message: t("common.deleteConfirm") }))) return;
     await fetch(`/api/investors/${id}`, { method: "DELETE" });
     fetchInvestors();
+    toastSuccess(t("common.deletedSuccessfully"));
   };
 
   const setField = (field: string, value: string) => {
@@ -107,9 +112,9 @@ export default function InvestorsPage() {
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("investors.title")}</h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
         >
-          {showForm ? t("common.cancel") : t("investors.addInvestor")}
+          {showForm ? (<><X size={16} />{t("common.cancel")}</>) : (<><Plus size={16} />{t("investors.addInvestor")}</>)}
         </button>
       </div>
 
@@ -150,7 +155,7 @@ export default function InvestorsPage() {
             />
             <button
               type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
             >
               {t("common.save")}
             </button>
@@ -205,15 +210,15 @@ export default function InvestorsPage() {
                 paged.map((investor) => (
                   <tr key={investor.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium">{investor.name}</td>
-                    <td className="px-4 py-3 text-sm">{investor.phone || "—"}</td>
-                    <td className="px-4 py-3 text-sm">{investor.email || "—"}</td>
+                    <td className="px-4 py-3 text-sm">{investor.phone || "â€”"}</td>
+                    <td className="px-4 py-3 text-sm">{investor.email || "â€”"}</td>
                     <td className="px-4 py-3 text-sm">{investor.ownershipPct}%</td>
                     <td className="px-4 py-3">
                       <button
                         onClick={() => handleDelete(investor.id)}
                         className="text-red-600 hover:text-red-800 text-sm"
                       >
-                        {t("common.delete")}
+                        <Trash2 size={14} className="inline-block me-1" />{t("common.delete")}
                       </button>
                     </td>
                   </tr>

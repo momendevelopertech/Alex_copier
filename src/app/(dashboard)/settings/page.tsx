@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useI18n } from "@/i18n/context";
@@ -6,6 +6,8 @@ import { useSession } from "next-auth/react";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import PrinterLoader from "@/components/PrinterLoader";
+import { useConfirm } from "@/components/UIProvider";
+import { apiErrorMessage } from "@/lib/api-client";
 import { Plus, Pencil, Power, Eye, EyeOff, X } from "lucide-react";
 
 interface User {
@@ -40,6 +42,8 @@ const emptyForm = {
 
 export default function SettingsPage() {
   const { t, locale, setLocale, dir } = useI18n();
+  const confirmAction = useConfirm();
+  
   const { data: session } = useSession();
   const meId = (session?.user as { id?: string })?.id;
 
@@ -139,7 +143,7 @@ export default function SettingsPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setFormError(data.error || t("settings.actionFailed"));
+        setFormError(apiErrorMessage(data, t, "settings.actionFailed"));
         return;
       }
 
@@ -154,7 +158,12 @@ export default function SettingsPage() {
   };
 
   const toggleStatus = async (user: User) => {
-    if (!window.confirm(`${t("settings.toggleStatusConfirm")}\n${user.name} — ${user.email}`)) return;
+    if (
+      !(await confirmAction({
+        message: `${t("settings.toggleStatusConfirm")}\n${user.name} â€” ${user.email}`,
+      }))
+    )
+      return;
     try {
       const res = await fetch(`/api/users/${user.id}`, {
         method: "PUT",
@@ -163,7 +172,7 @@ export default function SettingsPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        setBanner({ type: "error", text: data.error || t("settings.actionFailed") });
+        setBanner({ type: "error", text: apiErrorMessage(data, t, "settings.actionFailed") });
         return;
       }
       setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, isActive: !user.isActive } : u)));
@@ -174,8 +183,8 @@ export default function SettingsPage() {
   };
 
   const tabs = [
-    { key: "language" as const, label: t("settings.language"), icon: "🌐" },
-    { key: "users" as const, label: t("settings.users"), icon: "👥" },
+    { key: "language" as const, label: t("settings.language"), icon: "ðŸŒ" },
+    { key: "users" as const, label: t("settings.users"), icon: "ðŸ‘¥" },
   ];
 
   return (
@@ -210,8 +219,8 @@ export default function SettingsPage() {
                   : "border-gray-200 hover:border-gray-400"
               }`}
             >
-              <div className="text-2xl mb-1">🇪🇬</div>
-              <div className="font-semibold">العربية</div>
+              <div className="text-2xl mb-1">ðŸ‡ªðŸ‡¬</div>
+              <div className="font-semibold">Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©</div>
               <div className="text-xs text-gray-500 mt-1">Right to Left</div>
             </button>
             <button
@@ -222,7 +231,7 @@ export default function SettingsPage() {
                   : "border-gray-200 hover:border-gray-400"
               }`}
             >
-              <div className="text-2xl mb-1">🇬🇧</div>
+              <div className="text-2xl mb-1">ðŸ‡¬ðŸ‡§</div>
               <div className="font-semibold">English</div>
               <div className="text-xs text-gray-500 mt-1">Left to Right</div>
             </button>
@@ -255,7 +264,7 @@ export default function SettingsPage() {
                 value={roleFilter}
                 onChange={(v) => setRoleFilter(v)}
                 options={ALL_ROLES.map((role) => ({ value: role, label: t(`roles.${role}`) }))}
-                allLabel={`${t("settings.roleFilter")} — ${t("common.all")}`}
+                allLabel={`${t("settings.roleFilter")} â€” ${t("common.all")}`}
                 className="md:w-48"
               />
               {(search !== "" || roleFilter !== "") && (
@@ -372,14 +381,14 @@ export default function SettingsPage() {
 
       {modalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4 cursor-pointer"
           role="dialog"
           aria-modal="true"
           onClick={(e) => { if (e.target === e.currentTarget) setModalOpen(false); }}
         >
           <form
             onSubmit={handleSave}
-            className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white p-5 sm:p-6 shadow-xl max-h-[92vh] overflow-y-auto sidebar-scroll"
+            className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white p-5 sm:p-6 shadow-xl max-h-[92vh] overflow-y-auto sidebar-scroll cursor-default"
           >
             <div className="mb-5 flex items-center justify-between">
               <h3 className="text-lg font-bold text-gray-900">
@@ -442,7 +451,7 @@ export default function SettingsPage() {
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2.5 pr-10 text-sm focus:border-blue-500 focus:outline-none"
                     autoComplete="new-password"
-                    placeholder={editingUser ? "••••••••" : ""}
+                    placeholder={editingUser ? "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" : ""}
                   />
                   <button
                     type="button"

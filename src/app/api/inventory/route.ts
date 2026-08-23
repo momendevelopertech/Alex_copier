@@ -32,13 +32,13 @@ export async function POST(request: Request) {
     const actor = await requirePageAccess("inventory");
     if (!actor) {
       const authed = await requireAuth();
-      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
+      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized", code: authed ? "FORBIDDEN" : "UNAUTHORIZED" }, { status: authed ? 403 : 401 });
     }
     const body = await request.json();
     const { warehouseId, productId, quantity, movementType, referenceId, notes } = body;
 
     if (!warehouseId || !productId || !movementType || !Number.isInteger(quantity) || quantity <= 0) {
-      return NextResponse.json({ error: "Invalid stock movement data" }, { status: 400 });
+      return NextResponse.json({ error: "بيانات حركة المخزون غير صالحة", code: "INVALID_MOVEMENT_DATA" }, { status: 400 });
     }
 
     const incoming = ["PURCHASE_IN", "INTER_COMPANY_IN", "ENGINEER_RETURN"].includes(movementType);
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
     return NextResponse.json(movement, { status: 201 });
   } catch (error) {
     if (error instanceof Error && error.message === "INSUFFICIENT_STOCK") {
-      return NextResponse.json({ error: "Insufficient stock for this movement" }, { status: 409 });
+      return NextResponse.json({ error: "الكمية المتاحة لا تكفي لهذه الحركة", code: "INSUFFICIENT_STOCK" }, { status: 409 });
     }
     return NextResponse.json({ error: "Failed to create stock movement" }, { status: 500 });
   }

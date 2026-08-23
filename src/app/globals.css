@@ -33,6 +33,30 @@ input:focus, select:focus, textarea:focus {
   outline-offset: 1px;
 }
 
+/* -- Cursor policy: pointer on anything actionable, default elsewhere -- */
+a[href],
+button:not(:disabled),
+label,
+select,
+summary,
+[role="button"]:not([aria-disabled="true"]),
+input[type="checkbox"],
+input[type="radio"],
+input[type="submit"]:not(:disabled),
+input[type="reset"],
+input[type="button"]:not(:disabled) {
+  cursor: pointer;
+}
+
+/* Disabled controls must signal they cannot be activated. */
+button:disabled,
+button[aria-disabled="true"],
+[role="button"][aria-disabled="true"],
+input[type="checkbox"]:disabled,
+input[type="radio"]:disabled {
+  cursor: not-allowed;
+}
+
 ::selection {
   background: rgb(191 219 254);
   color: #0f172a;

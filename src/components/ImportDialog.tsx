@@ -82,9 +82,9 @@ export default function ImportDialog({ open, onClose, entity, title, onImported 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 cursor-pointer" onClick={onClose}>
       <div
-        className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6"
+        className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 cursor-default"
         onClick={(e) => e.stopPropagation()}
         dir={locale === "ar" ? "rtl" : "ltr"}
       >

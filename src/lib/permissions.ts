@@ -17,6 +17,8 @@ export type Page =
   | "purchases"
   | "sales"
   | "inventory"
+  | "warehouses"
+  | "products"
   | "workshop"
   | "finance"
   | "companies"
@@ -31,7 +33,7 @@ export const ROLE_PERMISSIONS: Record<Role, Page[]> = {
   GENERAL_MANAGER: [
     "dashboard", "machines", "customers", "engineers",
     "serviceRequests", "contracts", "purchases", "sales",
-    "inventory", "workshop", "finance", "companies",
+    "inventory", "warehouses", "products", "workshop", "finance", "companies",
     "settlements", "reports", "settings", "suppliers", "investors",
   ],
 
@@ -39,7 +41,7 @@ export const ROLE_PERMISSIONS: Record<Role, Page[]> = {
   COMPANY_MANAGER: [
     "dashboard", "machines", "customers", "engineers",
     "serviceRequests", "contracts", "purchases", "sales",
-    "inventory", "workshop", "finance", "settlements",
+    "inventory", "warehouses", "products", "workshop", "finance", "settlements",
     "reports", "suppliers",
   ],
 
@@ -52,12 +54,12 @@ export const ROLE_PERMISSIONS: Record<Role, Page[]> = {
   // مدير الصيانة — طلبات الصيانة والمهندسين والورشة
   MAINTENANCE_MANAGER: [
     "dashboard", "serviceRequests", "engineers",
-    "contracts", "workshop", "inventory", "machines",
+    "contracts", "workshop", "inventory", "warehouses", "products", "machines",
   ],
 
-  // مدير الورشة — الورشة والمخزون والengineers
+  // مدير الورشة — الورشة والمخزون وengineers
   WORKSHOP_MANAGER: [
-    "dashboard", "workshop", "inventory", "engineers", "machines",
+    "dashboard", "workshop", "inventory", "warehouses", "products", "engineers", "machines",
   ],
 
   // المهندس — طلبات الصيانة المعينة عليه فقط

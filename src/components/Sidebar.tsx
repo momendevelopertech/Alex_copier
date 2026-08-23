@@ -16,6 +16,8 @@ import {
   ShoppingCart,
   DollarSign,
   Package,
+  Warehouse,
+  Boxes,
   Cog,
   Wallet,
   Receipt,
@@ -30,25 +32,64 @@ import {
   X,
 } from "lucide-react";
 
-const navItems: { key: string; href: string; icon: typeof LayoutDashboard; page?: Page }[] = [
-  { key: "navigation.dashboard", href: "/", icon: LayoutDashboard, page: "dashboard" },
-  { key: "navigation.machines", href: "/machines", icon: Printer, page: "machines" },
-  { key: "navigation.customers", href: "/customers", icon: Users, page: "customers" },
-  { key: "navigation.engineers", href: "/engineers", icon: Wrench, page: "engineers" },
-  { key: "navigation.serviceRequests", href: "/service-requests", icon: AlertTriangle, page: "serviceRequests" },
-  { key: "navigation.contracts", href: "/contracts", icon: FileText, page: "contracts" },
-  { key: "navigation.purchases", href: "/purchases", icon: ShoppingCart, page: "purchases" },
-  { key: "navigation.sales", href: "/sales", icon: DollarSign, page: "sales" },
-  { key: "navigation.inventory", href: "/inventory", icon: Package, page: "inventory" },
-  { key: "navigation.workshop", href: "/workshop", icon: Cog, page: "workshop" },
-  { key: "navigation.finance", href: "/finance", icon: Wallet, page: "finance" },
-  { key: "navigation.settlements", href: "/settlements", icon: Receipt, page: "settlements" },
-  { key: "navigation.suppliers", href: "/suppliers", icon: Truck, page: "suppliers" },
-  { key: "navigation.companies", href: "/companies", icon: Building2, page: "companies" },
-  { key: "navigation.investors", href: "/investors", icon: PieChart, page: "investors" },
-  { key: "navigation.reports", href: "/reports", icon: BarChart3, page: "reports" },
-  { key: "navigation.notifications", href: "/notifications", icon: Bell },
-  { key: "navigation.settings", href: "/settings", icon: Settings, page: "settings" },
+interface NavItem {
+  key: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+  page?: Page;
+}
+
+const navGroups: { key: string; items: NavItem[] }[] = [
+  {
+    key: "navigation.group.general",
+    items: [
+      { key: "navigation.dashboard", href: "/", icon: LayoutDashboard, page: "dashboard" },
+      { key: "navigation.notifications", href: "/notifications", icon: Bell },
+    ],
+  },
+  {
+    key: "navigation.group.salesCustomers",
+    items: [
+      { key: "navigation.sales", href: "/sales", icon: DollarSign, page: "sales" },
+      { key: "navigation.customers", href: "/customers", icon: Users, page: "customers" },
+      { key: "navigation.contracts", href: "/contracts", icon: FileText, page: "contracts" },
+      { key: "navigation.machines", href: "/machines", icon: Printer, page: "machines" },
+    ],
+  },
+  {
+    key: "navigation.group.purchasing",
+    items: [
+      { key: "navigation.purchases", href: "/purchases", icon: ShoppingCart, page: "purchases" },
+      { key: "navigation.suppliers", href: "/suppliers", icon: Truck, page: "suppliers" },
+      { key: "navigation.inventory", href: "/inventory", icon: Package, page: "inventory" },
+      { key: "navigation.warehouses", href: "/warehouses", icon: Warehouse, page: "warehouses" },
+      { key: "navigation.products", href: "/products", icon: Boxes, page: "products" },
+    ],
+  },
+  {
+    key: "navigation.group.maintenance",
+    items: [
+      { key: "navigation.serviceRequests", href: "/service-requests", icon: AlertTriangle, page: "serviceRequests" },
+      { key: "navigation.engineers", href: "/engineers", icon: Wrench, page: "engineers" },
+      { key: "navigation.workshop", href: "/workshop", icon: Cog, page: "workshop" },
+    ],
+  },
+  {
+    key: "navigation.group.finance",
+    items: [
+      { key: "navigation.finance", href: "/finance", icon: Wallet, page: "finance" },
+      { key: "navigation.settlements", href: "/settlements", icon: Receipt, page: "settlements" },
+      { key: "navigation.investors", href: "/investors", icon: PieChart, page: "investors" },
+    ],
+  },
+  {
+    key: "navigation.group.admin",
+    items: [
+      { key: "navigation.reports", href: "/reports", icon: BarChart3, page: "reports" },
+      { key: "navigation.companies", href: "/companies", icon: Building2, page: "companies" },
+      { key: "navigation.settings", href: "/settings", icon: Settings, page: "settings" },
+    ],
+  },
 ];
 
 export default function Sidebar() {
@@ -63,8 +104,6 @@ export default function Sidebar() {
     if (href === "/") return pathname === "/";
     return pathname.startsWith(href);
   };
-
-  const allowedNavItems = navItems.filter((item) => !item.page || hasPageAccess(userRole, item.page));
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
@@ -90,24 +129,42 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 sidebar-scroll">
-        {allowedNavItems.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item.href);
+        {navGroups.map((group, groupIndex) => {
+          const items = group.items.filter((item) => !item.page || hasPageAccess(userRole, item.page));
+          if (items.length === 0) return null;
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setMobileOpen(false)}
-              title={collapsed ? t(item.key) : undefined}
-              className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-colors ${
-                active
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-300 hover:bg-gray-800 hover:text-white"
-              } ${collapsed ? "justify-center px-0" : ""}`}
+            <div
+              key={group.key}
+              className={
+                collapsed && groupIndex > 0 ? "mt-3 border-t border-gray-700 pt-3" : collapsed ? "" : "mb-4"
+              }
             >
-              <Icon size={20} className="shrink-0" />
-              {!collapsed && <span className="text-sm whitespace-nowrap">{t(item.key)}</span>}
-            </Link>
+              {!collapsed && (
+                <p className="px-6 mb-1 text-[11px] font-semibold tracking-wide text-gray-500">
+                  {t(group.key)}
+                </p>
+              )}
+              {items.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    title={collapsed ? t(item.key) : undefined}
+                    className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg transition-colors ${
+                      active
+                        ? "bg-blue-600 text-white"
+                        : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                    } ${collapsed ? "justify-center px-0" : ""}`}
+                  >
+                    <Icon size={20} className="shrink-0" />
+                    {!collapsed && <span className="text-sm whitespace-nowrap">{t(item.key)}</span>}
+                  </Link>
+                );
+              })}
+            </div>
           );
         })}
       </nav>
@@ -138,7 +195,7 @@ export default function Sidebar() {
 
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden cursor-pointer"
           onClick={() => setMobileOpen(false)}
         />
       )}

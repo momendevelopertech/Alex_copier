@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     const { machineIds, ...data } = body;
 
     if (!data.customerId || !data.startDate || !data.endDate) {
-      return NextResponse.json({ error: "العميل وتاريخا البداية والنهاية مطلوبان" }, { status: 400 });
+      return NextResponse.json({ error: "العميل وتاريخا البداية والنهاية مطلوبان", code: "CONTRACT_FIELDS_REQUIRED" }, { status: 400 });
     }
 
     const contractNumber = `CTR-${Date.now()}`;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Download } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 import { exportRowsToCsv } from "@/lib/csv";
 
@@ -30,8 +31,9 @@ export default function ExportButton({ filename, getExport, disabled }: ExportBu
       onClick={handleExport}
       disabled={disabled || exporting}
       title={locale === "ar" ? "تصدير النتائج الحالية إلى CSV (يفتح في Excel)" : "Export current results to CSV"}
-      className="border border-green-600 text-green-700 hover:bg-green-50 disabled:opacity-50 px-3 py-2 rounded-lg text-sm font-medium"
+      className="border border-green-600 text-green-700 hover:bg-green-50 disabled:opacity-50 px-3 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2"
     >
+      <Download size={15} />
       {t("common.export")}
     </button>
   );

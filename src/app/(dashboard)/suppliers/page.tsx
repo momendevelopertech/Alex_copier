@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
@@ -6,8 +6,10 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
+import { Plus, Trash2, Upload, X } from "lucide-react";
 import ImportDialog from "@/components/ImportDialog";
 import PrinterLoader from "@/components/PrinterLoader";
+import { useConfirm, useToast } from "@/components/UIProvider";
 
 interface Supplier {
   id: string;
@@ -36,6 +38,9 @@ const emptyForm = {
 
 export default function SuppliersPage() {
   const { t, dir } = useI18n();
+  const confirmAction = useConfirm();
+const { success: toastSuccess } = useToast();
+  
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [search, setSearch] = useState("");
@@ -110,10 +115,11 @@ export default function SuppliersPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("هل أنت متأكد من الحذف؟")) return;
-    await fetch(`/api/suppliers/${id}`, { method: "DELETE" });
-    fetchSuppliers();
-  };
+      if (!(await confirmAction({ message: t("common.deleteConfirm") }))) return;
+      await fetch(`/api/suppliers/${id}`, { method: "DELETE" });
+      fetchSuppliers();
+      toastSuccess(t("common.deletedSuccessfully"));
+    };
 
   const setField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -125,9 +131,9 @@ export default function SuppliersPage() {
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("suppliers.title")}</h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
         >
-          {showForm ? t("common.cancel") : t("suppliers.addSupplier")}
+          {showForm ? (<><X size={16} />{t("common.cancel")}</>) : (<><Plus size={16} />{t("suppliers.addSupplier")}</>)}
         </button>
       </div>
 
@@ -145,7 +151,7 @@ export default function SuppliersPage() {
             />
             <input
               type="text"
-              placeholder="جهة الاتصال"
+              placeholder="Ø¬Ù‡Ø© Ø§Ù„Ø§ØªØµØ§Ù„"
               value={form.contactName}
               onChange={(e) => setField("contactName", e.target.value)}
               className="border rounded-lg px-4 py-2 w-full"
@@ -173,7 +179,7 @@ export default function SuppliersPage() {
             />
             <input
               type="text"
-              placeholder="الرقم الضريبي"
+              placeholder="Ø§Ù„Ø±Ù‚Ù… Ø§Ù„Ø¶Ø±ÙŠØ¨ÙŠ"
               value={form.taxNumber}
               onChange={(e) => setField("taxNumber", e.target.value)}
               className="border rounded-lg px-4 py-2 w-full"
@@ -186,7 +192,7 @@ export default function SuppliersPage() {
             ><option value="">{t("companies.selectCompany")}</option>{companies.map(company => <option key={company.id} value={company.id}>{company.name}</option>)}</select>
             <button
               type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
             >
               {t("common.save")}
             </button>
@@ -204,7 +210,7 @@ export default function SuppliersPage() {
           value={companyFilter}
           onChange={(v) => { setCompanyFilter(v); setPage(1); }}
           options={companies.map((c) => ({ value: c.id, label: c.name }))}
-          allLabel={`${t("common.company")} — ${t("common.all")}`}
+          allLabel={`${t("common.company")} â€” ${t("common.all")}`}
           className="md:w-44"
         />
         {hasActiveFilters && (
@@ -218,7 +224,7 @@ export default function SuppliersPage() {
             onClick={() => setShowImport(true)}
             className="border border-blue-600 text-blue-700 hover:bg-blue-50 px-3 py-2 rounded-lg text-sm font-medium"
           >
-            {t("common.import")}
+            <Upload size={14} className="inline-block me-1" />{t("common.import")}
           </button>
         </div>
       </div>
@@ -229,10 +235,10 @@ export default function SuppliersPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("suppliers.name")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">جهة الاتصال</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Ø¬Ù‡Ø© Ø§Ù„Ø§ØªØµØ§Ù„</th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("suppliers.phone")}</th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("suppliers.email")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">الرقم الضريبي</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Ø§Ù„Ø±Ù‚Ù… Ø§Ù„Ø¶Ø±ÙŠØ¨ÙŠ</th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.actions")}</th>
               </tr>
             </thead>
@@ -255,16 +261,16 @@ export default function SuppliersPage() {
                 paged.map((supplier) => (
                   <tr key={supplier.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium">{supplier.name}</td>
-                    <td className="px-4 py-3 text-sm">{supplier.contactName || "—"}</td>
-                    <td className="px-4 py-3 text-sm">{supplier.phone || "—"}</td>
-                    <td className="px-4 py-3 text-sm">{supplier.email || "—"}</td>
-                    <td className="px-4 py-3 text-sm">{supplier.taxNumber || "—"}</td>
+                    <td className="px-4 py-3 text-sm">{supplier.contactName || "â€”"}</td>
+                    <td className="px-4 py-3 text-sm">{supplier.phone || "â€”"}</td>
+                    <td className="px-4 py-3 text-sm">{supplier.email || "â€”"}</td>
+                    <td className="px-4 py-3 text-sm">{supplier.taxNumber || "â€”"}</td>
                     <td className="px-4 py-3">
                       <button
                         onClick={() => handleDelete(supplier.id)}
                         className="text-red-600 hover:text-red-800 text-sm"
                       >
-                        {t("common.delete")}
+                        <Trash2 size={14} className="inline-block me-1" />{t("common.delete")}
                       </button>
                     </td>
                   </tr>
@@ -286,7 +292,7 @@ export default function SuppliersPage() {
         open={showImport}
         onClose={() => setShowImport(false)}
         entity="suppliers"
-        title={`${t("common.import")} — ${t("suppliers.title")}`}
+        title={`${t("common.import")} â€” ${t("suppliers.title")}`}
         onImported={fetchSuppliers}
       />
     </div>

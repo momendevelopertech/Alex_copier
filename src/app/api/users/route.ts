@@ -12,7 +12,7 @@ export async function GET() {
     if (!admin) {
       const authed = await requireAuth();
       return NextResponse.json(
-        { error: authed ? "Forbidden" : "Unauthorized" },
+        { error: authed ? "Forbidden" : "Unauthorized", code: authed ? "FORBIDDEN" : "UNAUTHORIZED" },
         { status: authed ? 403 : 401 }
       );
     }
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     if (!admin) {
       const authed = await requireAuth();
       return NextResponse.json(
-        { error: authed ? "Forbidden" : "Unauthorized" },
+        { error: authed ? "Forbidden" : "Unauthorized", code: authed ? "FORBIDDEN" : "UNAUTHORIZED" },
         { status: authed ? 403 : 401 }
       );
     }
@@ -55,21 +55,21 @@ export async function POST(request: Request) {
 
     if (!name || !email || !password) {
       return NextResponse.json(
-        { error: "الاسم والبريد الإلكتروني وكلمة المرور والدور مطلوبة" },
+        { error: "الاسم والبريد الإلكتروني وكلمة المرور والدور مطلوبة", code: "USER_FIELDS_REQUIRED" },
         { status: 400 }
       );
     }
     if (!EMAIL_REGEX.test(email)) {
-      return NextResponse.json({ error: "صيغة البريد الإلكتروني غير صحيحة" }, { status: 400 });
+      return NextResponse.json({ error: "صيغة البريد الإلكتروني غير صحيحة", code: "INVALID_EMAIL" }, { status: 400 });
     }
     if (password.length < 6) {
       return NextResponse.json(
-        { error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" },
+        { error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل", code: "PASSWORD_TOO_SHORT" },
         { status: 400 }
       );
     }
     if (!ROLES.includes(role)) {
-      return NextResponse.json({ error: "الدور غير صالح" }, { status: 400 });
+      return NextResponse.json({ error: "الدور غير صالح", code: "INVALID_ROLE" }, { status: 400 });
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
     if (companyId) {
       const company = await prisma.company.findUnique({ where: { id: companyId } });
       if (!company) {
-        return NextResponse.json({ error: "الشركة غير موجودة" }, { status: 400 });
+        return NextResponse.json({ error: "الشركة غير موجودة", code: "COMPANY_NOT_FOUND" }, { status: 400 });
       }
     }
 

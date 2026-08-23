@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -6,10 +6,13 @@ import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
+import { CheckCircle2, Plus, Save, X } from "lucide-react";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
+import { useToast } from "@/components/UIProvider";
 import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
+import { apiErrorMessage } from "@/lib/api-client";
 
 interface Company { id: string; name: string; }
 interface Customer { id: string; name: string; }
@@ -22,13 +25,15 @@ interface Settlement {
   engineer: Engineer | null; collector: User; verifier: User | null;
 }
 
-const PAYMENT_METHOD_LABELS: Record<string, string> = { CASH: "نقدي", CREDIT: "آجل", INSTALLMENT: "أقساط", MIXED: "مختلط" };
-const STATUS_LABELS: Record<string, string> = { INITIAL: "أولي", VERIFIED: "تم التحقق" };
+const PAYMENT_METHOD_LABELS: Record<string, string> = { CASH: "Ù†Ù‚Ø¯ÙŠ", CREDIT: "Ø¢Ø¬Ù„", INSTALLMENT: "Ø£Ù‚Ø³Ø§Ø·", MIXED: "Ù…Ø®ØªÙ„Ø·" };
+const STATUS_LABELS: Record<string, string> = { INITIAL: "Ø£ÙˆÙ„ÙŠ", VERIFIED: "ØªÙ… Ø§Ù„ØªØ­Ù‚Ù‚" };
 
 const CAN_VERIFY_ROLES = ["GENERAL_MANAGER", "ACCOUNTANT", "COMPANY_MANAGER"];
 
 export default function SettlementsPage() {
   const { t, dir } = useI18n();
+  
+  const { success: toastSuccess, error: toastError } = useToast();
   const { data: session } = useSession();
   const canVerify = CAN_VERIFY_ROLES.includes(session?.user?.role ?? "");
   const [settlements, setSettlements] = useState<Settlement[]>([]);
@@ -73,7 +78,9 @@ export default function SettlementsPage() {
     const res = await fetch(`/api/settlements/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "VERIFIED" }) });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || t("common.error"));
+      toastError(apiErrorMessage(data, t));
+    } else {
+      toastSuccess(t("common.savedSuccessfully"));
     }
     fetchData();
   };
@@ -120,7 +127,7 @@ export default function SettlementsPage() {
     <div dir={dir}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("settlements.title")}</h1>
-        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">{t("settlements.newSettlement")}</button>
+        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"><Plus size={16} />{t("settlements.newSettlement")}</button>
       </div>
 
       {showForm && (
@@ -147,8 +154,8 @@ export default function SettlementsPage() {
             </select>
             <input type="text" placeholder={t("settlements.reason")} value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className="border rounded-lg px-4 py-2" required />
             <div className="md:col-span-2 flex gap-2">
-              <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">{t("common.save")}</button>
-              <button type="button" onClick={() => setShowForm(false)} className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">{t("common.cancel")}</button>
+              <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"><Save size={16} />{t("common.save")}</button>
+              <button type="button" onClick={() => setShowForm(false)} className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 inline-flex items-center gap-2"><X size={16} />{t("common.cancel")}</button>
             </div>
           </form>
         </div>
@@ -157,8 +164,8 @@ export default function SettlementsPage() {
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
           <SearchInput value={search} onChange={setSearchInput} placeholder={t("settlements.searchPlaceholder")} />
-          <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("settlements.status")} — ${t("common.all")}`} className="md:w-40" />
-          <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} — ${t("common.all")}`} className="md:w-40" />
+          <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("settlements.status")} â€” ${t("common.all")}`} className="md:w-40" />
+          <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} â€” ${t("common.all")}`} className="md:w-40" />
           <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={(v) => { setDateFrom(v); setPage(1); }} onToChange={(v) => { setDateTo(v); setPage(1); }} />
           {hasActiveFilters && (
             <button onClick={() => { setSearchInput(null); setStatusFilter(""); setCompanyFilter(""); setDateFrom(""); setDateTo(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
@@ -202,13 +209,13 @@ export default function SettlementsPage() {
                       <td className="px-4 py-3 text-sm">{s.reason}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${s.status === "VERIFIED" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
-                          {s.status === "VERIFIED" && "✓ "}{STATUS_LABELS[s.status] || s.status}
+                          {s.status === "VERIFIED" && "âœ“ "}{STATUS_LABELS[s.status] || s.status}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm">{s.collector.name}</td>
                       <td className="px-4 py-3 text-sm">{new Date(s.createdAt).toLocaleDateString("ar-EG")}</td>
                       <td className="px-4 py-3 text-sm">
-                        {s.status === "INITIAL" && canVerify && (<button onClick={() => handleVerify(s.id)} className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">{t("common.verify")}</button>)}
+                        {s.status === "INITIAL" && canVerify && (<button onClick={() => handleVerify(s.id)} className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700"><CheckCircle2 size={14} className="inline-block me-1" />{t("common.verify")}</button>)}
                         {s.status === "VERIFIED" && s.verifier && (<span className="text-green-600 text-xs">{t("settlements.by")} {s.verifier.name}</span>)}
                       </td>
                     </tr>

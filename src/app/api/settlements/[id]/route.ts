@@ -42,7 +42,7 @@ export async function PUT(
     const actor = await requirePageAccess("settlements");
     if (!actor) {
       const authed = await requireAuth();
-      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
+      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized", code: authed ? "FORBIDDEN" : "UNAUTHORIZED" }, { status: authed ? 403 : 401 });
     }
 
     const { id } = await params;
@@ -50,25 +50,25 @@ export async function PUT(
 
     const existing = await prisma.settlement.findUnique({ where: { id } });
     if (!existing) {
-      return NextResponse.json({ error: "التسوية غير موجودة" }, { status: 404 });
+      return NextResponse.json({ error: "التسوية غير موجودة", code: "SETTLEMENT_NOT_FOUND" }, { status: 404 });
     }
 
     if (body.status === "VERIFIED") {
       if (!["GENERAL_MANAGER", "ACCOUNTANT", "COMPANY_MANAGER"].includes((actor as { role?: string }).role ?? "")) {
-        return NextResponse.json({ error: "لا تملك صلاحية التحقق من التسويات" }, { status: 403 });
+        return NextResponse.json({ error: "لا تملك صلاحية التحقق من التسويات", code: "FORBIDDEN" }, { status: 403 });
       }
       // Two-step rule: the collector cannot verify his own collection.
       if (existing.collectedBy === actor.id) {
         return NextResponse.json(
-          { error: "لا يمكنك التحقق من تسوية قمت أنت بتحصيلها" },
+          { error: "لا يمكنك التحقق من تسوية قمت أنت بتحصيلها", code: "SELF_VERIFICATION_NOT_ALLOWED" },
           { status: 403 },
         );
       }
       if (existing.status === "VERIFIED") {
-        return NextResponse.json({ error: "التسوية تم التحقق منها بالفعل" }, { status: 409 });
+        return NextResponse.json({ error: "التسوية تم التحقق منها بالفعل", code: "ALREADY_VERIFIED" }, { status: 409 });
       }
     } else if (body.status && body.status !== "INITIAL") {
-      return NextResponse.json({ error: "حالة غير صالحة" }, { status: 400 });
+      return NextResponse.json({ error: "حالة غير صالحة", code: "INVALID_STATUS" }, { status: 400 });
     }
 
     const data: Record<string, unknown> = {};
@@ -77,7 +77,7 @@ export async function PUT(
     if (body.status === "VERIFIED") data.verifiedBy = actor.id;
 
     if (Object.keys(data).length === 0) {
-      return NextResponse.json({ error: "لا توجد بيانات للتحديث" }, { status: 400 });
+      return NextResponse.json({ error: "لا توجد بيانات للتحديث", code: "NO_CHANGES" }, { status: 400 });
     }
 
     const settlement = await prisma.settlement.update({

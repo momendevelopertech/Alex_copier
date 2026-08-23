@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     const totalOwnership = investors.reduce((sum, inv) => sum + inv.ownershipPct, 0);
 
     if (totalOwnership === 0) {
-      return NextResponse.json({ error: "No active investors found" }, { status: 400 });
+      return NextResponse.json({ error: "لا يوجد مستثمرون نشطون", code: "NO_ACTIVE_INVESTORS" }, { status: 400 });
     }
 
     const cycle = await prisma.investorDistributionCycle.create({

@@ -29,20 +29,20 @@ export async function POST(request: Request) {
     const actor = await requirePageAccess("settlements");
     if (!actor) {
       const authed = await requireAuth();
-      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
+      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized", code: authed ? "FORBIDDEN" : "UNAUTHORIZED" }, { status: authed ? 403 : 401 });
     }
 
     const body = await request.json();
 
     const amount = Number(body.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
-      return NextResponse.json({ error: "المبلغ يجب أن يكون رقمًا أكبر من صفر" }, { status: 400 });
+      return NextResponse.json({ error: "المبلغ يجب أن يكون رقمًا أكبر من صفر", code: "AMOUNT_INVALID" }, { status: 400 });
     }
     if (!body.companyId || !body.reason || String(body.reason).trim() === "") {
-      return NextResponse.json({ error: "الشركة والسبب مطلوبان" }, { status: 400 });
+      return NextResponse.json({ error: "الشركة والسبب مطلوبان", code: "SETTLEMENT_FIELDS_REQUIRED" }, { status: 400 });
     }
     if (!["CASH", "CREDIT", "INSTALLMENT", "MIXED"].includes(body.paymentMethod)) {
-      return NextResponse.json({ error: "طريقة الدفع غير صالحة" }, { status: 400 });
+      return NextResponse.json({ error: "طريقة الدفع غير صالحة", code: "PAYMENT_METHOD_INVALID" }, { status: 400 });
     }
 
     // The collector is whoever is creating the record unless stated otherwise.
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       typeof body.collectedBy === "string" && body.collectedBy !== "" ? body.collectedBy : actor.id;
     const collectorExists = await prisma.user.findUnique({ where: { id: collectedBy }, select: { id: true, name: true } });
     if (!collectorExists) {
-      return NextResponse.json({ error: "المستخدم المُحصِّل غير موجود" }, { status: 400 });
+      return NextResponse.json({ error: "المستخدم المُحصِّل غير موجود", code: "USER_NOT_FOUND" }, { status: 400 });
     }
 
     const settlementNumber = `STL-${Date.now()}`;
