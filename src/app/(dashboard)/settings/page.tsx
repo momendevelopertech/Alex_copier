@@ -440,7 +440,7 @@ export default function SettingsPage() {
                     dir="ltr"
                     value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 pe-10 text-sm focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 pr-10 text-sm focus:border-blue-500 focus:outline-none"
                     autoComplete="new-password"
                     placeholder={editingUser ? "••••••••" : ""}
                   />
@@ -449,7 +449,7 @@ export default function SettingsPage() {
                     onClick={() => setShowPassword(!showPassword)}
                     title={t(showPassword ? "settings.hidePassword" : "settings.showPassword")}
                     aria-label={t(showPassword ? "settings.hidePassword" : "settings.showPassword")}
-                    className="absolute inset-y-0 end-0 flex items-center px-3 text-gray-400 hover:text-gray-600"
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600"
                   >
                     {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                   </button>
