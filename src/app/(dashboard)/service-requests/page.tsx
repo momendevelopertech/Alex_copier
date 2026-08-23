@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
+import SearchInput, { matchesQuery } from "@/components/SearchInput";
+import FilterSelect from "@/components/FilterSelect";
+import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
+import ExportButton from "@/components/ExportButton";
 
 const PRIORITY_LABELS: Record<string, string> = {
   NORMAL: "عادي",
@@ -76,6 +80,10 @@ export default function ServiceRequestsPage() {
   const [assignEngineerId, setAssignEngineerId] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
+  const [engineerFilter, setEngineerFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [form, setForm] = useState({
     customerId: "",
     locationId: "",
@@ -87,18 +95,20 @@ export default function ServiceRequestsPage() {
   const PAGE_SIZE = 15;
 
   const fetchData = async () => {
-    setLoading(true);
-    const [reqRes, custRes, engRes, machineRes] = await Promise.all([
-      fetch("/api/service-requests"),
-      fetch("/api/customers"),
-      fetch("/api/engineers"),
-      fetch("/api/machines"),
-    ]);
-    setRequests(await reqRes.json());
-    setCustomers(await custRes.json());
-    setEngineers(await engRes.json());
-    setMachines(await machineRes.json());
-    setLoading(false);
+    try {
+      const [reqRes, custRes, engRes, machineRes] = await Promise.all([
+        fetch("/api/service-requests"),
+        fetch("/api/customers"),
+        fetch("/api/engineers"),
+        fetch("/api/machines"),
+      ]);
+      setRequests(await reqRes.json());
+      setCustomers(await custRes.json());
+      setEngineers(await engRes.json());
+      setMachines(await machineRes.json());
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -148,9 +158,46 @@ export default function ServiceRequestsPage() {
     );
   };
 
-  const filtered = requests.filter(request => (!statusFilter || request.status === statusFilter) && [request.requestNumber, request.description, request.customer.name, request.machine?.serialNumber, request.engineer?.name].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase()));
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const filtered = requests.filter(request =>
+    (!statusFilter || request.status === statusFilter) &&
+    (!priorityFilter || request.priority === priorityFilter) &&
+    (!engineerFilter || request.engineerId === engineerFilter) &&
+    inDateRange(request.createdAt, dateFrom, dateTo) &&
+    (matchesQuery(request.requestNumber, search) ||
+      matchesQuery(request.description, search) ||
+      matchesQuery(request.customer?.name, search) ||
+      matchesQuery(request.machine?.serialNumber, search) ||
+      matchesQuery(request.engineer?.name, search))
+  );
+  const hasActiveFilters = statusFilter !== "" || priorityFilter !== "" || engineerFilter !== "" || dateFrom !== "" || dateTo !== "" || search !== "";
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const exportRequests = () => ({
+    headers: [
+      t("serviceRequests.requestNumber"),
+      t("serviceRequests.customer"),
+      t("serviceRequests.machine"),
+      t("serviceRequests.priority"),
+      t("serviceRequests.status"),
+      t("serviceRequests.engineer"),
+      t("common.date"),
+      t("serviceRequests.problems"),
+      t("serviceRequests.rating"),
+    ],
+    rows: filtered.map((req) => [
+      req.requestNumber,
+      req.customer.name,
+      req.machine?.serialNumber || "",
+      PRIORITY_LABELS[req.priority] || req.priority,
+      STATUS_LABELS[req.status] || req.status,
+      req.engineer?.name || "",
+      new Date(req.createdAt).toISOString().slice(0, 10),
+      String(req.problems.length),
+      req.customerRating != null ? String(req.customerRating) : "",
+    ]),
+  });
 
   return (
     <div dir={dir}>
@@ -192,7 +239,21 @@ export default function ServiceRequestsPage() {
       )}
 
       <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="mb-4 grid gap-3 md:grid-cols-2"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("serviceRequests.requestNumber")} / ${t("serviceRequests.customer")}...`} className="border rounded-lg px-4 py-2" /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded-lg px-4 py-2"><option value="">{t("serviceRequests.status")} ({t("common.selectOption")})</option>{Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
+          <SearchInput value={search} onChange={setSearch} placeholder={t("serviceRequests.searchPlaceholder")} />
+          <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("serviceRequests.status")} — ${t("common.all")}`} className="md:w-40" />
+          <FilterSelect value={priorityFilter} onChange={(v) => { setPriorityFilter(v); setPage(1); }} options={Object.entries(PRIORITY_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("serviceRequests.priorityFilter")} — ${t("common.all")}`} className="md:w-36" />
+          <FilterSelect value={engineerFilter} onChange={(v) => { setEngineerFilter(v); setPage(1); }} options={engineers.map((e) => ({ value: e.id, label: e.name }))} allLabel={`${t("serviceRequests.engineerFilter")} — ${t("common.all")}`} className="md:w-44" />
+          <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={(v) => { setDateFrom(v); setPage(1); }} onToChange={(v) => { setDateTo(v); setPage(1); }} />
+          {hasActiveFilters && (
+            <button onClick={() => { setSearch(""); setStatusFilter(""); setPriorityFilter(""); setEngineerFilter(""); setDateFrom(""); setDateTo(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
+              {t("common.resetFilters")}
+            </button>
+          )}
+          <div className="md:ms-auto">
+            <ExportButton filename="service-requests" getExport={exportRequests} disabled={filtered.length === 0} />
+          </div>
+        </div>
         {loading ? (
           <p className="text-gray-500">{t("common.loading")}</p>
         ) : requests.length === 0 ? (
@@ -269,7 +330,7 @@ export default function ServiceRequestsPage() {
               </tbody>
             </table>
           </div>
-          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
+          <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
           </>
         )}
       </div>

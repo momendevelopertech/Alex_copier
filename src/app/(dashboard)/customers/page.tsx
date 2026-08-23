@@ -3,6 +3,10 @@
 import { useEffect, useState, useMemo } from "react";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
+import SearchInput, { matchesQuery } from "@/components/SearchInput";
+import FilterSelect from "@/components/FilterSelect";
+import ExportButton from "@/components/ExportButton";
+import ImportDialog from "@/components/ImportDialog";
 
 interface CustomerLocation {
   id: string;
@@ -63,14 +67,20 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Customer | null>(null);
   const [page, setPage] = useState(1);
+  const [typeFilter, setTypeFilter] = useState("");
+  const [cityFilter, setCityFilter] = useState("");
+  const [activeFilter, setActiveFilter] = useState("");
+  const [showImport, setShowImport] = useState(false);
   const PAGE_SIZE = 15;
 
   const fetchCustomers = async () => {
-    setLoading(true);
-    const res = await fetch("/api/customers");
-    const data = await res.json();
-    setCustomers(data);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/customers");
+      const data = await res.json();
+      setCustomers(data);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -79,13 +89,56 @@ export default function CustomersPage() {
 
   const filtered = customers.filter(
     (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      (c.companyName && c.companyName.toLowerCase().includes(search.toLowerCase())) ||
-      (c.phone && c.phone.includes(search))
+      (matchesQuery(c.name, search) ||
+        matchesQuery(c.companyName, search) ||
+        matchesQuery(c.email, search) ||
+        (Boolean(c.phone) && c.phone.includes(search))) &&
+      (!typeFilter || c.customerType === typeFilter) &&
+      (!cityFilter || c.city === cityFilter) &&
+      (!activeFilter || String(c.isActive) === activeFilter)
   );
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const cities = useMemo(
+    () => Array.from(new Set(customers.map((c) => c.city).filter(Boolean))) as string[],
+    [customers]
+  );
+  const hasActiveFilters = typeFilter !== "" || cityFilter !== "" || activeFilter !== "" || search !== "";
+
+  const resetFilters = () => {
+    setSearch("");
+    setTypeFilter("");
+    setCityFilter("");
+    setActiveFilter("");
+  };
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const exportCustomers = () => ({
+    headers: [
+      t("customers.name"),
+      t("customers.companyName"),
+      t("customers.phone"),
+      t("customers.email"),
+      t("customers.city"),
+      t("customers.governorate"),
+      t("customers.creditLimit"),
+      t("customers.type"),
+      t("common.status"),
+    ],
+    rows: filtered.map((c) => [
+      c.name,
+      c.companyName || "",
+      c.phone || "",
+      c.email || "",
+      c.city || "",
+      c.governorate || "",
+      String(c.creditLimit),
+      TYPE_LABELS[c.customerType] || c.customerType,
+      c.isActive ? t("common.yes") : t("common.no"),
+    ]),
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -343,14 +396,56 @@ export default function CustomersPage() {
         </div>
       )}
 
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder={t("common.search") + "..."}
+      <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
+        <SearchInput
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="border rounded-lg px-4 py-2 w-full md:w-96"
+          onChange={setSearch}
+          placeholder={t("customers.searchPlaceholder")}
         />
+        <FilterSelect
+          value={typeFilter}
+          onChange={(v) => { setTypeFilter(v); setPage(1); }}
+          options={[
+            { value: "INDIVIDUAL", label: TYPE_LABELS.INDIVIDUAL },
+            { value: "COMPANY", label: TYPE_LABELS.COMPANY },
+          ]}
+          allLabel={`${t("customers.typeFilter")} — ${t("common.all")}`}
+          className="md:w-44"
+        />
+        <FilterSelect
+          value={cityFilter}
+          onChange={(v) => { setCityFilter(v); setPage(1); }}
+          options={cities.map((c) => ({ value: c, label: c }))}
+          allLabel={`${t("customers.city")} — ${t("common.all")}`}
+          className="md:w-40"
+        />
+        <FilterSelect
+          value={activeFilter}
+          onChange={(v) => { setActiveFilter(v); setPage(1); }}
+          options={[
+            { value: "true", label: t("common.yes") },
+            { value: "false", label: t("common.no") },
+          ]}
+          allLabel={`${t("common.status")} — ${t("common.all")}`}
+          className="md:w-36"
+        />
+        {hasActiveFilters && (
+          <button
+            onClick={resetFilters}
+            className="text-sm text-gray-500 hover:text-gray-700 underline"
+          >
+            {t("common.resetFilters")}
+          </button>
+        )}
+        <div className="flex gap-2 md:ms-auto">
+          <ExportButton filename="customers" getExport={exportCustomers} disabled={filtered.length === 0} />
+          <button
+            onClick={() => setShowImport(true)}
+            className="border border-blue-600 text-blue-700 hover:bg-blue-50 px-3 py-2 rounded-lg text-sm font-medium"
+          >
+            {t("common.import")}
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl overflow-hidden shadow-md">
@@ -420,13 +515,21 @@ export default function CustomersPage() {
           </table>
         </div>
         <Pagination
-          currentPage={page}
+          currentPage={safePage}
           totalPages={totalPages}
           onPageChange={setPage}
           totalItems={filtered.length}
           pageSize={PAGE_SIZE}
         />
       </div>
+
+      <ImportDialog
+        open={showImport}
+        onClose={() => setShowImport(false)}
+        entity="customers"
+        title={`${t("common.import")} — ${t("customers.title")}`}
+        onImported={fetchCustomers}
+      />
     </div>
   );
 }

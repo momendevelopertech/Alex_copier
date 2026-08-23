@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
+import SearchInput, { matchesQuery } from "@/components/SearchInput";
+import ExportButton from "@/components/ExportButton";
 
 interface EngineerArea {
   id: string;
@@ -40,7 +42,7 @@ const emptyForm = {
 };
 
 export default function EngineersPage() {
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
   const [engineers, setEngineers] = useState<Engineer[]>([]);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -51,11 +53,13 @@ export default function EngineersPage() {
   const PAGE_SIZE = 15;
 
   const fetchEngineers = async () => {
-    setLoading(true);
-    const res = await fetch("/api/engineers");
-    const data = await res.json();
-    setEngineers(data);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/engineers");
+      const data = await res.json();
+      setEngineers(data);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -64,12 +68,41 @@ export default function EngineersPage() {
 
   const filtered = engineers.filter(
     (e) =>
-      e.name.toLowerCase().includes(search.toLowerCase()) ||
-      (e.phone && e.phone.includes(search))
+      matchesQuery(e.name, search) ||
+      matchesQuery(e.email, search) ||
+      matchesQuery(e.areas.map((a) => a.areaName).join(" "), search) ||
+      matchesQuery(e.skills.map((s) => s.modelType).join(" "), search) ||
+      (Boolean(e.phone) && e.phone.includes(search))
   );
+  const hasActiveFilters = search !== "";
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const exportEngineers = () => ({
+    headers: [
+      t("engineers.name"),
+      t("customers.phone"),
+      t("customers.email"),
+      t("engineers.baseSalary"),
+      t("engineers.transportAllowance"),
+      t("engineers.commissionRate"),
+      t("engineers.areas"),
+      t("engineers.skills"),
+      t("common.status"),
+    ],
+    rows: filtered.map((e) => [
+      e.name,
+      e.phone || "",
+      e.email || "",
+      String(e.baseSalary),
+      String(e.transportAllowance),
+      String(e.commissionRate),
+      e.areas.map((a) => a.areaName).join("، "),
+      e.skills.map((s) => `${s.modelType} (${s.skillLevel})`).join("، "),
+      e.isActive ? "نعم" : "لا",
+    ]),
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,7 +139,7 @@ export default function EngineersPage() {
   };
 
   return (
-    <div dir="rtl">
+    <div dir={dir}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("engineers.title")}</h1>
         <button
@@ -237,14 +270,20 @@ export default function EngineersPage() {
         </div>
       )}
 
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder={t("common.search") + "..."}
+      <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
+        <SearchInput
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="border rounded-lg px-4 py-2 w-full md:w-96"
+          onChange={setSearch}
+          placeholder={t("engineers.searchPlaceholder")}
         />
+        {hasActiveFilters && (
+          <button onClick={() => setSearch("")} className="text-sm text-gray-500 hover:text-gray-700 underline">
+            {t("common.resetFilters")}
+          </button>
+        )}
+        <div className="md:ms-auto">
+          <ExportButton filename="engineers" getExport={exportEngineers} disabled={filtered.length === 0} />
+        </div>
       </div>
 
       <div className="bg-white rounded-xl overflow-hidden shadow-md">
@@ -306,7 +345,7 @@ export default function EngineersPage() {
           </table>
         </div>
         <Pagination
-          currentPage={page}
+          currentPage={safePage}
           totalPages={totalPages}
           onPageChange={setPage}
           totalItems={filtered.length}

@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
+import Pagination from "@/components/Pagination";
+import SearchInput, { matchesQuery } from "@/components/SearchInput";
+import FilterSelect from "@/components/FilterSelect";
+import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
+import ExportButton from "@/components/ExportButton";
 
 interface Company { id: string; name: string; }
 interface Expense {
@@ -17,16 +22,56 @@ export default function FinancePage() {
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [companyFilter, setCompanyFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [page, setPage] = useState(1);
   const [form, setForm] = useState({ companyId: "", category: "", description: "", amount: "" });
+  const PAGE_SIZE = 15;
 
   const fetchData = async () => {
-    setLoading(true);
-    const [eRes, cRes] = await Promise.all([fetch("/api/expenses"), fetch("/api/companies")]);
-    setExpenses(await eRes.json()); setCompanies(await cRes.json());
-    setLoading(false);
+    try {
+      const [eRes, cRes] = await Promise.all([fetch("/api/expenses"), fetch("/api/companies")]);
+      setExpenses(await eRes.json()); setCompanies(await cRes.json());
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  const filtered = expenses.filter(expense =>
+    (!companyFilter || expense.companyId === companyFilter) &&
+    (!categoryFilter || expense.category === categoryFilter) &&
+    inDateRange(expense.date || expense.createdAt, dateFrom, dateTo) &&
+    (matchesQuery(expense.category, search) ||
+      matchesQuery(expense.description, search) ||
+      matchesQuery(expense.company?.name, search))
+  );
+  const categories = Array.from(new Set(expenses.map((e) => e.category).filter(Boolean)));
+  const hasActiveFilters = companyFilter !== "" || categoryFilter !== "" || dateFrom !== "" || dateTo !== "" || search !== "";
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const exportExpenses = () => ({
+    headers: [
+      t("common.date"),
+      t("common.company"),
+      t("finance.category"),
+      t("common.description"),
+      t("common.amount"),
+      t("finance.paidBy"),
+    ],
+    rows: filtered.map((expense) => [
+      new Date(expense.date || expense.createdAt).toISOString().slice(0, 10),
+      expense.company?.name || "",
+      expense.category,
+      expense.description,
+      String(expense.amount),
+      expense.paidBy,
+    ]),
+  });
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,9 +109,22 @@ export default function FinancePage() {
       )}
 
       <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="mb-4 grid gap-3 md:grid-cols-2"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("finance.category")} / ${t("common.description")}...`} className="border rounded-lg px-4 py-2" /><select value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)} className="border rounded-lg px-4 py-2"><option value="">{t("common.company")} ({t("common.selectOption")})</option>{companies.map(company => <option key={company.id} value={company.id}>{company.name}</option>)}</select></div>
+        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
+          <SearchInput value={search} onChange={setSearch} placeholder={t("finance.searchPlaceholder")} />
+          <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} — ${t("common.all")}`} className="md:w-40" />
+          <FilterSelect value={categoryFilter} onChange={(v) => { setCategoryFilter(v); setPage(1); }} options={categories.map((cat) => ({ value: cat, label: cat }))} allLabel={`${t("finance.categoryFilter")} — ${t("common.all")}`} className="md:w-44" />
+          <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={(v) => { setDateFrom(v); setPage(1); }} onToChange={(v) => { setDateTo(v); setPage(1); }} />
+          {hasActiveFilters && (
+            <button onClick={() => { setSearch(""); setCompanyFilter(""); setCategoryFilter(""); setDateFrom(""); setDateTo(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
+              {t("common.resetFilters")}
+            </button>
+          )}
+          <div className="md:ms-auto">
+            <ExportButton filename="expenses" getExport={exportExpenses} disabled={filtered.length === 0} />
+          </div>
+        </div>
         {loading ? <p className="text-gray-500">{t("common.loading")}</p>
-        : expenses.filter(expense => (!companyFilter || expense.companyId === companyFilter) && [expense.category, expense.description, expense.company?.name].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())).length === 0 ? <p className="text-gray-500">{t("common.noData")}</p>
+        : filtered.length === 0 ? <p className="text-gray-500">{t("common.noData")}</p>
         : (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -80,7 +138,7 @@ export default function FinancePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {expenses.filter(expense => (!companyFilter || expense.companyId === companyFilter) && [expense.category, expense.description, expense.company?.name].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())).map((expense) => (
+                {paged.map((expense) => (
                   <tr key={expense.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm">{new Date(expense.date || expense.createdAt).toLocaleDateString("ar-EG")}</td>
                     <td className="px-4 py-3 text-sm">{expense.category}</td>
@@ -93,6 +151,7 @@ export default function FinancePage() {
             </table>
           </div>
         )}
+        <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
       </div>
     </div>
   );

@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
+import Pagination from "@/components/Pagination";
+import SearchInput, { matchesQuery } from "@/components/SearchInput";
+import FilterSelect from "@/components/FilterSelect";
+import ExportButton from "@/components/ExportButton";
+import ImportDialog from "@/components/ImportDialog";
 
 interface Supplier {
   id: string;
@@ -14,6 +19,7 @@ interface Supplier {
   companyId: string;
   isActive: boolean;
   createdAt: string;
+  company?: Company;
 }
 interface Company { id: string; name: string; }
 
@@ -35,14 +41,20 @@ export default function SuppliersPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
+  const [companyFilter, setCompanyFilter] = useState("");
+  const [showImport, setShowImport] = useState(false);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
 
   const fetchSuppliers = async () => {
-    setLoading(true);
-    const [res, companyRes] = await Promise.all([fetch("/api/suppliers"), fetch("/api/companies")]);
-    const data = await res.json();
-    setSuppliers(data);
-    setCompanies(await companyRes.json());
-    setLoading(false);
+    try {
+      const [res, companyRes] = await Promise.all([fetch("/api/suppliers"), fetch("/api/companies")]);
+      const data = await res.json();
+      setSuppliers(data);
+      setCompanies(await companyRes.json());
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -51,10 +63,38 @@ export default function SuppliersPage() {
 
   const filtered = suppliers.filter(
     (s) =>
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      (s.contactName && s.contactName.toLowerCase().includes(search.toLowerCase())) ||
-      (s.phone && s.phone.includes(search))
+      (matchesQuery(s.name, search) ||
+        matchesQuery(s.contactName, search) ||
+        matchesQuery(s.email, search) ||
+        matchesQuery(s.company?.name, search) ||
+        (Boolean(s.phone) && s.phone.includes(search))) &&
+      (!companyFilter || s.companyId === companyFilter)
   );
+  const hasActiveFilters = companyFilter !== "" || search !== "";
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const exportSuppliers = () => ({
+    headers: [
+      t("suppliers.name"),
+      t("common.company"),
+      t("suppliers.contactName"),
+      t("suppliers.phone"),
+      t("suppliers.email"),
+      t("suppliers.address"),
+      t("suppliers.taxNumber"),
+    ],
+    rows: filtered.map((s) => [
+      s.name,
+      s.company?.name || "",
+      s.contactName || "",
+      s.phone || "",
+      s.email || "",
+      s.address || "",
+      s.taxNumber || "",
+    ]),
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,14 +193,33 @@ export default function SuppliersPage() {
         </div>
       )}
 
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder={t("common.search") + "..."}
+      <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
+        <SearchInput
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="border rounded-lg px-4 py-2 w-full md:w-96"
+          onChange={setSearch}
+          placeholder={t("suppliers.searchPlaceholder")}
         />
+        <FilterSelect
+          value={companyFilter}
+          onChange={(v) => { setCompanyFilter(v); setPage(1); }}
+          options={companies.map((c) => ({ value: c.id, label: c.name }))}
+          allLabel={`${t("common.company")} — ${t("common.all")}`}
+          className="md:w-44"
+        />
+        {hasActiveFilters && (
+          <button onClick={() => { setSearch(""); setCompanyFilter(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
+            {t("common.resetFilters")}
+          </button>
+        )}
+        <div className="flex gap-2 md:ms-auto">
+          <ExportButton filename="suppliers" getExport={exportSuppliers} disabled={filtered.length === 0} />
+          <button
+            onClick={() => setShowImport(true)}
+            className="border border-blue-600 text-blue-700 hover:bg-blue-50 px-3 py-2 rounded-lg text-sm font-medium"
+          >
+            {t("common.import")}
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl overflow-hidden shadow-md">
@@ -190,7 +249,7 @@ export default function SuppliersPage() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((supplier) => (
+                paged.map((supplier) => (
                   <tr key={supplier.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium">{supplier.name}</td>
                     <td className="px-4 py-3 text-sm">{supplier.contactName || "—"}</td>
@@ -211,7 +270,22 @@ export default function SuppliersPage() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={safePage}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          totalItems={filtered.length}
+          pageSize={PAGE_SIZE}
+        />
       </div>
+
+      <ImportDialog
+        open={showImport}
+        onClose={() => setShowImport(false)}
+        entity="suppliers"
+        title={`${t("common.import")} — ${t("suppliers.title")}`}
+        onImported={fetchSuppliers}
+      />
     </div>
   );
 }

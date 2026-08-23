@@ -3,6 +3,10 @@
 import { useEffect, useState, useMemo } from "react";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
+import SearchInput, { matchesQuery } from "@/components/SearchInput";
+import FilterSelect from "@/components/FilterSelect";
+import ExportButton from "@/components/ExportButton";
+import ImportDialog from "@/components/ImportDialog";
 
 interface Machine {
   id: string;
@@ -70,14 +74,18 @@ export default function MachinesPage() {
   const [selected, setSelected] = useState<MachineDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [showImport, setShowImport] = useState(false);
   const PAGE_SIZE = 15;
 
   const fetchMachines = async () => {
-    setLoading(true);
-    const res = await fetch("/api/machines");
-    const data = await res.json();
-    setMachines(data);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/machines");
+      const data = await res.json();
+      setMachines(data);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -86,12 +94,40 @@ export default function MachinesPage() {
 
   const filtered = machines.filter(
     (m) =>
-      m.serialNumber.toLowerCase().includes(search.toLowerCase()) ||
-      (m.model && m.model.toLowerCase().includes(search.toLowerCase()))
+      (matchesQuery(m.serialNumber, search) ||
+        matchesQuery(m.model, search) ||
+        matchesQuery(m.manufacturer, search) ||
+        matchesQuery(m.currentOwner?.name, search)) &&
+      (!statusFilter || m.currentStatus === statusFilter)
   );
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const hasActiveFilters = statusFilter !== "" || search !== "";
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const exportMachines = () => ({
+    headers: [
+      t("machines.serialNumber"),
+      t("machines.manufacturer"),
+      t("machines.model"),
+      t("machines.isColor"),
+      t("machines.status"),
+      t("machines.purchasePrice"),
+      t("machines.purchaseDate"),
+      t("machines.currentOwner"),
+    ],
+    rows: filtered.map((m) => [
+      m.serialNumber,
+      m.manufacturer || "",
+      m.model || "",
+      m.isColor ? t("common.yes") : t("common.no"),
+      STATUS_LABELS[m.currentStatus] || m.currentStatus,
+      m.purchasePrice != null ? String(m.purchasePrice) : "",
+      m.purchaseDate ? new Date(m.purchaseDate).toISOString().slice(0, 10) : "",
+      m.currentOwner?.name || "",
+    ]),
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -223,14 +259,36 @@ export default function MachinesPage() {
         </div>
       )}
 
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder={t("common.search") + "..."}
+      <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
+        <SearchInput
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="border rounded-lg px-4 py-2 w-full md:w-96"
+          onChange={setSearch}
+          placeholder={t("machines.searchPlaceholder")}
         />
+        <FilterSelect
+          value={statusFilter}
+          onChange={(v) => { setStatusFilter(v); setPage(1); }}
+          options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))}
+          allLabel={`${t("machines.status")} — ${t("common.all")}`}
+          className="md:w-44"
+        />
+        {hasActiveFilters && (
+          <button
+            onClick={() => { setSearch(""); setStatusFilter(""); }}
+            className="text-sm text-gray-500 hover:text-gray-700 underline"
+          >
+            {t("common.resetFilters")}
+          </button>
+        )}
+        <div className="flex gap-2 md:ms-auto">
+          <ExportButton filename="machines" getExport={exportMachines} disabled={filtered.length === 0} />
+          <button
+            onClick={() => setShowImport(true)}
+            className="border border-blue-600 text-blue-700 hover:bg-blue-50 px-3 py-2 rounded-lg text-sm font-medium"
+          >
+            {t("common.import")}
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl overflow-hidden shadow-md">
@@ -302,7 +360,7 @@ export default function MachinesPage() {
           </table>
         </div>
         <Pagination
-          currentPage={page}
+          currentPage={safePage}
           totalPages={totalPages}
           onPageChange={setPage}
           totalItems={filtered.length}
@@ -369,6 +427,14 @@ export default function MachinesPage() {
           </div>
         </div>
       )}
+
+      <ImportDialog
+        open={showImport}
+        onClose={() => setShowImport(false)}
+        entity="machines"
+        title={`${t("common.import")} — ${t("machines.title")}`}
+        onImported={fetchMachines}
+      />
     </div>
   );
 }

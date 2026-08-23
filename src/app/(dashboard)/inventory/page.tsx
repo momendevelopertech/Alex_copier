@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
+import Pagination from "@/components/Pagination";
+import SearchInput, { matchesQuery } from "@/components/SearchInput";
+import FilterSelect from "@/components/FilterSelect";
+import ExportButton from "@/components/ExportButton";
 
 interface InventoryItem {
   id: string;
@@ -62,6 +66,34 @@ export default function InventoryPage() {
     notes: "",
   });
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
+
+  const filtered = inventory.filter(
+    (item) =>
+      (!warehouseFilter || item.warehouseId === warehouseFilter) &&
+      (matchesQuery(item.product?.name, search) ||
+        matchesQuery(item.product?.sku, search) ||
+        matchesQuery(item.warehouse?.name, search))
+  );
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const exportInventory = () => ({
+    headers: [
+      t("inventory.product"),
+      t("inventory.product") + " SKU",
+      t("inventory.warehouse"),
+      t("inventory.quantity"),
+    ],
+    rows: filtered.map((item) => [
+      item.product?.name || item.productId,
+      item.product?.sku || "",
+      item.warehouse?.name || item.warehouseId,
+      String(item.quantity),
+    ]),
+  });
 
   const fetchInventory = () => {
     fetch("/api/inventory?catalog=true")
@@ -175,9 +207,17 @@ export default function InventoryPage() {
       )}
 
       <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="mb-4 grid gap-3 md:grid-cols-2">
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("inventory.product")} أو SKU...`} className="border rounded-lg px-4 py-2" />
-          <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className="border rounded-lg px-4 py-2"><option value="">{t("inventory.warehouse")} ({t("common.selectOption")})</option>{warehouses.map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}</select>
+        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
+          <SearchInput value={search} onChange={setSearch} placeholder={`${t("common.search")} ${t("inventory.product")} / SKU...`} />
+          <FilterSelect value={warehouseFilter} onChange={(v) => { setWarehouseFilter(v); setPage(1); }} options={warehouses.map((w) => ({ value: w.id, label: w.name }))} allLabel={`${t("inventory.warehouse")} — ${t("common.all")}`} className="md:w-44" />
+          {(search !== "" || warehouseFilter !== "") && (
+            <button onClick={() => { setSearch(""); setWarehouseFilter(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
+              {t("common.resetFilters")}
+            </button>
+          )}
+          <div className="md:ms-auto">
+            <ExportButton filename="inventory" getExport={exportInventory} disabled={filtered.length === 0} />
+          </div>
         </div>
         {loading ? (
           <p className="text-gray-500">{t("common.loading")}</p>
@@ -192,7 +232,7 @@ export default function InventoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {inventory.filter(item => (!warehouseFilter || item.warehouseId === warehouseFilter) && [item.product?.name, item.product?.sku, item.warehouse?.name].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())).map((item) => (
+                {paged.map((item) => (
                   <tr key={item.id} className="border-t border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm">{item.product?.name || item.productId}</td>
                     <td className="px-4 py-3 text-sm">{item.warehouse?.name || item.warehouseId}</td>
@@ -203,7 +243,7 @@ export default function InventoryPage() {
                     </td>
                   </tr>
                 ))}
-                {inventory.filter(item => (!warehouseFilter || item.warehouseId === warehouseFilter) && [item.product?.name, item.product?.sku, item.warehouse?.name].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())).length === 0 && (
+                {filtered.length === 0 && (
                   <tr>
                     <td colSpan={3} className="px-4 py-8 text-center text-gray-400">{t("common.noData")}</td>
                   </tr>
@@ -212,6 +252,7 @@ export default function InventoryPage() {
             </table>
           </div>
         )}
+        <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
       </div>
     </div>
   );

@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
+import SearchInput, { matchesQuery } from "@/components/SearchInput";
+import FilterSelect from "@/components/FilterSelect";
+import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
+import ExportButton from "@/components/ExportButton";
 
 interface Company { id: string; name: string; }
 interface Customer { id: string; name: string; }
@@ -28,15 +32,20 @@ export default function SettlementsPage() {
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [companyFilter, setCompanyFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [form, setForm] = useState({ companyId: "", customerId: "", engineerId: "", amount: "", paymentMethod: "CASH", reason: "" });
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
 
   const fetchData = async () => {
-    setLoading(true);
-    const [sRes, coRes, cuRes, eRes] = await Promise.all([fetch("/api/settlements"), fetch("/api/companies"), fetch("/api/customers"), fetch("/api/engineers")]);
-    setSettlements(await sRes.json()); setCompanies(await coRes.json()); setCustomers(await cuRes.json()); setEngineers(await eRes.json());
-    setLoading(false);
+    try {
+      const [sRes, coRes, cuRes, eRes] = await Promise.all([fetch("/api/settlements"), fetch("/api/companies"), fetch("/api/customers"), fetch("/api/engineers")]);
+      setSettlements(await sRes.json()); setCompanies(await coRes.json()); setCustomers(await cuRes.json()); setEngineers(await eRes.json());
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -56,9 +65,43 @@ export default function SettlementsPage() {
     fetchData();
   };
 
-  const filtered = settlements.filter(settlement => (!statusFilter || settlement.status === statusFilter) && [settlement.settlementNumber, settlement.reason, settlement.customer?.name, settlement.engineer?.name].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase()));
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const filtered = settlements.filter(settlement =>
+    (!statusFilter || settlement.status === statusFilter) &&
+    (!companyFilter || settlement.companyId === companyFilter) &&
+    inDateRange(settlement.createdAt, dateFrom, dateTo) &&
+    (matchesQuery(settlement.settlementNumber, search) ||
+      matchesQuery(settlement.reason, search) ||
+      matchesQuery(settlement.customer?.name, search) ||
+      matchesQuery(settlement.engineer?.name, search) ||
+      matchesQuery(settlement.collector?.name, search))
+  );
+  const hasActiveFilters = statusFilter !== "" || companyFilter !== "" || dateFrom !== "" || dateTo !== "" || search !== "";
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const exportSettlements = () => ({
+    headers: [
+      t("settlements.number"),
+      t("common.company"),
+      t("settlements.amount"),
+      t("settlements.paymentMethod"),
+      t("settlements.reason"),
+      t("settlements.status"),
+      t("settlements.collectedBy"),
+      t("common.date"),
+    ],
+    rows: filtered.map((s) => [
+      s.settlementNumber,
+      s.company.name,
+      String(s.amount),
+      PAYMENT_METHOD_LABELS[s.paymentMethod] || s.paymentMethod,
+      s.reason,
+      STATUS_LABELS[s.status] || s.status,
+      s.collector?.name || "",
+      new Date(s.createdAt).toISOString().slice(0, 10),
+    ]),
+  });
 
   return (
     <div dir={dir}>
@@ -99,7 +142,20 @@ export default function SettlementsPage() {
       )}
 
       <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="mb-4 grid gap-3 md:grid-cols-2"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("settlements.number")} / ${t("settlements.reason")}...`} className="border rounded-lg px-4 py-2" /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded-lg px-4 py-2"><option value="">{t("settlements.status")} ({t("common.selectOption")})</option>{Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
+          <SearchInput value={search} onChange={setSearch} placeholder={t("settlements.searchPlaceholder")} />
+          <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("settlements.status")} — ${t("common.all")}`} className="md:w-40" />
+          <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} — ${t("common.all")}`} className="md:w-40" />
+          <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={(v) => { setDateFrom(v); setPage(1); }} onToChange={(v) => { setDateTo(v); setPage(1); }} />
+          {hasActiveFilters && (
+            <button onClick={() => { setSearch(""); setStatusFilter(""); setCompanyFilter(""); setDateFrom(""); setDateTo(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
+              {t("common.resetFilters")}
+            </button>
+          )}
+          <div className="md:ms-auto">
+            <ExportButton filename="settlements" getExport={exportSettlements} disabled={filtered.length === 0} />
+          </div>
+        </div>
         {loading ? <p className="text-gray-500">{t("common.loading")}</p>
         : settlements.length === 0 ? <p className="text-gray-500">{t("common.noData")}</p>
         : (
@@ -143,7 +199,7 @@ export default function SettlementsPage() {
                 </tbody>
               </table>
             </div>
-            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
+            <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
           </>
         )}
       </div>

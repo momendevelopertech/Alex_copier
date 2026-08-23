@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
+import Pagination from "@/components/Pagination";
+import SearchInput, { matchesQuery } from "@/components/SearchInput";
+import FilterSelect from "@/components/FilterSelect";
+import ExportButton from "@/components/ExportButton";
 
 interface Machine {
   id: string;
@@ -45,6 +49,40 @@ export default function WorkshopPage() {
     approvedBy: "",
     scrapValue: 0,
   });
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
+
+  const filtered = machines.filter(
+    (machine) =>
+      (!statusFilter || machine.status === statusFilter) &&
+      (matchesQuery(machine.serialNumber, search) ||
+        matchesQuery(machine.manufacturer, search) ||
+        matchesQuery(machine.model, search) ||
+        matchesQuery(machine.notes, search))
+  );
+  const hasActiveFilters = statusFilter !== "" || search !== "";
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const exportWorkshop = () => ({
+    headers: [
+      t("machines.serialNumber"),
+      t("machines.manufacturer"),
+      t("machines.model"),
+      t("machines.status"),
+      t("workshop.purchaseDate"),
+      t("common.notes"),
+    ],
+    rows: filtered.map((m) => [
+      m.serialNumber,
+      m.manufacturer || "",
+      m.model || "",
+      STATUS_LABELS[m.status] || m.status,
+      m.purchaseDate ? new Date(m.purchaseDate).toISOString().slice(0, 10) : "",
+      m.notes || "",
+    ]),
+  });
 
   const fetchMachines = () => {
     fetch("/api/workshop")
@@ -77,7 +115,18 @@ export default function WorkshopPage() {
       <h1 className="text-xl sm:text-2xl font-bold mb-6">{t("workshop.title")}</h1>
 
       <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="mb-4 grid gap-3 md:grid-cols-2"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("machines.serialNumber")} / ${t("machines.model")}...`} className="border rounded-lg px-4 py-2" /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded-lg px-4 py-2"><option value="">{t("machines.status")} ({t("common.selectOption")})</option>{Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
+          <SearchInput value={search} onChange={setSearch} placeholder={`${t("common.search")} ${t("machines.serialNumber")} / ${t("machines.model")}...`} />
+          <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("machines.status")} — ${t("common.all")}`} className="md:w-44" />
+          {hasActiveFilters && (
+            <button onClick={() => { setSearch(""); setStatusFilter(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
+              {t("common.resetFilters")}
+            </button>
+          )}
+          <div className="md:ms-auto">
+            <ExportButton filename="workshop-machines" getExport={exportWorkshop} disabled={filtered.length === 0} />
+          </div>
+        </div>
         {loading ? (
           <p className="text-gray-500">{t("common.loading")}</p>
         ) : (
@@ -95,7 +144,7 @@ export default function WorkshopPage() {
                 </tr>
               </thead>
               <tbody>
-                {machines.filter(machine => (!statusFilter || machine.status === statusFilter) && [machine.serialNumber, machine.manufacturer, machine.model, machine.notes].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())).map((machine) => (
+                {paged.map((machine) => (
                   <tr key={machine.id} className="border-t border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm">{machine.serialNumber}</td>
                     <td className="px-4 py-3 text-sm">{machine.manufacturer}</td>
@@ -117,7 +166,7 @@ export default function WorkshopPage() {
                     </td>
                   </tr>
                 ))}
-                {machines.filter(machine => (!statusFilter || machine.status === statusFilter) && [machine.serialNumber, machine.manufacturer, machine.model, machine.notes].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())).length === 0 && (
+                {filtered.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-4 py-8 text-center text-gray-400">{t("common.noData")}</td>
                   </tr>
@@ -126,6 +175,7 @@ export default function WorkshopPage() {
             </table>
           </div>
         )}
+        <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
       </div>
 
       {scrapTarget && (

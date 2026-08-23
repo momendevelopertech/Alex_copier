@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
+import SearchInput, { matchesQuery } from "@/components/SearchInput";
+import FilterSelect from "@/components/FilterSelect";
+import ExportButton from "@/components/ExportButton";
 
 const TYPE_LABELS: Record<string, string> = {
   MAINTENANCE_ONLY: "صيانة فقط",
@@ -58,6 +61,7 @@ export default function ContractsPage() {
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
   const [form, setForm] = useState({
     customerId: "", contractType: "MAINTENANCE_ONLY", startDate: "", endDate: "",
     value: "", billingCycle: "MONTHLY", visitLimit: "", costPerCopy: "",
@@ -67,12 +71,14 @@ export default function ContractsPage() {
   const PAGE_SIZE = 15;
 
   const fetchData = async () => {
-    setLoading(true);
-    const [cRes, custRes, machineRes] = await Promise.all([fetch("/api/contracts"), fetch("/api/customers"), fetch("/api/machines")]);
-    setContracts(await cRes.json());
-    setCustomers(await custRes.json());
-    setMachines(await machineRes.json());
-    setLoading(false);
+    try {
+      const [cRes, custRes, machineRes] = await Promise.all([fetch("/api/contracts"), fetch("/api/customers"), fetch("/api/machines")]);
+      setContracts(await cRes.json());
+      setCustomers(await custRes.json());
+      setMachines(await machineRes.json());
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -101,9 +107,40 @@ export default function ContractsPage() {
     fetchData();
   };
 
-  const filtered = contracts.filter(contract => (!statusFilter || contract.status === statusFilter) && [contract.contractNumber, contract.customer.name, contract.contractType].join(" ").toLowerCase().includes(search.toLowerCase()));
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const filtered = contracts.filter(contract =>
+    (!statusFilter || contract.status === statusFilter) &&
+    (!typeFilter || contract.contractType === typeFilter) &&
+    (matchesQuery(contract.contractNumber, search) ||
+      matchesQuery(contract.customer?.name, search) ||
+      matchesQuery(TYPE_LABELS[contract.contractType], search))
+  );
+  const hasActiveFilters = statusFilter !== "" || typeFilter !== "" || search !== "";
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const exportContracts = () => ({
+    headers: [
+      t("contracts.contractNumber"),
+      t("serviceRequests.customer"),
+      t("contracts.type"),
+      t("common.status"),
+      t("contracts.value"),
+      t("contracts.startDate"),
+      t("contracts.endDate"),
+      t("contracts.machines"),
+    ],
+    rows: filtered.map((c) => [
+      c.contractNumber,
+      c.customer.name,
+      TYPE_LABELS[c.contractType] || c.contractType,
+      STATUS_LABELS[c.status] || c.status,
+      String(c.value),
+      new Date(c.startDate).toISOString().slice(0, 10),
+      new Date(c.endDate).toISOString().slice(0, 10),
+      String(c.machines.length),
+    ]),
+  });
 
   return (
     <div dir={dir}>
@@ -159,7 +196,19 @@ export default function ContractsPage() {
       )}
 
       <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="mb-4 grid gap-3 md:grid-cols-2"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("contracts.contractNumber")} / ${t("serviceRequests.customer")}...`} className="border rounded-lg px-4 py-2" /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded-lg px-4 py-2"><option value="">{t("common.status")} ({t("common.selectOption")})</option>{Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
+          <SearchInput value={search} onChange={setSearch} placeholder={t("contracts.searchPlaceholder")} />
+          <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("common.status")} — ${t("common.all")}`} className="md:w-40" />
+          <FilterSelect value={typeFilter} onChange={(v) => { setTypeFilter(v); setPage(1); }} options={Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("contracts.typeFilter")} — ${t("common.all")}`} className="md:w-44" />
+          {hasActiveFilters && (
+            <button onClick={() => { setSearch(""); setStatusFilter(""); setTypeFilter(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
+              {t("common.resetFilters")}
+            </button>
+          )}
+          <div className="md:ms-auto">
+            <ExportButton filename="contracts" getExport={exportContracts} disabled={filtered.length === 0} />
+          </div>
+        </div>
         {loading ? <p className="text-gray-500">{t("common.loading")}</p>
         : contracts.length === 0 ? <p className="text-gray-500">{t("common.noData")}</p>
         : (
@@ -200,7 +249,7 @@ export default function ContractsPage() {
             </table>
           </div>
         )}
-        <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
+        <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
       </div>
     </div>
   );
