@@ -33,27 +33,27 @@
     "addMachine": "Add Machine",
     "createServiceRequest": "Create Service Request",
     "newSale": "New Sale",
-    "addCustomer": "Add Customer"
-    ,"monthlyPerformance": "This month by company"
-    ,"openRequests": "Open requests"
-    ,"urgentRequests": "Urgent requests"
-    ,"unassignedRequests": "Unassigned requests"
-    ,"visitsThisMonth": "Visits this month"
-    ,"engineerWorkload": "Technician workload"
-    ,"salesThisMonth": "Sales"
-    ,"purchasesThisMonth": "Purchases"
-    ,"expensesThisMonth": "Expenses"
-    ,"collectedThisMonth": "Verified collections"
-    ,"serviceQueue": "Service queue"
-    ,"loadingDashboard": "Opening your dashboard..."
-    ,"maintenanceStatus": "Maintenance status"
-    ,"machinesInService": "Devices in service"
-    ,"updatedAt": "Updated"
-    ,"engineer": "Technician"
-    ,"assignedOpen": "Assigned (open)"
-    ,"visitsCol": "Visits this month"
-    ,"daysLeft": "days left"
-    ,"alerts": {
+    "addCustomer": "Add Customer",
+    "monthlyPerformance": "This month by company",
+    "openRequests": "Open requests",
+    "urgentRequests": "Urgent requests",
+    "unassignedRequests": "Unassigned requests",
+    "visitsThisMonth": "Visits this month",
+    "engineerWorkload": "Technician workload",
+    "salesThisMonth": "Sales",
+    "purchasesThisMonth": "Purchases",
+    "expensesThisMonth": "Expenses",
+    "collectedThisMonth": "Verified collections",
+    "serviceQueue": "Service queue",
+    "loadingDashboard": "Opening your dashboard...",
+    "maintenanceStatus": "Maintenance status",
+    "machinesInService": "Devices in service",
+    "updatedAt": "Updated",
+    "engineer": "Technician",
+    "assignedOpen": "Assigned (open)",
+    "visitsCol": "Visits this month",
+    "daysLeft": "days left",
+    "alerts": {
       "URGENT_REQUESTS": "Open urgent/emergency requests",
       "UNASSIGNED_REQUESTS": "Requests not assigned to a technician",
       "OVERDUE_INSTALLMENTS": "Overdue installments",
@@ -90,7 +90,6 @@
     "no": "No",
     "active": "Active",
     "selectOption": "Select...",
-    "company": "Company",
     "submit": "Submit",
     "verify": "Verify",
     "closeAction": "Close",
@@ -117,7 +116,8 @@
     "SOLD": "Sold",
     "RENTED": "Rented",
     "IN_WAREHOUSE": "In Warehouse",
-    "SCRAPPED": "Scrapped"
+    "SCRAPPED": "Scrapped",
+    "searchPlaceholder": "Search by serial number, brand, model, or owner..."
   },
   "machineDetails": {
     "view": "View lifecycle",
@@ -174,7 +174,9 @@
     "contracts": "Contracts",
     "sales": "Sales orders",
     "openRequests": "Open service requests",
-    "outstandingBalance": "Outstanding balance"
+    "outstandingBalance": "Outstanding balance",
+    "searchPlaceholder": "Search by name, company, or phone...",
+    "typeFilter": "Customer type"
   },
   "suppliers": {
     "title": "Suppliers",
@@ -185,7 +187,9 @@
     "addSupplier": "Add Supplier",
     "contactName": "Contact Name",
     "taxNumber": "Tax Number",
-    "companyId": "Company ID"
+    "companyId": "Company ID",
+    "searchPlaceholder": "Search by supplier name, contact, or phone...",
+    "companyFilter": "Company"
   },
   "engineers": {
     "title": "Engineers",
@@ -200,7 +204,8 @@
     "commissionRate": "Commission Rate",
     "baseSalary": "Base Salary",
     "addEngineer": "Add Engineer",
-    "areasPlaceholder": "Areas (comma separated)"
+    "areasPlaceholder": "Areas (comma separated)",
+    "searchPlaceholder": "Search by name, phone, email, or skill..."
   },
   "investors": {
     "title": "Investors",
@@ -208,7 +213,8 @@
     "phone": "Phone",
     "email": "Email",
     "ownershipPct": "Ownership %",
-    "addInvestor": "Add Investor"
+    "addInvestor": "Add Investor",
+    "searchPlaceholder": "Search by name, phone, or email..."
   },
   "serviceRequests": {
     "title": "Service Requests",
@@ -238,7 +244,10 @@
     "ok": "OK",
     "customer": "Customer",
     "machine": "Machine",
-    "engineer": "Engineer"
+    "engineer": "Engineer",
+    "searchPlaceholder": "Search by request no., customer, machine, or engineer...",
+    "priorityFilter": "Priority",
+    "engineerFilter": "Engineer"
   },
   "contracts": {
     "title": "Contracts",
@@ -267,7 +276,9 @@
     "suspended": "Suspended",
     "terminate": "Terminate",
     "activate": "Activate",
-    "coveredMachines": "Covered machines"
+    "coveredMachines": "Covered machines",
+    "searchPlaceholder": "Search by contract no., customer, or type...",
+    "typeFilter": "Contract type"
   },
   "purchases": {
     "title": "Purchases",
@@ -286,7 +297,9 @@
       "confirmed": "Confirmed",
       "received": "Received",
       "cancelled": "Cancelled"
-    }
+    },
+    "searchPlaceholder": "Search by supplier, company, or order no....",
+    "companyFilter": "Company"
   },
   "sales": {
     "title": "Sales",
@@ -317,7 +330,10 @@
     "pending": "Pending",
     "partial": "Partial",
     "paid": "Paid",
-    "overdue": "Overdue"
+    "overdue": "Overdue",
+    "searchPlaceholder": "Search by order no., customer, product, or type...",
+    "companyFilter": "Company",
+    "typeFilter": "Order type"
   },
   "inventory": {
     "title": "Inventory",
@@ -360,7 +376,9 @@
     "newExpense": "New Expense",
     "selectCompany": "Select Company",
     "category": "Category",
-    "paidBy": "Paid By"
+    "paidBy": "Paid By",
+    "searchPlaceholder": "Search by category, description, or company...",
+    "categoryFilter": "Category"
   },
   "settlements": {
     "title": "Settlements",
@@ -381,7 +399,9 @@
     "credit": "Credit",
     "installment": "Installment",
     "mixed": "Mixed",
-    "by": "by"
+    "by": "by",
+    "searchPlaceholder": "Search by settlement no., reason, or collector...",
+    "companyFilter": "Company"
   },
   "reports": {
     "title": "Reports",
@@ -418,7 +438,9 @@
     "title": "Settings",
     "language": "Language",
     "company": "Company",
-    "users": "Users"
+    "users": "Users",
+    "usersSearchPlaceholder": "Search by name, email, or role...",
+    "roleFilter": "Role"
   },
   "roles": {
     "GENERAL_MANAGER": "General Manager",

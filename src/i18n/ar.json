@@ -33,27 +33,27 @@
     "addMachine": "إضافة جهاز",
     "createServiceRequest": "إنشاء طلب خدمة",
     "newSale": "عملية بيع جديدة",
-    "addCustomer": "إضافة عميل"
-    ,"monthlyPerformance": "أداء الشركات هذا الشهر"
-    ,"openRequests": "طلبات مفتوحة"
-    ,"urgentRequests": "طلبات عاجلة"
-    ,"unassignedRequests": "طلبات غير مسندة"
-    ,"visitsThisMonth": "زيارات هذا الشهر"
-    ,"engineerWorkload": "حِمل الفنيين"
-    ,"salesThisMonth": "المبيعات"
-    ,"purchasesThisMonth": "المشتريات"
-    ,"expensesThisMonth": "المصروفات"
-    ,"collectedThisMonth": "تحصيلات مؤكدة"
-    ,"serviceQueue": "طابور الصيانة"
-    ,"loadingDashboard": "جاري فتح لوحة التحكم..."
-    ,"maintenanceStatus": "حالة الصيانة"
-    ,"machinesInService": "أجهزة تحت الصيانة"
-    ,"updatedAt": "آخر تحديث"
-    ,"engineer": "الفني"
-    ,"assignedOpen": "مسندة (مفتوحة)"
-    ,"visitsCol": "زيارات الشهر"
-    ,"daysLeft": "يوم متبقٍ"
-    ,"alerts": {
+    "addCustomer": "إضافة عميل",
+    "monthlyPerformance": "أداء الشركات هذا الشهر",
+    "openRequests": "طلبات مفتوحة",
+    "urgentRequests": "طلبات عاجلة",
+    "unassignedRequests": "طلبات غير مسندة",
+    "visitsThisMonth": "زيارات هذا الشهر",
+    "engineerWorkload": "حِمل الفنيين",
+    "salesThisMonth": "المبيعات",
+    "purchasesThisMonth": "المشتريات",
+    "expensesThisMonth": "المصروفات",
+    "collectedThisMonth": "تحصيلات مؤكدة",
+    "serviceQueue": "طابور الصيانة",
+    "loadingDashboard": "جاري فتح لوحة التحكم...",
+    "maintenanceStatus": "حالة الصيانة",
+    "machinesInService": "أجهزة تحت الصيانة",
+    "updatedAt": "آخر تحديث",
+    "engineer": "الفني",
+    "assignedOpen": "مسندة (مفتوحة)",
+    "visitsCol": "زيارات الشهر",
+    "daysLeft": "يوم متبقٍ",
+    "alerts": {
       "URGENT_REQUESTS": "طلبات عاجلة/طارئة مفتوحة",
       "UNASSIGNED_REQUESTS": "طلبات لم يُسند لها فني",
       "OVERDUE_INSTALLMENTS": "أقساط متأخرة عن السداد",
@@ -90,12 +90,26 @@
     "no": "لا",
     "active": "نشط",
     "selectOption": "اختر...",
-    "company": "الشركة",
     "submit": "إرسال",
     "verify": "تحقق",
     "closeAction": "إغلاق",
     "resolve": "تم الحل",
-    "notResolve": "لم يتم الحل"
+    "notResolve": "لم يتم الحل",
+    "all": "الكل",
+    "resetFilters": "مسح الفلاتر",
+    "from": "من تاريخ",
+    "to": "إلى تاريخ",
+    "import": "استيراد",
+    "downloadTemplate": "تحميل القالب",
+    "importInstructions": "حمّل القالب أولاً، عبّئ الصفوف في Excel مع الحفاظ على صف العناوين كما هو، ثم اختر الملف واستورد. يُفحص كل صف قبل الإضافة، وإذا وُجد خطأ لن يُضف أي سجل.",
+    "importSubmit": "استيراد البيانات",
+    "column": "العمود",
+    "required": "مطلوب",
+    "rowWord": "صف",
+    "rowsUnit": "صف بنجاح",
+    "importSuccessPrefix": "تم استيراد",
+    "importFailedTitle": "لم يتم استيراد أي صف — صحّح الأخطاء التالية ثم أعد المحاولة:",
+    "importErrorGeneric": "حدث خطأ أثناء الاستيراد، تأكد من صيغة الملف وحاول مرة أخرى"
   },
   "machines": {
     "title": "الأجهزة",
@@ -117,7 +131,8 @@
     "SOLD": "مباع",
     "RENTED": "مؤجر",
     "IN_WAREHOUSE": "في المستودع",
-    "SCRAPPED": "مهمل"
+    "SCRAPPED": "مهمل",
+    "searchPlaceholder": "ابحث برقم التسلسل أو الماركة أو الموديل أو اسم العميل..."
   },
   "machineDetails": {
     "view": "عرض سجل دورة الحياة",
@@ -174,7 +189,9 @@
     "contracts": "العقود",
     "sales": "أوامر البيع",
     "openRequests": "طلبات الصيانة المفتوحة",
-    "outstandingBalance": "الرصيد المستحق"
+    "outstandingBalance": "الرصيد المستحق",
+    "searchPlaceholder": "ابحث بالاسم أو اسم الشركة أو الهاتف...",
+    "typeFilter": "نوع العميل"
   },
   "suppliers": {
     "title": "الموردون",
@@ -185,7 +202,9 @@
     "addSupplier": "إضافة مورد",
     "contactName": "جهة الاتصال",
     "taxNumber": "الرقم الضريبي",
-    "companyId": "معرّف الشركة"
+    "companyId": "معرّف الشركة",
+    "searchPlaceholder": "ابحث باسم المورد أو جهة الاتصال أو الهاتف...",
+    "companyFilter": "الشركة"
   },
   "engineers": {
     "title": "المهندسون",
@@ -200,7 +219,8 @@
     "commissionRate": "نسبة العمولة",
     "baseSalary": "الراتب الأساسي",
     "addEngineer": "إضافة مهندس",
-    "areasPlaceholder": "المناطق (مفصولة بفاصلة)"
+    "areasPlaceholder": "المناطق (مفصولة بفاصلة)",
+    "searchPlaceholder": "ابحث بالاسم أو الهاتف أو البريد أو المهارة..."
   },
   "investors": {
     "title": "المستثمرون",
@@ -208,7 +228,8 @@
     "phone": "الهاتف",
     "email": "البريد الإلكتروني",
     "ownershipPct": "نسبة الملكية",
-    "addInvestor": "إضافة مستثمر"
+    "addInvestor": "إضافة مستثمر",
+    "searchPlaceholder": "ابحث بالاسم أو الهاتف أو البريد..."
   },
   "serviceRequests": {
     "title": "طلبات الخدمة",
@@ -238,7 +259,10 @@
     "ok": "موافق",
     "customer": "العميل",
     "machine": "الجهاز",
-    "engineer": "المهندس"
+    "engineer": "المهندس",
+    "searchPlaceholder": "ابحث برقم الطلب أو العميل أو الجهاز أو المهندس...",
+    "priorityFilter": "الأولوية",
+    "engineerFilter": "المهندس"
   },
   "contracts": {
     "title": "العقود",
@@ -267,7 +291,9 @@
     "suspended": "موقوف",
     "terminate": "إلغاء",
     "activate": "تفعيل",
-    "coveredMachines": "الأجهزة المشمولة بالعقد"
+    "coveredMachines": "الأجهزة المشمولة بالعقد",
+    "searchPlaceholder": "ابحث برقم العقد أو العميل أو النوع...",
+    "typeFilter": "نوع العقد"
   },
   "purchases": {
     "title": "المشتريات",
@@ -286,7 +312,9 @@
       "confirmed": "مؤكد",
       "received": "تم الاستلام",
       "cancelled": "ملغي"
-    }
+    },
+    "searchPlaceholder": "ابحث بالمورد أو الشركة أو رقم الأمر...",
+    "companyFilter": "الشركة"
   },
   "sales": {
     "title": "المبيعات",
@@ -317,7 +345,11 @@
     "pending": "معلق",
     "partial": "جزئي",
     "paid": "مدفوع",
-    "overdue": "متأخر"
+    "overdue": "متأخر",
+    "searchPlaceholder": "ابحث برقم الأمر أو العميل أو المنتج أو النوع...",
+    "companyFilter": "الشركة",
+    "typeFilter": "نوع الأمر",
+    "dateFrom": ""
   },
   "inventory": {
     "title": "المخزون",
@@ -360,7 +392,9 @@
     "newExpense": "مصروف جديد",
     "selectCompany": "اختر الشركة",
     "category": "الفئة",
-    "paidBy": "الدافع"
+    "paidBy": "الدافع",
+    "searchPlaceholder": "ابحث بالفئة أو الوصف أو الشركة...",
+    "categoryFilter": "الفئة"
   },
   "settlements": {
     "title": "التسويات",
@@ -381,7 +415,9 @@
     "credit": "آجل",
     "installment": "أقساط",
     "mixed": "مختلط",
-    "by": "بواسطة"
+    "by": "بواسطة",
+    "searchPlaceholder": "ابحث برقم التسوية أو السبب أو المحصل...",
+    "companyFilter": "الشركة"
   },
   "reports": {
     "title": "التقارير",
@@ -422,7 +458,9 @@
     "general": "عام",
     "profile": "الملف الشخصي",
     "notifications": "الإشعارات",
-    "security": "الأمان"
+    "security": "الأمان",
+    "usersSearchPlaceholder": "ابحث بالاسم أو البريد الإلكتروني أو الدور...",
+    "roleFilter": "الدور"
   },
   "pagination": {
     "showing": "عرض",
