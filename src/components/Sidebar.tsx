@@ -87,7 +87,7 @@ export default function Sidebar() {
         </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-4">
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 sidebar-scroll">
         {allowedNavItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
@@ -96,14 +96,15 @@ export default function Sidebar() {
               key={item.href}
               href={item.href}
               onClick={() => setMobileOpen(false)}
+              title={collapsed ? t(item.key) : undefined}
               className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-colors ${
                 active
                   ? "bg-blue-600 text-white"
                   : "text-gray-300 hover:bg-gray-800 hover:text-white"
-              }`}
+              } ${collapsed ? "justify-center px-0" : ""}`}
             >
-              <Icon size={20} />
-              {!collapsed && <span className="text-sm">{t(item.key)}</span>}
+              <Icon size={20} className="shrink-0" />
+              {!collapsed && <span className="text-sm whitespace-nowrap">{t(item.key)}</span>}
             </Link>
           );
         })}
@@ -112,10 +113,13 @@ export default function Sidebar() {
       <div className="border-t border-gray-700 p-3">
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-colors w-full text-gray-300 hover:bg-red-600/20 hover:text-red-400"
+          title={collapsed ? t("navigation.logout") : undefined}
+          className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-colors text-gray-300 hover:bg-red-600/20 hover:text-red-400 ${
+            collapsed ? "justify-center px-0" : "w-[calc(100%-16px)]"
+          }`}
         >
-          <LogOut size={20} />
-          {!collapsed && <span className="text-sm">{t("navigation.logout")}</span>}
+          <LogOut size={20} className="shrink-0" />
+          {!collapsed && <span className="text-sm whitespace-nowrap">{t("navigation.logout")}</span>}
         </button>
       </div>
     </div>
