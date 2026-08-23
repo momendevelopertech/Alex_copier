@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useI18n } from "@/i18n/context";
+import PrinterLoader from "@/components/PrinterLoader";
 
 interface Contract {
   id: string;
@@ -93,7 +94,9 @@ export default function ReportsPage() {
               <div className="bg-white rounded-xl shadow-md p-6 mt-3">
                 <h3 className="text-lg font-semibold mb-4">{t("reports.contractProfitability")}</h3>
                 {loadingContracts ? (
-                  <p className="text-gray-500">{t("common.loading")}</p>
+                  <div className="flex min-h-[200px] items-center justify-center">
+                    <PrinterLoader size="sm" label={t("common.loading")} />
+                  </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
@@ -140,7 +143,9 @@ export default function ReportsPage() {
               <div className="bg-white rounded-xl shadow-md p-6 mt-3">
                 <h3 className="text-lg font-semibold mb-4">{t("reports.engineerPerformance")}</h3>
                 {loadingEngineers ? (
-                  <p className="text-gray-500">{t("common.loading")}</p>
+                  <div className="flex min-h-[200px] items-center justify-center">
+                    <PrinterLoader size="sm" label={t("common.loading")} />
+                  </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">

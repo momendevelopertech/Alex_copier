@@ -6,19 +6,27 @@ interface PrinterLoaderProps {
   fullScreen?: boolean;
   label?: string;
   dark?: boolean;
+  size?: "sm" | "md" | "lg";
 }
 
-export default function PrinterLoader({ fullScreen = false, label = "جاري التحميل...", dark = false }: PrinterLoaderProps) {
+const SIZES = {
+  sm: { width: 120, height: 94, bar: "w-28", label: "text-xs", gap: "gap-3" },
+  md: { width: 160, height: 128, bar: "w-36", label: "text-sm", gap: "gap-4" },
+  lg: { width: 200, height: 160, bar: "w-44", label: "text-sm", gap: "gap-5" },
+} as const;
+
+export default function PrinterLoader({ fullScreen = false, label = "جاري التحميل...", dark = false, size = "lg" }: PrinterLoaderProps) {
   const clipId = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const gradientId = `${clipId}-grad`;
+  const s = SIZES[size];
 
   const loader = (
     <div
       role="status"
       aria-live="polite"
-      className={`printer-loader flex flex-col items-center gap-5 select-none ${dark ? "text-white" : "text-gray-600"}`}
+      className={`printer-loader flex flex-col items-center select-none ${s.gap} ${dark ? "text-white" : "text-gray-600"}`}
     >
-      <svg width="200" height="160" viewBox="0 0 220 170" fill="none" aria-hidden="true">
+      <svg width={s.width} height={s.height} viewBox="0 0 220 170" fill="none" aria-hidden="true">
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="#3b82f6" />
@@ -60,8 +68,8 @@ export default function PrinterLoader({ fullScreen = false, label = "جاري ا
       </svg>
 
       <div className="flex flex-col items-center gap-3">
-        <p className={`text-sm font-medium ${dark ? "text-blue-100" : "text-gray-600"}`}>{label}</p>
-        <div className={`w-44 h-1.5 rounded-full overflow-hidden ${dark ? "bg-white/15" : "bg-gray-200"}`}>
+        <p className={`font-medium ${s.label} ${dark ? "text-blue-100" : "text-gray-600"}`}>{label}</p>
+        <div className={`${s.bar} h-1.5 rounded-full overflow-hidden ${dark ? "bg-white/15" : "bg-gray-200"}`}>
           <div className="pl-fill h-full w-12 rounded-full bg-gradient-to-r from-blue-500 to-indigo-400" />
         </div>
       </div>

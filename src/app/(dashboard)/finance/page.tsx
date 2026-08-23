@@ -7,6 +7,7 @@ import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
 import ExportButton from "@/components/ExportButton";
+import PrinterLoader from "@/components/PrinterLoader";
 
 interface Company { id: string; name: string; }
 interface Expense {
@@ -123,7 +124,11 @@ export default function FinancePage() {
             <ExportButton filename="expenses" getExport={exportExpenses} disabled={filtered.length === 0} />
           </div>
         </div>
-        {loading ? <p className="text-gray-500">{t("common.loading")}</p>
+        {loading ? (
+          <div className="flex min-h-[320px] w-full items-center justify-center px-4 py-8">
+            <PrinterLoader size="md" label={t("common.loading")} />
+          </div>
+        )
         : filtered.length === 0 ? <p className="text-gray-500">{t("common.noData")}</p>
         : (
           <div className="overflow-x-auto">

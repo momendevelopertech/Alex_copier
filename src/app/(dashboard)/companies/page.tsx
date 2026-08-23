@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
+import PrinterLoader from "@/components/PrinterLoader";
 
 interface CompanyData {
   id: string;
@@ -48,7 +49,11 @@ export default function CompaniesPage() {
   const selected = companies.find((c) => c.id === selectedId);
 
   if (loading) {
-    return <div dir={dir} className="text-gray-500 text-center py-10">{t("common.loading")}</div>;
+    return (
+      <div dir={dir} className="flex min-h-[50vh] items-center justify-center px-4">
+        <PrinterLoader size="md" label={t("common.loading")} />
+      </div>
+    );
   }
 
   return (

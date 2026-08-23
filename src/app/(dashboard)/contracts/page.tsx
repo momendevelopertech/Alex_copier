@@ -6,6 +6,7 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
+import PrinterLoader from "@/components/PrinterLoader";
 
 const TYPE_LABELS: Record<string, string> = {
   MAINTENANCE_ONLY: "صيانة فقط",
@@ -209,7 +210,11 @@ export default function ContractsPage() {
             <ExportButton filename="contracts" getExport={exportContracts} disabled={filtered.length === 0} />
           </div>
         </div>
-        {loading ? <p className="text-gray-500">{t("common.loading")}</p>
+        {loading ? (
+          <div className="flex min-h-[320px] w-full items-center justify-center px-4 py-8">
+            <PrinterLoader size="md" label={t("common.loading")} />
+          </div>
+        )
         : contracts.length === 0 ? <p className="text-gray-500">{t("common.noData")}</p>
         : (
           <div className="overflow-x-auto">

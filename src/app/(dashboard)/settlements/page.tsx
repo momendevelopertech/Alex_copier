@@ -7,6 +7,7 @@ import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
 import ExportButton from "@/components/ExportButton";
+import PrinterLoader from "@/components/PrinterLoader";
 
 interface Company { id: string; name: string; }
 interface Customer { id: string; name: string; }
@@ -156,7 +157,11 @@ export default function SettlementsPage() {
             <ExportButton filename="settlements" getExport={exportSettlements} disabled={filtered.length === 0} />
           </div>
         </div>
-        {loading ? <p className="text-gray-500">{t("common.loading")}</p>
+        {loading ? (
+          <div className="flex min-h-[320px] w-full items-center justify-center px-4 py-8">
+            <PrinterLoader size="md" label={t("common.loading")} />
+          </div>
+        )
         : settlements.length === 0 ? <p className="text-gray-500">{t("common.noData")}</p>
         : (
           <>

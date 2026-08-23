@@ -7,6 +7,7 @@ import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
 import ImportDialog from "@/components/ImportDialog";
+import PrinterLoader from "@/components/PrinterLoader";
 
 interface CustomerLocation {
   id: string;
@@ -467,8 +468,10 @@ export default function CustomersPage() {
             <tbody className="divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-8 text-gray-400">
-                    {t("common.loading")}
+                  <td colSpan={9} className="py-10">
+                    <div className="flex items-center justify-center">
+                      <PrinterLoader size="sm" label={t("common.loading")} />
+                    </div>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (

@@ -6,6 +6,7 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
+import PrinterLoader from "@/components/PrinterLoader";
 
 interface Machine {
   id: string;
@@ -128,7 +129,9 @@ export default function WorkshopPage() {
           </div>
         </div>
         {loading ? (
-          <p className="text-gray-500">{t("common.loading")}</p>
+          <div className="flex min-h-[320px] w-full items-center justify-center px-4 py-8">
+            <PrinterLoader size="md" label={t("common.loading")} />
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useI18n } from "@/i18n/context";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
+import PrinterLoader from "@/components/PrinterLoader";
 
 interface User {
   id: string;
@@ -134,7 +135,9 @@ export default function SettingsPage() {
             )}
           </div>
           {loading ? (
-            <div className="p-8 text-center text-gray-400">{t("common.loading")}</div>
+            <div className="flex items-center justify-center p-12">
+              <PrinterLoader size="sm" label={t("common.loading")} />
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">

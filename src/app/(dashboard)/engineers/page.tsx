@@ -5,6 +5,7 @@ import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import ExportButton from "@/components/ExportButton";
+import PrinterLoader from "@/components/PrinterLoader";
 
 interface EngineerArea {
   id: string;
@@ -303,8 +304,10 @@ export default function EngineersPage() {
             <tbody className="divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-8 text-gray-400">
-                    {t("common.loading")}
+                  <td colSpan={7} className="py-10">
+                    <div className="flex items-center justify-center">
+                      <PrinterLoader size="sm" label={t("common.loading")} />
+                    </div>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (

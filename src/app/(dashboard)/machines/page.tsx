@@ -7,6 +7,7 @@ import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
 import ImportDialog from "@/components/ImportDialog";
+import PrinterLoader from "@/components/PrinterLoader";
 
 interface Machine {
   id: string;
@@ -309,8 +310,10 @@ export default function MachinesPage() {
             <tbody className="divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-8 text-gray-400">
-                    {t("common.loading")}
+                  <td colSpan={8} className="py-10">
+                    <div className="flex items-center justify-center">
+                      <PrinterLoader size="sm" label={t("common.loading")} />
+                    </div>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
@@ -378,7 +381,11 @@ export default function MachinesPage() {
               </div>
               <button onClick={() => setSelected(null)} className="rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100">{t("common.close")}</button>
             </div>
-            {detailsLoading || !selected ? <p className="p-8 text-slate-500">{t("common.loading")}</p> : (
+            {detailsLoading || !selected ? (
+              <div className="flex items-center justify-center p-12">
+                <PrinterLoader size="sm" label={t("common.loading")} />
+              </div>
+            ) : (
               <div className="space-y-6 p-5 sm:p-7">
                 <section className="grid gap-4 md:grid-cols-4">
                   <Info label={t("machines.manufacturer")} value={selected.manufacturer || "—"} />
