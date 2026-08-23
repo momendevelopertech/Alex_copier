@@ -71,6 +71,8 @@ export const ROLE_PERMISSIONS: Record<Role, Page[]> = {
   ],
 };
 
+export const ROLES = Object.keys(ROLE_PERMISSIONS) as Role[];
+
 export const ROLE_LABELS_AR: Record<Role, string> = {
   GENERAL_MANAGER: "المدير العام",
   COMPANY_MANAGER: "مدير الشركة",

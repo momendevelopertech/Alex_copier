@@ -1,11 +1,21 @@
 import { NextResponse } from "next/server";
+import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth-helpers";
+import { requireAuth, requireRole } from "@/lib/auth-helpers";
+import { ROLES } from "@/lib/permissions";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function GET() {
   try {
-    const user = await requireAuth();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const admin = await requireRole("GENERAL_MANAGER");
+    if (!admin) {
+      const authed = await requireAuth();
+      return NextResponse.json(
+        { error: authed ? "Forbidden" : "Unauthorized" },
+        { status: authed ? 403 : 401 }
+      );
+    }
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -13,6 +23,7 @@ export async function GET() {
         email: true,
         role: true,
         companyId: true,
+        isActive: true,
         createdAt: true,
       },
       orderBy: { createdAt: "desc" },
@@ -20,5 +31,83 @@ export async function GET() {
     return NextResponse.json(users);
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const admin = await requireRole("GENERAL_MANAGER");
+    if (!admin) {
+      const authed = await requireAuth();
+      return NextResponse.json(
+        { error: authed ? "Forbidden" : "Unauthorized" },
+        { status: authed ? 403 : 401 }
+      );
+    }
+
+    const body = await request.json();
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const password = typeof body.password === "string" ? body.password : "";
+    const role = body.role;
+    const companyId =
+      typeof body.companyId === "string" && body.companyId !== "" ? body.companyId : null;
+
+    if (!name || !email || !password) {
+      return NextResponse.json(
+        { error: "الاسم والبريد الإلكتروني وكلمة المرور والدور مطلوبة" },
+        { status: 400 }
+      );
+    }
+    if (!EMAIL_REGEX.test(email)) {
+      return NextResponse.json({ error: "صيغة البريد الإلكتروني غير صحيحة" }, { status: 400 });
+    }
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" },
+        { status: 400 }
+      );
+    }
+    if (!ROLES.includes(role)) {
+      return NextResponse.json({ error: "الدور غير صالح" }, { status: 400 });
+    }
+
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return NextResponse.json({ error: "البريد الإلكتروني مستخدم بالفعل" }, { status: 409 });
+    }
+
+    if (companyId) {
+      const company = await prisma.company.findUnique({ where: { id: companyId } });
+      if (!company) {
+        return NextResponse.json({ error: "الشركة غير موجودة" }, { status: 400 });
+      }
+    }
+
+    const passwordHash = await hash(password, 10);
+    const user = await prisma.user.create({
+      data: { name, email, passwordHash, role, companyId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        companyId: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json(user, { status: 201 });
+  } catch (error: unknown) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: string }).code === "P2002"
+    ) {
+      return NextResponse.json({ error: "البريد الإلكتروني مستخدم بالفعل" }, { status: 409 });
+    }
+    return NextResponse.json({ error: "Failed to create user" }, { status: 500 });
   }
 }
