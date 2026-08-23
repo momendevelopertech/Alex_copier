@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -25,8 +25,8 @@ interface Settlement {
   engineer: Engineer | null; collector: User; verifier: User | null;
 }
 
-const PAYMENT_METHOD_LABELS: Record<string, string> = { CASH: "Ù†Ù‚Ø¯ÙŠ", CREDIT: "Ø¢Ø¬Ù„", INSTALLMENT: "Ø£Ù‚Ø³Ø§Ø·", MIXED: "Ù…Ø®ØªÙ„Ø·" };
-const STATUS_LABELS: Record<string, string> = { INITIAL: "Ø£ÙˆÙ„ÙŠ", VERIFIED: "ØªÙ… Ø§Ù„ØªØ­Ù‚Ù‚" };
+const PAYMENT_METHOD_LABELS: Record<string, string> = { CASH: "نقدي", CREDIT: "آجل", INSTALLMENT: "أقساط", MIXED: "مختلط" };
+const STATUS_LABELS: Record<string, string> = { INITIAL: "أولي", VERIFIED: "تم التحقق" };
 
 const CAN_VERIFY_ROLES = ["GENERAL_MANAGER", "ACCOUNTANT", "COMPANY_MANAGER"];
 
@@ -164,8 +164,8 @@ export default function SettlementsPage() {
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
           <SearchInput value={search} onChange={setSearchInput} placeholder={t("settlements.searchPlaceholder")} />
-          <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("settlements.status")} â€” ${t("common.all")}`} className="md:w-40" />
-          <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} â€” ${t("common.all")}`} className="md:w-40" />
+          <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("settlements.status")} — ${t("common.all")}`} className="md:w-40" />
+          <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} — ${t("common.all")}`} className="md:w-40" />
           <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={(v) => { setDateFrom(v); setPage(1); }} onToChange={(v) => { setDateTo(v); setPage(1); }} />
           {hasActiveFilters && (
             <button onClick={() => { setSearchInput(null); setStatusFilter(""); setCompanyFilter(""); setDateFrom(""); setDateTo(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
@@ -209,7 +209,7 @@ export default function SettlementsPage() {
                       <td className="px-4 py-3 text-sm">{s.reason}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${s.status === "VERIFIED" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
-                          {s.status === "VERIFIED" && "âœ“ "}{STATUS_LABELS[s.status] || s.status}
+                          {s.status === "VERIFIED" && "✓ "}{STATUS_LABELS[s.status] || s.status}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm">{s.collector.name}</td>

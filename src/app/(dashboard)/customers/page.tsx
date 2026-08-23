@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
@@ -254,8 +254,8 @@ export default function CustomersPage() {
   };
 
   const TYPE_LABELS: Record<string, string> = {
-    INDIVIDUAL: "ÙØ±Ø¯",
-    COMPANY: "Ø´Ø±ÙƒØ©",
+    INDIVIDUAL: "فرد",
+    COMPANY: "شركة",
   };
 
   return (
@@ -284,14 +284,14 @@ export default function CustomersPage() {
             />
             <input
               type="text"
-              placeholder="Ø§Ø³Ù… Ø§Ù„Ø´Ø±ÙƒØ©"
+              placeholder="اسم الشركة"
               value={form.companyName}
               onChange={(e) => setField("companyName", e.target.value)}
               className="border rounded-lg px-4 py-2 w-full"
             />
             <input
               type="text"
-              placeholder="Ø¬Ù‡Ø© Ø§Ù„Ø§ØªØµØ§Ù„"
+              placeholder="جهة الاتصال"
               value={form.contactPerson}
               onChange={(e) => setField("contactPerson", e.target.value)}
               className="border rounded-lg px-4 py-2 w-full"
@@ -305,7 +305,7 @@ export default function CustomersPage() {
             />
             <input
               type="text"
-              placeholder="ÙˆØ§ØªØ³Ø§Ø¨"
+              placeholder="واتساب"
               value={form.whatsapp}
               onChange={(e) => setField("whatsapp", e.target.value)}
               className="border rounded-lg px-4 py-2 w-full"
@@ -326,21 +326,21 @@ export default function CustomersPage() {
             />
             <input
               type="text"
-              placeholder="Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©"
+              placeholder="المدينة"
               value={form.city}
               onChange={(e) => setField("city", e.target.value)}
               className="border rounded-lg px-4 py-2 w-full"
             />
             <input
               type="text"
-              placeholder="Ø§Ù„Ù…Ø­Ø§ÙØ¸Ø©"
+              placeholder="المحافظة"
               value={form.governorate}
               onChange={(e) => setField("governorate", e.target.value)}
               className="border rounded-lg px-4 py-2 w-full"
             />
             <input
               type="text"
-              placeholder="Ø§Ù„Ø±Ù‚Ù… Ø§Ù„Ø¶Ø±ÙŠØ¨ÙŠ"
+              placeholder="الرقم الضريبي"
               value={form.taxNumber}
               onChange={(e) => setField("taxNumber", e.target.value)}
               className="border rounded-lg px-4 py-2 w-full"
@@ -354,7 +354,7 @@ export default function CustomersPage() {
             />
             <input
               type="text"
-              placeholder="Ø´Ø±ÙˆØ· Ø§Ù„Ø¯ÙØ¹"
+              placeholder="شروط الدفع"
               value={form.paymentTerms}
               onChange={(e) => setField("paymentTerms", e.target.value)}
               className="border rounded-lg px-4 py-2 w-full"
@@ -389,18 +389,18 @@ export default function CustomersPage() {
             </button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
-            <div><span className="text-gray-500">Ø§Ù„Ø´Ø±ÙƒØ©:</span> {selected.companyName || "â€”"}</div>
-            <div><span className="text-gray-500">Ø¬Ù‡Ø© Ø§Ù„Ø§ØªØµØ§Ù„:</span> {selected.contactPerson || "â€”"}</div>
-            <div><span className="text-gray-500">{t("customers.phone")}:</span> {selected.phone || "â€”"}</div>
-            <div><span className="text-gray-500">{t("customers.email")}:</span> {selected.email || "â€”"}</div>
-            <div><span className="text-gray-500">{t("customers.address")}:</span> {selected.address || "â€”"}</div>
-            <div><span className="text-gray-500">Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©:</span> {selected.city || "â€”"}</div>
-            <div><span className="text-gray-500">Ø§Ù„Ù…Ø­Ø§ÙØ¸Ø©:</span> {selected.governorate || "â€”"}</div>
-            <div><span className="text-gray-500">Ø§Ù„Ø±Ù‚Ù… Ø§Ù„Ø¶Ø±ÙŠØ¨ÙŠ:</span> {selected.taxNumber || "â€”"}</div>
+            <div><span className="text-gray-500">الشركة:</span> {selected.companyName || "—"}</div>
+            <div><span className="text-gray-500">جهة الاتصال:</span> {selected.contactPerson || "—"}</div>
+            <div><span className="text-gray-500">{t("customers.phone")}:</span> {selected.phone || "—"}</div>
+            <div><span className="text-gray-500">{t("customers.email")}:</span> {selected.email || "—"}</div>
+            <div><span className="text-gray-500">{t("customers.address")}:</span> {selected.address || "—"}</div>
+            <div><span className="text-gray-500">المدينة:</span> {selected.city || "—"}</div>
+            <div><span className="text-gray-500">المحافظة:</span> {selected.governorate || "—"}</div>
+            <div><span className="text-gray-500">الرقم الضريبي:</span> {selected.taxNumber || "—"}</div>
             <div><span className="text-gray-500">{t("customers.creditLimit")}:</span> {selected.creditLimit}</div>
-            <div><span className="text-gray-500">Ø´Ø±ÙˆØ· Ø§Ù„Ø¯ÙØ¹:</span> {selected.paymentTerms || "â€”"}</div>
+            <div><span className="text-gray-500">شروط الدفع:</span> {selected.paymentTerms || "—"}</div>
             <div>
-              <span className="text-gray-500">Ø§Ù„Ù†ÙˆØ¹:</span>{" "}
+              <span className="text-gray-500">النوع:</span>{" "}
               <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${TYPE_BADGES[selected.customerType] || ""}`}>
                 {TYPE_LABELS[selected.customerType] || selected.customerType}
               </span>
@@ -499,11 +499,11 @@ export default function CustomersPage() {
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-2 text-right">Ø§Ù„Ø§Ø³Ù…</th>
-                      <th className="px-4 py-2 text-right">Ø§Ù„Ø¹Ù†ÙˆØ§Ù†</th>
-                      <th className="px-4 py-2 text-right">Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©</th>
-                      <th className="px-4 py-2 text-right">Ø§Ù„Ù…Ø­Ø§ÙØ¸Ø©</th>
-                      <th className="px-4 py-2 text-right">Ø§Ù„Ù‡Ø§ØªÙ</th>
+                      <th className="px-4 py-2 text-right">الاسم</th>
+                      <th className="px-4 py-2 text-right">العنوان</th>
+                      <th className="px-4 py-2 text-right">المدينة</th>
+                      <th className="px-4 py-2 text-right">المحافظة</th>
+                      <th className="px-4 py-2 text-right">الهاتف</th>
                       <th className="px-4 py-2 text-right">{t("common.actions")}</th>
                     </tr>
                   </thead>
@@ -511,10 +511,10 @@ export default function CustomersPage() {
                     {selected.locations.map((loc) => (
                       <tr key={loc.id} className={loc.isActive === false ? "opacity-50" : ""}>
                         <td className="px-4 py-2 font-medium">{loc.name}{loc.isActive === false && ` (${t("common.inactive")})`}</td>
-                        <td className="px-4 py-2">{loc.address || "â€”"}</td>
-                        <td className="px-4 py-2">{loc.city || "â€”"}</td>
-                        <td className="px-4 py-2">{loc.governorate || "â€”"}</td>
-                        <td className="px-4 py-2"><span dir="ltr">{loc.phone || "â€”"}</span></td>
+                        <td className="px-4 py-2">{loc.address || "—"}</td>
+                        <td className="px-4 py-2">{loc.city || "—"}</td>
+                        <td className="px-4 py-2">{loc.governorate || "—"}</td>
+                        <td className="px-4 py-2"><span dir="ltr">{loc.phone || "—"}</span></td>
                         <td className="px-4 py-2">
                           <div className="flex gap-2">
                             <button onClick={() => openLocationEdit(loc)} className="text-blue-600 hover:text-blue-800">
@@ -539,16 +539,16 @@ export default function CustomersPage() {
 
           <div className="grid gap-4 mt-5 lg:grid-cols-2">
             <CustomerPanel title={t("customers.machines")}>
-              {selected.machines?.length ? selected.machines.map(machine => <div key={machine.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><Link href={`/machines?serial=${encodeURIComponent(machine.serialNumber)}`} className="font-mono font-medium text-blue-600 hover:underline">{machine.serialNumber}</Link><span>{[machine.manufacturer, machine.model].filter(Boolean).join(" ") || "â€”"} Â· {machine.currentStatus}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
+              {selected.machines?.length ? selected.machines.map(machine => <div key={machine.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><Link href={`/machines?serial=${encodeURIComponent(machine.serialNumber)}`} className="font-mono font-medium text-blue-600 hover:underline">{machine.serialNumber}</Link><span>{[machine.manufacturer, machine.model].filter(Boolean).join(" ") || "—"} · {machine.currentStatus}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
             </CustomerPanel>
             <CustomerPanel title={t("customers.serviceHistory")}>
-              {selected.serviceRequests?.length ? selected.serviceRequests.slice(0, 6).map(request => <div key={request.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><Link href={`/service-requests?focus=${request.id}`} className="font-medium text-blue-600 hover:underline">{request.requestNumber}</Link><span>{request.machine?.serialNumber || "â€”"} Â· {request.status} Â· {date(request.createdAt)}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
+              {selected.serviceRequests?.length ? selected.serviceRequests.slice(0, 6).map(request => <div key={request.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><Link href={`/service-requests?focus=${request.id}`} className="font-medium text-blue-600 hover:underline">{request.requestNumber}</Link><span>{request.machine?.serialNumber || "—"} · {request.status} · {date(request.createdAt)}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
             </CustomerPanel>
             <CustomerPanel title={t("customers.contracts")}>
-              {selected.contracts?.length ? selected.contracts.map(contract => <div key={contract.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><Link href={`/contracts?focus=${contract.id}`} className="font-medium text-blue-600 hover:underline">{contract.contractNumber}</Link><span>{contract.status} Â· {date(contract.endDate)}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
+              {selected.contracts?.length ? selected.contracts.map(contract => <div key={contract.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><Link href={`/contracts?focus=${contract.id}`} className="font-medium text-blue-600 hover:underline">{contract.contractNumber}</Link><span>{contract.status} · {date(contract.endDate)}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
             </CustomerPanel>
             <CustomerPanel title={t("customers.sales")}>
-              {selected.orders?.length ? selected.orders.slice(0, 6).map(order => <div key={order.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><span>{date(order.orderDate)}</span><span>{order.total.toLocaleString()} Â· {order.status}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
+              {selected.orders?.length ? selected.orders.slice(0, 6).map(order => <div key={order.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><span>{date(order.orderDate)}</span><span>{order.total.toLocaleString()} · {order.status}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
             </CustomerPanel>
           </div>
 
@@ -576,14 +576,14 @@ export default function CustomersPage() {
             { value: "INDIVIDUAL", label: TYPE_LABELS.INDIVIDUAL },
             { value: "COMPANY", label: TYPE_LABELS.COMPANY },
           ]}
-          allLabel={`${t("customers.typeFilter")} â€” ${t("common.all")}`}
+          allLabel={`${t("customers.typeFilter")} — ${t("common.all")}`}
           className="md:w-44"
         />
         <FilterSelect
           value={cityFilter}
           onChange={(v) => { setCityFilter(v); setPage(1); }}
           options={cities.map((c) => ({ value: c, label: c }))}
-          allLabel={`${t("customers.city")} â€” ${t("common.all")}`}
+          allLabel={`${t("customers.city")} — ${t("common.all")}`}
           className="md:w-40"
         />
         <FilterSelect
@@ -593,7 +593,7 @@ export default function CustomersPage() {
             { value: "true", label: t("common.yes") },
             { value: "false", label: t("common.no") },
           ]}
-          allLabel={`${t("common.status")} â€” ${t("common.all")}`}
+          allLabel={`${t("common.status")} — ${t("common.all")}`}
           className="md:w-36"
         />
         {hasActiveFilters && (
@@ -621,13 +621,13 @@ export default function CustomersPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("customers.name")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Ø§Ù„Ø´Ø±ÙƒØ©</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">الشركة</th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("customers.phone")}</th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("customers.email")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">المدينة</th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("customers.creditLimit")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Ø§Ù„Ù†ÙˆØ¹</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Ù†Ø´Ø·</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">النوع</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">نشط</th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.actions")}</th>
               </tr>
             </thead>
@@ -654,10 +654,10 @@ export default function CustomersPage() {
                     onClick={() => openDetails(customer.id)}
                   >
                     <td className="px-4 py-3 text-sm font-medium">{customer.name}</td>
-                    <td className="px-4 py-3 text-sm">{customer.companyName || "â€”"}</td>
-                    <td className="px-4 py-3 text-sm">{customer.phone || "â€”"}</td>
-                    <td className="px-4 py-3 text-sm">{customer.email || "â€”"}</td>
-                    <td className="px-4 py-3 text-sm">{customer.city || "â€”"}</td>
+                    <td className="px-4 py-3 text-sm">{customer.companyName || "—"}</td>
+                    <td className="px-4 py-3 text-sm">{customer.phone || "—"}</td>
+                    <td className="px-4 py-3 text-sm">{customer.email || "—"}</td>
+                    <td className="px-4 py-3 text-sm">{customer.city || "—"}</td>
                     <td className="px-4 py-3 text-sm">{customer.creditLimit.toLocaleString()}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${TYPE_BADGES[customer.customerType] || ""}`}>
@@ -666,7 +666,7 @@ export default function CustomersPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${customer.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-                        {customer.isActive ? "Ù†Ø¹Ù…" : "Ù„Ø§"}
+                        {customer.isActive ? "نعم" : "لا"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -696,7 +696,7 @@ export default function CustomersPage() {
         open={showImport}
         onClose={() => setShowImport(false)}
         entity="customers"
-        title={`${t("common.import")} â€” ${t("customers.title")}`}
+        title={`${t("common.import")} — ${t("customers.title")}`}
         onImported={fetchCustomers}
       />
     </div>

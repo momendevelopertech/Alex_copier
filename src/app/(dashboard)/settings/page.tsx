@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useI18n } from "@/i18n/context";
@@ -160,7 +160,7 @@ export default function SettingsPage() {
   const toggleStatus = async (user: User) => {
     if (
       !(await confirmAction({
-        message: `${t("settings.toggleStatusConfirm")}\n${user.name} â€” ${user.email}`,
+        message: `${t("settings.toggleStatusConfirm")}\n${user.name} — ${user.email}`,
       }))
     )
       return;
@@ -183,8 +183,8 @@ export default function SettingsPage() {
   };
 
   const tabs = [
-    { key: "language" as const, label: t("settings.language"), icon: "ðŸŒ" },
-    { key: "users" as const, label: t("settings.users"), icon: "ðŸ‘¥" },
+    { key: "language" as const, label: t("settings.language"), icon: "🌐" },
+    { key: "users" as const, label: t("settings.users"), icon: "👥" },
   ];
 
   return (
@@ -219,8 +219,8 @@ export default function SettingsPage() {
                   : "border-gray-200 hover:border-gray-400"
               }`}
             >
-              <div className="text-2xl mb-1">ðŸ‡ªðŸ‡¬</div>
-              <div className="font-semibold">Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©</div>
+              <div className="text-2xl mb-1">🇪🇬</div>
+              <div className="font-semibold">العربية</div>
               <div className="text-xs text-gray-500 mt-1">Right to Left</div>
             </button>
             <button
@@ -231,7 +231,7 @@ export default function SettingsPage() {
                   : "border-gray-200 hover:border-gray-400"
               }`}
             >
-              <div className="text-2xl mb-1">ðŸ‡¬ðŸ‡§</div>
+              <div className="text-2xl mb-1">🇬🇧</div>
               <div className="font-semibold">English</div>
               <div className="text-xs text-gray-500 mt-1">Left to Right</div>
             </button>
@@ -264,7 +264,7 @@ export default function SettingsPage() {
                 value={roleFilter}
                 onChange={(v) => setRoleFilter(v)}
                 options={ALL_ROLES.map((role) => ({ value: role, label: t(`roles.${role}`) }))}
-                allLabel={`${t("settings.roleFilter")} â€” ${t("common.all")}`}
+                allLabel={`${t("settings.roleFilter")} — ${t("common.all")}`}
                 className="md:w-48"
               />
               {(search !== "" || roleFilter !== "") && (
@@ -451,7 +451,7 @@ export default function SettingsPage() {
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2.5 pr-10 text-sm focus:border-blue-500 focus:outline-none"
                     autoComplete="new-password"
-                    placeholder={editingUser ? "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" : ""}
+                    placeholder={editingUser ? "••••••••" : ""}
                   />
                   <button
                     type="button"

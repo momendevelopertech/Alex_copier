@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
@@ -151,7 +151,7 @@ const { success: toastSuccess } = useToast();
             />
             <input
               type="text"
-              placeholder="Ø¬Ù‡Ø© Ø§Ù„Ø§ØªØµØ§Ù„"
+              placeholder="جهة الاتصال"
               value={form.contactName}
               onChange={(e) => setField("contactName", e.target.value)}
               className="border rounded-lg px-4 py-2 w-full"
@@ -179,7 +179,7 @@ const { success: toastSuccess } = useToast();
             />
             <input
               type="text"
-              placeholder="Ø§Ù„Ø±Ù‚Ù… Ø§Ù„Ø¶Ø±ÙŠØ¨ÙŠ"
+              placeholder="الرقم الضريبي"
               value={form.taxNumber}
               onChange={(e) => setField("taxNumber", e.target.value)}
               className="border rounded-lg px-4 py-2 w-full"
@@ -210,7 +210,7 @@ const { success: toastSuccess } = useToast();
           value={companyFilter}
           onChange={(v) => { setCompanyFilter(v); setPage(1); }}
           options={companies.map((c) => ({ value: c.id, label: c.name }))}
-          allLabel={`${t("common.company")} â€” ${t("common.all")}`}
+          allLabel={`${t("common.company")} — ${t("common.all")}`}
           className="md:w-44"
         />
         {hasActiveFilters && (
@@ -235,10 +235,10 @@ const { success: toastSuccess } = useToast();
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("suppliers.name")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Ø¬Ù‡Ø© Ø§Ù„Ø§ØªØµØ§Ù„</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">جهة الاتصال</th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("suppliers.phone")}</th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("suppliers.email")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Ø§Ù„Ø±Ù‚Ù… Ø§Ù„Ø¶Ø±ÙŠØ¨ÙŠ</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">الرقم الضريبي</th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.actions")}</th>
               </tr>
             </thead>
@@ -261,10 +261,10 @@ const { success: toastSuccess } = useToast();
                 paged.map((supplier) => (
                   <tr key={supplier.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium">{supplier.name}</td>
-                    <td className="px-4 py-3 text-sm">{supplier.contactName || "â€”"}</td>
-                    <td className="px-4 py-3 text-sm">{supplier.phone || "â€”"}</td>
-                    <td className="px-4 py-3 text-sm">{supplier.email || "â€”"}</td>
-                    <td className="px-4 py-3 text-sm">{supplier.taxNumber || "â€”"}</td>
+                    <td className="px-4 py-3 text-sm">{supplier.contactName || "—"}</td>
+                    <td className="px-4 py-3 text-sm">{supplier.phone || "—"}</td>
+                    <td className="px-4 py-3 text-sm">{supplier.email || "—"}</td>
+                    <td className="px-4 py-3 text-sm">{supplier.taxNumber || "—"}</td>
                     <td className="px-4 py-3">
                       <button
                         onClick={() => handleDelete(supplier.id)}
@@ -292,7 +292,7 @@ const { success: toastSuccess } = useToast();
         open={showImport}
         onClose={() => setShowImport(false)}
         entity="suppliers"
-        title={`${t("common.import")} â€” ${t("suppliers.title")}`}
+        title={`${t("common.import")} — ${t("suppliers.title")}`}
         onImported={fetchSuppliers}
       />
     </div>

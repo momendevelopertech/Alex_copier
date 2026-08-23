@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
@@ -43,15 +43,15 @@ const movementTypeColors: Record<string, string> = {
 };
 
 const MOVEMENT_LABELS: Record<string, string> = {
-  PURCHASE_IN: "ÙˆØ§Ø±Ø¯ Ø´Ø±Ø§Ø¡",
-  INTER_COMPANY_IN: "ÙˆØ§Ø±Ø¯ Ø¨ÙŠÙ† Ø§Ù„Ø´Ø±ÙƒØ§Øª",
-  INTER_COMPANY_OUT: "ØµØ§Ø¯Ø± Ø¨ÙŠÙ† Ø§Ù„Ø´Ø±ÙƒØ§Øª",
-  SALE_OUT: "ØµØ§Ø¯Ø± Ù…Ø¨ÙŠØ¹Ø§Øª",
-  ENGINEER_CUSTODY_OUT: "Ø¹Ù‡Ø¯Ø© Ù…Ù‡Ù†Ø¯Ø³ (ØµØ§Ø¯Ø±)",
-  ENGINEER_RETURN: "Ù…Ø±ØªØ¬Ø¹ Ù…Ù‡Ù†Ø¯Ø³",
-  CONSUMED: "Ù…Ø³ØªÙ‡Ù„Ùƒ",
-  SCRAP: "Ù…Ù‡Ù…Ù„",
-  ADJUSTMENT: "ØªØ³ÙˆÙŠØ©",
+  PURCHASE_IN: "وارد شراء",
+  INTER_COMPANY_IN: "وارد بين الشركات",
+  INTER_COMPANY_OUT: "صادر بين الشركات",
+  SALE_OUT: "صادر مبيعات",
+  ENGINEER_CUSTODY_OUT: "عهدة مهندس (صادر)",
+  ENGINEER_RETURN: "مرتجع مهندس",
+  CONSUMED: "مستهلك",
+  SCRAP: "مهمل",
+  ADJUSTMENT: "تسوية",
 };
 
 export default function InventoryPage() {
@@ -168,7 +168,7 @@ export default function InventoryPage() {
                 onChange={(e) => setForm({ ...form, productId: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
-              ><option value="">{t("common.selectOption")}</option>{products.map(product => <option key={product.id} value={product.id}>{product.name}{product.sku ? ` Â· ${product.sku}` : ""}</option>)}</select>
+              ><option value="">{t("common.selectOption")}</option>{products.map(product => <option key={product.id} value={product.id}>{product.name}{product.sku ? ` · ${product.sku}` : ""}</option>)}</select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t("inventory.quantity")}</label>
@@ -217,7 +217,7 @@ export default function InventoryPage() {
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
           <SearchInput value={search} onChange={setSearchInput} placeholder={`${t("common.search")} ${t("inventory.product")} / SKU...`} />
-          <FilterSelect value={warehouseFilter} onChange={(v) => { setWarehouseFilter(v); setPage(1); }} options={warehouses.map((w) => ({ value: w.id, label: w.name }))} allLabel={`${t("inventory.warehouse")} â€” ${t("common.all")}`} className="md:w-44" />
+          <FilterSelect value={warehouseFilter} onChange={(v) => { setWarehouseFilter(v); setPage(1); }} options={warehouses.map((w) => ({ value: w.id, label: w.name }))} allLabel={`${t("inventory.warehouse")} — ${t("common.all")}`} className="md:w-44" />
           {(search !== "" || warehouseFilter !== "") && (
             <button onClick={() => { setSearchInput(null); setWarehouseFilter(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
               {t("common.resetFilters")}

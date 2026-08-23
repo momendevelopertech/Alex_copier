@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Fragment, useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
@@ -13,22 +13,22 @@ import { useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  CASH: "Ù†Ù‚Ø¯ÙŠ",
-  CREDIT: "Ø¢Ø¬Ù„",
-  INSTALLMENT: "Ø£Ù‚Ø³Ø§Ø·",
-  MIXED: "Ù…Ø®ØªÙ„Ø·",
+  CASH: "نقدي",
+  CREDIT: "آجل",
+  INSTALLMENT: "أقساط",
+  MIXED: "مختلط",
 };
 
 const PAYMENT_STATUS_LABELS: Record<string, string> = {
-  PENDING: "Ù…Ø¹Ù„Ù‚",
-  PARTIAL: "Ø¬Ø²Ø¦ÙŠ",
-  PAID: "Ù…Ø¯ÙÙˆØ¹",
-  OVERDUE: "Ù…ØªØ£Ø®Ø±",
+  PENDING: "معلق",
+  PARTIAL: "جزئي",
+  PAID: "مدفوع",
+  OVERDUE: "متأخر",
 };
 
 const ORDER_TYPE_LABELS: Record<string, string> = {
-  MACHINE_SALE: "Ø¨ÙŠØ¹ Ø¬Ù‡Ø§Ø²",
-  SPARE_PART_SALE: "Ø¨ÙŠØ¹ Ù‚Ø·Ø¹ ØºÙŠØ§Ø±",
+  MACHINE_SALE: "بيع جهاز",
+  SPARE_PART_SALE: "بيع قطع غيار",
 };
 
 const paymentStatusColors: Record<string, string> = {
@@ -183,7 +183,7 @@ export default function SalesPage() {
             <textarea placeholder={t("common.notes")} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="border rounded-lg px-4 py-2" rows={2} />
             <div className="md:col-span-2 rounded-lg border border-slate-200 p-4">
               <div className="mb-3 flex items-center justify-between"><h3 className="font-medium">{t("sales.items")}</h3><button type="button" onClick={() => setItemRows([...itemRows, { productId: "", quantity: "", unitPrice: "", discount: "" }])} className="text-sm text-blue-600 hover:underline"><Plus size={16} />{t("purchases.addRow")}</button></div>
-              <div className="space-y-2">{itemRows.map((row, index) => <div key={index} className="grid gap-2 sm:grid-cols-[1fr_100px_130px_120px_auto]"><select value={row.productId} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, productId: e.target.value } : item))} className="border rounded-lg px-3 py-2" required><option value="">{t("purchases.selectProduct")}</option>{products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</select><input type="number" min="1" required placeholder={t("sales.qty")} value={row.quantity} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, quantity: e.target.value } : item))} className="border rounded-lg px-3 py-2" /><input type="number" min="0" step="0.01" required placeholder={t("sales.unitPrice")} value={row.unitPrice} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, unitPrice: e.target.value } : item))} className="border rounded-lg px-3 py-2" /><input type="number" min="0" step="0.01" placeholder={t("sales.discount")} value={row.discount} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, discount: e.target.value } : item))} className="border rounded-lg px-3 py-2" />{itemRows.length > 1 && <button type="button" onClick={() => setItemRows(itemRows.filter((_, i) => i !== index))} className="text-red-600">Ã—</button>}</div>)}</div>
+              <div className="space-y-2">{itemRows.map((row, index) => <div key={index} className="grid gap-2 sm:grid-cols-[1fr_100px_130px_120px_auto]"><select value={row.productId} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, productId: e.target.value } : item))} className="border rounded-lg px-3 py-2" required><option value="">{t("purchases.selectProduct")}</option>{products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</select><input type="number" min="1" required placeholder={t("sales.qty")} value={row.quantity} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, quantity: e.target.value } : item))} className="border rounded-lg px-3 py-2" /><input type="number" min="0" step="0.01" required placeholder={t("sales.unitPrice")} value={row.unitPrice} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, unitPrice: e.target.value } : item))} className="border rounded-lg px-3 py-2" /><input type="number" min="0" step="0.01" placeholder={t("sales.discount")} value={row.discount} onChange={(e) => setItemRows(itemRows.map((item, i) => i === index ? { ...item, discount: e.target.value } : item))} className="border rounded-lg px-3 py-2" />{itemRows.length > 1 && <button type="button" onClick={() => setItemRows(itemRows.filter((_, i) => i !== index))} className="text-red-600">×</button>}</div>)}</div>
             </div>
             <div className="md:col-span-2 flex gap-2">
               <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"><Save size={16} />{t("common.save")}</button>
@@ -196,9 +196,9 @@ export default function SalesPage() {
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
           <SearchInput value={search} onChange={setSearch} placeholder={t("sales.searchPlaceholder")} />
-          <FilterSelect value={paymentFilter} onChange={(v) => { setPaymentFilter(v); setPage(1); }} options={Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("sales.paymentStatus")} â€” ${t("common.all")}`} className="md:w-40" />
-          <FilterSelect value={typeFilter} onChange={(v) => { setTypeFilter(v); setPage(1); }} options={Object.entries(ORDER_TYPE_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("sales.typeFilter")} â€” ${t("common.all")}`} className="md:w-40" />
-          <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} â€” ${t("common.all")}`} className="md:w-40" />
+          <FilterSelect value={paymentFilter} onChange={(v) => { setPaymentFilter(v); setPage(1); }} options={Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("sales.paymentStatus")} — ${t("common.all")}`} className="md:w-40" />
+          <FilterSelect value={typeFilter} onChange={(v) => { setTypeFilter(v); setPage(1); }} options={Object.entries(ORDER_TYPE_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("sales.typeFilter")} — ${t("common.all")}`} className="md:w-40" />
+          <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} — ${t("common.all")}`} className="md:w-40" />
           <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={(v) => { setDateFrom(v); setPage(1); }} onToChange={(v) => { setDateTo(v); setPage(1); }} />
           {hasActiveFilters && (
             <button onClick={() => { setSearch(""); setPaymentFilter(""); setTypeFilter(""); setCompanyFilter(""); setDateFrom(""); setDateTo(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
@@ -238,7 +238,7 @@ export default function SalesPage() {
                   <Fragment key={order.id}>
                     <tr className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium">{order.id.slice(0, 8)}</td>
-                      <td className="px-4 py-3 text-sm">{order.company?.name || companies.find(c => c.id === order.companyId)?.name || "â€”"}</td>
+                      <td className="px-4 py-3 text-sm">{order.company?.name || companies.find(c => c.id === order.companyId)?.name || "—"}</td>
                       <td className="px-4 py-3 text-sm">{order.customer.name}</td>
                       <td className="px-4 py-3 text-sm">{ORDER_TYPE_LABELS[order.orderType] || order.orderType}</td>
                       <td className="px-4 py-3 text-sm">{order.total.toLocaleString()}</td>
