@@ -7,6 +7,7 @@ import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
+import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 
 interface InventoryItem {
   id: string;
@@ -56,7 +57,8 @@ export default function InventoryPage() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [search, setSearch] = useState("");
+  const urlParams = useUrlParams(["q"]);
+  const [search, setSearchInput] = useSearchWithDefault(urlParams.q ?? "");
   const [warehouseFilter, setWarehouseFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<StockMovementForm>({
@@ -209,10 +211,10 @@ export default function InventoryPage() {
 
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
-          <SearchInput value={search} onChange={setSearch} placeholder={`${t("common.search")} ${t("inventory.product")} / SKU...`} />
+          <SearchInput value={search} onChange={setSearchInput} placeholder={`${t("common.search")} ${t("inventory.product")} / SKU...`} />
           <FilterSelect value={warehouseFilter} onChange={(v) => { setWarehouseFilter(v); setPage(1); }} options={warehouses.map((w) => ({ value: w.id, label: w.name }))} allLabel={`${t("inventory.warehouse")} — ${t("common.all")}`} className="md:w-44" />
           {(search !== "" || warehouseFilter !== "") && (
-            <button onClick={() => { setSearch(""); setWarehouseFilter(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
+            <button onClick={() => { setSearchInput(null); setWarehouseFilter(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
               {t("common.resetFilters")}
             </button>
           )}

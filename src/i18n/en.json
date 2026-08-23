@@ -17,7 +17,8 @@
     "reports": "Reports",
     "settings": "Settings",
     "companies": "Companies",
-    "logout": "Logout"
+    "logout": "Logout",
+    "notifications": "Notifications"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -58,6 +59,52 @@
       "UNASSIGNED_REQUESTS": "Requests not assigned to a technician",
       "OVERDUE_INSTALLMENTS": "Overdue installments",
       "CONTRACTS_EXPIRING": "Contracts expiring within 30 days"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No new notifications",
+    "markAllRead": "Mark all as read",
+    "systemSender": "System",
+    "unread": "Unread",
+    "viewAll": "View all notifications",
+    "markRead": "Mark as read",
+    "markUnread": "Mark as unread",
+    "filterAll": "All",
+    "filterUnread": "Unread",
+    "filterRead": "Read",
+    "typeFilter": "Type",
+    "categoryFilter": "Category",
+    "statusFilter": "Status",
+    "soundOn": "Enable alert sound",
+    "soundOff": "Mute alert sound",
+    "unreadCount": "unread",
+    "types": {
+      "SYSTEM": "System",
+      "SERVICE_REQUEST_CREATED": "New service request",
+      "SERVICE_REQUEST_ASSIGNED": "Service request assigned",
+      "SERVICE_REQUEST_UPDATED": "Service request updated",
+      "MACHINE_STATUS_CHANGED": "Machine status changed",
+      "CONTRACT_EXPIRING": "Contract expiring",
+      "LOW_STOCK": "Low stock",
+      "PAYMENT_PENDING": "Payment pending review",
+      "PAYMENT_APPROVED": "Payment approved",
+      "PAYMENT_REJECTED": "Payment rejected"
+    },
+    "categories": {
+      "GENERAL": "General",
+      "SYSTEM": "System",
+      "SERVICE_REQUEST": "Service requests",
+      "MACHINE": "Machines",
+      "INVENTORY": "Inventory",
+      "PAYMENT": "Payments",
+      "CONTRACT": "Contracts"
+    },
+    "priorities": {
+      "LOW": "Low",
+      "NORMAL": "Normal",
+      "HIGH": "High",
+      "CRITICAL": "Critical"
     }
   },
   "common": {
@@ -205,7 +252,13 @@
     "baseSalary": "Base Salary",
     "addEngineer": "Add Engineer",
     "areasPlaceholder": "Areas (comma separated)",
-    "searchPlaceholder": "Search by name, phone, email, or skill..."
+    "searchPlaceholder": "Search by name, phone, email, or skill...",
+    "linkedAccount": "Linked login account",
+    "workload": "Open requests",
+    "selectAccountOptional": "Link user account (optional)",
+    "noLinkedAccount": "No linked account",
+    "accountLinked": "Account link updated",
+    "deleteConfirm": "Are you sure you want to delete?"
   },
   "investors": {
     "title": "Investors",

@@ -14,6 +14,7 @@ const { requireAuth, db } = vi.hoisted(() => ({
     purchaseOrder: { aggregate: vi.fn() },
     expense: { aggregate: vi.fn() },
     settlement: { aggregate: vi.fn() },
+    warehouseInventory: { count: vi.fn() },
   },
 }));
 
@@ -42,6 +43,7 @@ function stubCleanQueries(overrides?: {
   urgent?: number;
   unassigned?: number;
   companyOpen?: Record<string, number>;
+  lowStockItems?: number;
 }) {
   const companyOpen = overrides?.companyOpen ?? { c1: 3 };
   db.company.findMany.mockResolvedValue([
@@ -54,6 +56,7 @@ function stubCleanQueries(overrides?: {
     { currentStatus: "SOLD", _count: { _all: 30 } },
   ]);
   db.contract.count.mockResolvedValue(12);
+  db.warehouseInventory.count.mockResolvedValue(overrides?.lowStockItems ?? 3);
   db.serviceRequest.count.mockImplementation((args: { where: Record<string, unknown> }) => {
     const where = args.where;
     if ("companyId" in where) return Promise.resolve(companyOpen[where.companyId as string] ?? 0);
@@ -176,6 +179,7 @@ describe("GET /api/dashboard", () => {
       "OVERDUE_INSTALLMENTS",
       "UNASSIGNED_REQUESTS",
       "CONTRACTS_EXPIRING",
+      "LOW_STOCK",
     ]);
     const installmentAlert = body.alerts.find((alert: { kind: string }) => alert.kind === "OVERDUE_INSTALLMENTS");
     expect(installmentAlert.totalAmount).toBe(7500);
@@ -211,6 +215,7 @@ describe("GET /api/dashboard", () => {
       urgent: 0,
       unassigned: 0,
       companyOpen: {},
+      lowStockItems: 0,
     });
     db.installment.aggregate.mockResolvedValue({ _count: { _all: 0 }, _sum: { amount: null } });
     db.contract.findMany.mockResolvedValue([]);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
@@ -8,6 +9,7 @@ import FilterSelect from "@/components/FilterSelect";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
+import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 
 interface Company { id: string; name: string; }
 interface Customer { id: string; name: string; }
@@ -23,15 +25,21 @@ interface Settlement {
 const PAYMENT_METHOD_LABELS: Record<string, string> = { CASH: "نقدي", CREDIT: "آجل", INSTALLMENT: "أقساط", MIXED: "مختلط" };
 const STATUS_LABELS: Record<string, string> = { INITIAL: "أولي", VERIFIED: "تم التحقق" };
 
+const CAN_VERIFY_ROLES = ["GENERAL_MANAGER", "ACCOUNTANT", "COMPANY_MANAGER"];
+
 export default function SettlementsPage() {
   const { t, dir } = useI18n();
+  const { data: session } = useSession();
+  const canVerify = CAN_VERIFY_ROLES.includes(session?.user?.role ?? "");
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [engineers, setEngineers] = useState<Engineer[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [search, setSearch] = useState("");
+  const urlParams = useUrlParams(["focus"]);
+  const focusedSettlement = urlParams.focus ? settlements.find((s) => s.id === urlParams.focus) : undefined;
+  const [search, setSearchInput] = useSearchWithDefault(focusedSettlement?.settlementNumber ?? "");
   const [statusFilter, setStatusFilter] = useState("");
   const [companyFilter, setCompanyFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -62,7 +70,11 @@ export default function SettlementsPage() {
   };
 
   const handleVerify = async (id: string) => {
-    await fetch(`/api/settlements/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "VERIFIED" }) });
+    const res = await fetch(`/api/settlements/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "VERIFIED" }) });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || t("common.error"));
+    }
     fetchData();
   };
 
@@ -144,12 +156,12 @@ export default function SettlementsPage() {
 
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
-          <SearchInput value={search} onChange={setSearch} placeholder={t("settlements.searchPlaceholder")} />
+          <SearchInput value={search} onChange={setSearchInput} placeholder={t("settlements.searchPlaceholder")} />
           <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("settlements.status")} — ${t("common.all")}`} className="md:w-40" />
           <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} — ${t("common.all")}`} className="md:w-40" />
           <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={(v) => { setDateFrom(v); setPage(1); }} onToChange={(v) => { setDateTo(v); setPage(1); }} />
           {hasActiveFilters && (
-            <button onClick={() => { setSearch(""); setStatusFilter(""); setCompanyFilter(""); setDateFrom(""); setDateTo(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
+            <button onClick={() => { setSearchInput(null); setStatusFilter(""); setCompanyFilter(""); setDateFrom(""); setDateTo(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
               {t("common.resetFilters")}
             </button>
           )}
@@ -196,7 +208,7 @@ export default function SettlementsPage() {
                       <td className="px-4 py-3 text-sm">{s.collector.name}</td>
                       <td className="px-4 py-3 text-sm">{new Date(s.createdAt).toLocaleDateString("ar-EG")}</td>
                       <td className="px-4 py-3 text-sm">
-                        {s.status === "INITIAL" && (<button onClick={() => handleVerify(s.id)} className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">{t("common.verify")}</button>)}
+                        {s.status === "INITIAL" && canVerify && (<button onClick={() => handleVerify(s.id)} className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">{t("common.verify")}</button>)}
                         {s.status === "VERIFIED" && s.verifier && (<span className="text-green-600 text-xs">{t("settlements.by")} {s.verifier.name}</span>)}
                       </td>
                     </tr>

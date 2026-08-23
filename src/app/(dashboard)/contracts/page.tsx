@@ -7,6 +7,7 @@ import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
+import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 
 const TYPE_LABELS: Record<string, string> = {
   MAINTENANCE_ONLY: "صيانة فقط",
@@ -60,7 +61,9 @@ export default function ContractsPage() {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [search, setSearch] = useState("");
+  const urlParams = useUrlParams(["focus"]);
+  const focusedContract = urlParams.focus ? contracts.find((c) => c.id === urlParams.focus) : undefined;
+  const [search, setSearchInput] = useSearchWithDefault(focusedContract?.contractNumber ?? "");
   const [statusFilter, setStatusFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [form, setForm] = useState({
@@ -198,11 +201,11 @@ export default function ContractsPage() {
 
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
-          <SearchInput value={search} onChange={setSearch} placeholder={t("contracts.searchPlaceholder")} />
+          <SearchInput value={search} onChange={setSearchInput} placeholder={t("contracts.searchPlaceholder")} />
           <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("common.status")} — ${t("common.all")}`} className="md:w-40" />
           <FilterSelect value={typeFilter} onChange={(v) => { setTypeFilter(v); setPage(1); }} options={Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("contracts.typeFilter")} — ${t("common.all")}`} className="md:w-44" />
           {hasActiveFilters && (
-            <button onClick={() => { setSearch(""); setStatusFilter(""); setTypeFilter(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
+            <button onClick={() => { setSearchInput(null); setStatusFilter(""); setTypeFilter(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
               {t("common.resetFilters")}
             </button>
           )}

@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
 
 export async function GET() {
   try {
+    const user = await requirePageAccess("investors");
+    if (!user) {
+      const authed = await requireAuth();
+      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
+    }
     const cycles = await prisma.investorDistributionCycle.findMany({
       include: {
         distributions: {
@@ -19,6 +25,11 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const actor = await requirePageAccess("investors");
+    if (!actor) {
+      const authed = await requireAuth();
+      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
+    }
     const body = await request.json();
     const { cycleDate, totalProfit, notes } = body;
 

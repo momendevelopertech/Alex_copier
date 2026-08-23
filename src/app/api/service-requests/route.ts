@@ -1,11 +1,35 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth-helpers";
+import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
+import { notifyServiceRequestCreated } from "@/lib/notifications";
 
 export async function GET() {
   try {
     const user = await requireAuth();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const role = (user as { role?: string }).role;
+    // Engineers see only requests assigned to them (documented role scope).
+    if (role === "ENGINEER") {
+      const engineer = await prisma.engineer.findUnique({
+        where: { userId: user.id },
+        select: { id: true },
+      });
+      const serviceRequests = await prisma.serviceRequest.findMany({
+        where: { engineerId: engineer?.id ?? "__none__" },
+        include: {
+          customer: true,
+          location: true,
+          machine: true,
+          engineer: true,
+          problems: true,
+          visits: true,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      return NextResponse.json(serviceRequests);
+    }
+
     const serviceRequests = await prisma.serviceRequest.findMany({
       include: {
         customer: true,
@@ -25,14 +49,47 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const actor = await requirePageAccess("serviceRequests");
+    if (!actor) {
+      const authed = await requireAuth();
+      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
+    }
+
     const body = await request.json();
     const { problems, ...data } = body;
 
+    const customerId = typeof data.customerId === "string" ? data.customerId : "";
+    if (!customerId || !data.description || String(data.description).trim() === "") {
+      return NextResponse.json({ error: "العميل ووصف المشكلة مطلوبان" }, { status: 400 });
+    }
+    const customer = await prisma.customer.findUnique({ where: { id: customerId }, select: { id: true } });
+    if (!customer) {
+      return NextResponse.json({ error: "العميل غير موجود" }, { status: 400 });
+    }
+    if (data.priority && !["NORMAL", "IMPORTANT", "URGENT", "EMERGENCY"].includes(data.priority)) {
+      return NextResponse.json({ error: "قيمة الأولوية غير صالحة" }, { status: 400 });
+    }
+
     const requestNumber = `SR-${Date.now()}`;
+
+    // Requests belong to a company; default to the actor's company.
+    let companyId: string | null =
+      typeof data.companyId === "string" && data.companyId !== "" ? data.companyId : null;
+    if (!companyId) {
+      companyId = (actor as { companyId?: string | null }).companyId ?? null;
+    }
+    if (!companyId) {
+      const firstCompany = await prisma.company.findFirst({ select: { id: true } });
+      companyId = firstCompany?.id ?? null;
+    }
+    if (!companyId) {
+      return NextResponse.json({ error: "لا توجد شركة مرتبطة بالطلب" }, { status: 400 });
+    }
 
     const serviceRequest = await prisma.serviceRequest.create({
       data: {
         ...data,
+        companyId,
         requestNumber,
         ...(problems && {
           problems: {
@@ -51,8 +108,18 @@ export async function POST(request: Request) {
       },
     });
 
+    // Business event: maintenance managers (+GM) must know a new request arrived.
+    void notifyServiceRequestCreated({
+      requestId: serviceRequest.id,
+      requestNumber: serviceRequest.requestNumber,
+      priority: serviceRequest.priority,
+      customerName: serviceRequest.customer?.name,
+      actorId: actor.id,
+    }).catch(() => undefined);
+
     return NextResponse.json(serviceRequest, { status: 201 });
   } catch (error) {
+    console.error("[service-requests] POST failed:", error);
     return NextResponse.json({ error: "Failed to create service request" }, { status: 500 });
   }
 }

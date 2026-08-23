@@ -24,12 +24,13 @@ import {
   Building2,
   Truck,
   PieChart,
+  Bell,
   LogOut,
   Menu,
   X,
 } from "lucide-react";
 
-const navItems: { key: string; href: string; icon: typeof LayoutDashboard; page: Page }[] = [
+const navItems: { key: string; href: string; icon: typeof LayoutDashboard; page?: Page }[] = [
   { key: "navigation.dashboard", href: "/", icon: LayoutDashboard, page: "dashboard" },
   { key: "navigation.machines", href: "/machines", icon: Printer, page: "machines" },
   { key: "navigation.customers", href: "/customers", icon: Users, page: "customers" },
@@ -41,11 +42,12 @@ const navItems: { key: string; href: string; icon: typeof LayoutDashboard; page:
   { key: "navigation.inventory", href: "/inventory", icon: Package, page: "inventory" },
   { key: "navigation.workshop", href: "/workshop", icon: Cog, page: "workshop" },
   { key: "navigation.finance", href: "/finance", icon: Wallet, page: "finance" },
-  { key: "navigation.companies", href: "/companies", icon: Building2, page: "companies" },
   { key: "navigation.settlements", href: "/settlements", icon: Receipt, page: "settlements" },
   { key: "navigation.suppliers", href: "/suppliers", icon: Truck, page: "suppliers" },
+  { key: "navigation.companies", href: "/companies", icon: Building2, page: "companies" },
   { key: "navigation.investors", href: "/investors", icon: PieChart, page: "investors" },
   { key: "navigation.reports", href: "/reports", icon: BarChart3, page: "reports" },
+  { key: "navigation.notifications", href: "/notifications", icon: Bell },
   { key: "navigation.settings", href: "/settings", icon: Settings, page: "settings" },
 ];
 
@@ -62,7 +64,7 @@ export default function Sidebar() {
     return pathname.startsWith(href);
   };
 
-  const allowedNavItems = navItems.filter((item) => hasPageAccess(userRole, item.page));
+  const allowedNavItems = navItems.filter((item) => !item.page || hasPageAccess(userRole, item.page));
 
   const sidebarContent = (
     <div className="flex flex-col h-full">

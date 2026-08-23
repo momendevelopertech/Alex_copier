@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
@@ -8,6 +9,7 @@ import FilterSelect from "@/components/FilterSelect";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
+import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 
 const PRIORITY_LABELS: Record<string, string> = {
   NORMAL: "عادي",
@@ -79,7 +81,9 @@ export default function ServiceRequestsPage() {
   const [showForm, setShowForm] = useState(false);
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [assignEngineerId, setAssignEngineerId] = useState("");
-  const [search, setSearch] = useState("");
+  const urlParams = useUrlParams(["focus"]);
+  const focusedRequest = urlParams.focus ? requests.find((r) => r.id === urlParams.focus) : undefined;
+  const [search, setSearchInput] = useSearchWithDefault(focusedRequest?.requestNumber ?? "");
   const [statusFilter, setStatusFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
   const [engineerFilter, setEngineerFilter] = useState("");
@@ -241,13 +245,13 @@ export default function ServiceRequestsPage() {
 
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
-          <SearchInput value={search} onChange={setSearch} placeholder={t("serviceRequests.searchPlaceholder")} />
+          <SearchInput value={search} onChange={setSearchInput} placeholder={t("serviceRequests.searchPlaceholder")} />
           <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("serviceRequests.status")} — ${t("common.all")}`} className="md:w-40" />
           <FilterSelect value={priorityFilter} onChange={(v) => { setPriorityFilter(v); setPage(1); }} options={Object.entries(PRIORITY_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("serviceRequests.priorityFilter")} — ${t("common.all")}`} className="md:w-36" />
           <FilterSelect value={engineerFilter} onChange={(v) => { setEngineerFilter(v); setPage(1); }} options={engineers.map((e) => ({ value: e.id, label: e.name }))} allLabel={`${t("serviceRequests.engineerFilter")} — ${t("common.all")}`} className="md:w-44" />
           <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={(v) => { setDateFrom(v); setPage(1); }} onToChange={(v) => { setDateTo(v); setPage(1); }} />
           {hasActiveFilters && (
-            <button onClick={() => { setSearch(""); setStatusFilter(""); setPriorityFilter(""); setEngineerFilter(""); setDateFrom(""); setDateTo(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
+            <button onClick={() => { setSearchInput(null); setStatusFilter(""); setPriorityFilter(""); setEngineerFilter(""); setDateFrom(""); setDateTo(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
               {t("common.resetFilters")}
             </button>
           )}
@@ -283,8 +287,18 @@ export default function ServiceRequestsPage() {
                 {paged.map((req) => (
                   <tr key={req.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium">{req.requestNumber}</td>
-                    <td className="px-4 py-3 text-sm">{req.customer.name}</td>
-                    <td className="px-4 py-3 text-sm">{req.machine?.serialNumber || "-"}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <Link href={`/customers?q=${encodeURIComponent(req.customer.name)}`} className="text-blue-600 hover:underline">
+                        {req.customer.name}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {req.machine ? (
+                        <Link href={`/machines?serial=${encodeURIComponent(req.machine.serialNumber)}`} className="font-mono text-blue-600 hover:underline">
+                          {req.machine.serialNumber}
+                        </Link>
+                      ) : "-"}
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityColors[req.priority] || ""}`}>
                         {PRIORITY_LABELS[req.priority] || req.priority}

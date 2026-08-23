@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
@@ -8,6 +9,7 @@ import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
 import ImportDialog from "@/components/ImportDialog";
 import PrinterLoader from "@/components/PrinterLoader";
+import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 
 interface Machine {
   id: string;
@@ -31,7 +33,7 @@ interface MachineDetails extends Machine {
   warranty: { startDate: string; endDate: string; isExpired: boolean } | null;
   meterReadings: { id: string; reading: number; readingDate: string; source: string; notes?: string | null }[];
   history: { id: string; transactionType: string; date: string; financialValue?: number | null; notes?: string | null; customer?: { name: string } | null }[];
-  contracts: { id: string; contract: { contractNumber: string; status: string; endDate: string; contractType: string } }[];
+  contracts: { id: string; contract: { id: string; contractNumber: string; status: string; endDate: string; contractType: string } }[];
   serviceRequests: { id: string; requestNumber: string; status: string; priority: string; createdAt: string; engineer?: { name: string } | null; visits: { id: string; visitedAt: string; resolved: boolean; engineer: { name: string } }[] }[];
 }
 
@@ -68,7 +70,8 @@ const emptyForm = {
 export default function MachinesPage() {
   const { t, dir, locale } = useI18n();
   const [machines, setMachines] = useState<Machine[]>([]);
-  const [search, setSearch] = useState("");
+  const urlParams = useUrlParams(["serial"]);
+  const [search, setSearchInput] = useSearchWithDefault(urlParams.serial ?? "");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
@@ -263,7 +266,7 @@ export default function MachinesPage() {
       <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
         <SearchInput
           value={search}
-          onChange={setSearch}
+          onChange={setSearchInput}
           placeholder={t("machines.searchPlaceholder")}
         />
         <FilterSelect
@@ -275,7 +278,7 @@ export default function MachinesPage() {
         />
         {hasActiveFilters && (
           <button
-            onClick={() => { setSearch(""); setStatusFilter(""); }}
+            onClick={() => { setSearchInput(null); setStatusFilter(""); }}
             className="text-sm text-gray-500 hover:text-gray-700 underline"
           >
             {t("common.resetFilters")}
@@ -396,7 +399,16 @@ export default function MachinesPage() {
 
                 <section className="grid gap-4 lg:grid-cols-2">
                   <Panel title={t("machineDetails.customer")}>
-                    <p className="font-semibold">{selected.currentOwner?.name || selected.customerLocation?.customer.name || "—"}</p>
+                    {(selected.currentOwner || selected.customerLocation?.customer) ? (
+                      <>
+                        <Link href={`/customers?q=${encodeURIComponent(selected.currentOwner?.name || selected.customerLocation?.customer.name || "")}`} className="font-semibold text-blue-600 hover:underline">
+                          {selected.currentOwner?.name || selected.customerLocation?.customer.name}
+                        </Link>
+                        {selected.currentOwner?.phone && <span className="ms-2 text-sm text-slate-600" dir="ltr">{selected.currentOwner.phone}</span>}
+                      </>
+                    ) : (
+                      <p className="font-semibold">—</p>
+                    )}
                     <p className="mt-1 text-sm text-slate-600">{t("machineDetails.location")}: {selected.customerLocation?.name || "—"}</p>
                     {selected.customerLocation?.address && <p className="text-sm text-slate-500">{selected.customerLocation.address}</p>}
                   </Panel>
@@ -410,7 +422,7 @@ export default function MachinesPage() {
 
                 <section className="grid gap-4 lg:grid-cols-2">
                   <Panel title={t("machineDetails.contracts")}>
-                    {selected.contracts.length ? <div className="space-y-2">{selected.contracts.map(({ id, contract }) => <div key={id} className="flex justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm"><span className="font-medium">{contract.contractNumber}</span><span>{contract.status} · {date(contract.endDate)}</span></div>)}</div> : <Empty text={t("machineDetails.noContracts")} />}
+                    {selected.contracts.length ? <div className="space-y-2">{selected.contracts.map(({ id, contract }) => <Link key={id} href={`/contracts?focus=${contract.id}`} className="flex justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm hover:bg-slate-100"><span className="font-medium text-blue-600">{contract.contractNumber}</span><span>{contract.status} · {date(contract.endDate)}</span></Link>)}</div> : <Empty text={t("machineDetails.noContracts")} />}
                   </Panel>
                   <Panel title={t("machineDetails.meter")}>
                     {selected.meterReadings.length ? <div className="space-y-2">{selected.meterReadings.slice(0, 5).map(reading => <div key={reading.id} className="flex justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm"><span className="font-medium">{reading.reading.toLocaleString()}</span><span>{date(reading.readingDate)} · {reading.source}</span></div>)}</div> : <Empty text={t("machineDetails.noMeters")} />}
@@ -418,7 +430,7 @@ export default function MachinesPage() {
                 </section>
 
                 <Panel title={`${t("machineDetails.service")} · ${selected.serviceRequests.filter(r => isOpen(r.status)).length} ${t("machineDetails.openRequests")}`}>
-                  {selected.serviceRequests.length ? <div className="space-y-3">{selected.serviceRequests.map(request => <div key={request.id} className="rounded-lg border border-slate-200 p-3"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold">{request.requestNumber}</span><span className="rounded-full bg-slate-100 px-2 py-1 text-xs">{request.status}</span></div><p className="mt-1 text-sm text-slate-600">{t("machineDetails.assignedTo")}: {request.engineer?.name || "—"} · {date(request.createdAt)}</p>{request.visits.length > 0 && <p className="mt-1 text-sm text-slate-500">{t("machineDetails.visits")}: {request.visits.length}</p>}</div>)}</div> : <Empty text={t("machineDetails.noService")} />}
+                  {selected.serviceRequests.length ? <div className="space-y-3">{selected.serviceRequests.map(request => <Link key={request.id} href={`/service-requests?focus=${request.id}`} className="block rounded-lg border border-slate-200 p-3 hover:bg-slate-50"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold text-blue-600">{request.requestNumber}</span><span className="rounded-full bg-slate-100 px-2 py-1 text-xs">{request.status}</span></div><p className="mt-1 text-sm text-slate-600">{t("machineDetails.assignedTo")}: {request.engineer?.name || "—"} · {date(request.createdAt)}</p>{request.visits.length > 0 && <p className="mt-1 text-sm text-slate-500">{t("machineDetails.visits")}: {request.visits.length}</p>}</Link>)}</div> : <Empty text={t("machineDetails.noService")} />}
                 </Panel>
 
                 <Panel title={t("machineDetails.timeline")}>

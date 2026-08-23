@@ -17,7 +17,8 @@
     "reports": "التقارير",
     "settings": "الإعدادات",
     "companies": "الشركات",
-    "logout": "تسجيل الخروج"
+    "logout": "تسجيل الخروج",
+    "notifications": "الإشعارات"
   },
   "dashboard": {
     "title": "لوحة التحكم",
@@ -58,6 +59,52 @@
       "UNASSIGNED_REQUESTS": "طلبات لم يُسند لها فني",
       "OVERDUE_INSTALLMENTS": "أقساط متأخرة عن السداد",
       "CONTRACTS_EXPIRING": "عقود تنتهي خلال 30 يومًا"
+    }
+  },
+  "notifications": {
+    "title": "الإشعارات",
+    "empty": "لا توجد إشعارات جديدة",
+    "markAllRead": "تحديد الكل كمقروء",
+    "systemSender": "النظام",
+    "unread": "غير مقروء",
+    "viewAll": "عرض جميع الإشعارات",
+    "markRead": "تحديد كمقروء",
+    "markUnread": "تحديد كغير مقروء",
+    "filterAll": "الكل",
+    "filterUnread": "غير مقروء",
+    "filterRead": "مقروء",
+    "typeFilter": "النوع",
+    "categoryFilter": "التصنيف",
+    "statusFilter": "الحالة",
+    "soundOn": "تشغيل صوت التنبيه",
+    "soundOff": "كتم صوت التنبيه",
+    "unreadCount": "غير مقروءة",
+    "types": {
+      "SYSTEM": "النظام",
+      "SERVICE_REQUEST_CREATED": "طلب صيانة جديد",
+      "SERVICE_REQUEST_ASSIGNED": "تعيين طلب صيانة",
+      "SERVICE_REQUEST_UPDATED": "تحديث طلب صيانة",
+      "MACHINE_STATUS_CHANGED": "تغيير حالة جهاز",
+      "CONTRACT_EXPIRING": "انتهاء عقد",
+      "LOW_STOCK": "مخزون منخفض",
+      "PAYMENT_PENDING": "دفعة بانتظار المراجعة",
+      "PAYMENT_APPROVED": "اعتماد دفعة",
+      "PAYMENT_REJECTED": "رفض دفعة"
+    },
+    "categories": {
+      "GENERAL": "عام",
+      "SYSTEM": "النظام",
+      "SERVICE_REQUEST": "طلبات الصيانة",
+      "MACHINE": "الأجهزة",
+      "INVENTORY": "المخزون",
+      "PAYMENT": "المدفوعات",
+      "CONTRACT": "العقود"
+    },
+    "priorities": {
+      "LOW": "منخفضة",
+      "NORMAL": "عادية",
+      "HIGH": "عالية",
+      "CRITICAL": "حرجة"
     }
   },
   "common": {
@@ -220,7 +267,13 @@
     "baseSalary": "الراتب الأساسي",
     "addEngineer": "إضافة مهندس",
     "areasPlaceholder": "المناطق (مفصولة بفاصلة)",
-    "searchPlaceholder": "ابحث بالاسم أو الهاتف أو البريد أو المهارة..."
+    "searchPlaceholder": "ابحث بالاسم أو الهاتف أو البريد أو المهارة...",
+    "linkedAccount": "حساب الدخول المرتبط",
+    "workload": "طلبات مفتوحة",
+    "selectAccountOptional": "ربط بحساب مستخدم (اختياري)",
+    "noLinkedAccount": "لا يوجد حساب مرتبط",
+    "accountLinked": "تم تحديث ربط الحساب",
+    "deleteConfirm": "هل أنت متأكد من الحذف؟"
   },
   "investors": {
     "title": "المستثمرون",

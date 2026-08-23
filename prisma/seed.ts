@@ -187,7 +187,7 @@ async function main() {
     { customerId: 'cust-15', name: 'الإسكندرية', address: 'شارع فريد - وسط البلد', city: 'الإسكندرية', phone: '033-555-6666' },
   ];
 
-  const createdLocations: any[] = [];
+  const createdLocations: Awaited<ReturnType<typeof prisma.customerLocation.create>>[] = [];
   for (const loc of locationsData) {
     const l = await prisma.customerLocation.create({ data: loc });
     createdLocations.push(l);
@@ -235,7 +235,7 @@ async function main() {
     { id: 'eng-6', name: 'ياسر محمد', phone: '011-6666-7777', email: 'yasser.mohamed@alex-copier.com', baseSalary: 7000, transportAllowance: 1500, areas: ['المعادي', 'شارع الجيش'], skills: [{ model: 'Xerox WorkCentre', level: 2 }] },
   ];
 
-  const createdEngineers: any[] = [];
+  const createdEngineers: Awaited<ReturnType<typeof prisma.engineer.create>>[] = [];
   for (const engData of engineersData) {
     const eng = await prisma.engineer.create({
       data: {
@@ -290,7 +290,7 @@ async function main() {
     { id: 'prod-m-15', name: 'Konica Minolta bizhub C3110', description: 'Machine Konica C3110 Color', productType: 'MACHINE' as const, companyId: company2.id, egsCode: 'EGS-M-015', purchasePrice: 38000, wholesalePrice: 50000, retailPrice: 62000 },
   ];
 
-  const createdMachineProducts: any[] = [];
+  const createdMachineProducts: Awaited<ReturnType<typeof prisma.product.create>>[] = [];
   for (const p of machineProductsData) {
     const prod = await prisma.product.create({ data: p });
     createdMachineProducts.push(prod);
@@ -319,7 +319,7 @@ async function main() {
     { id: 'prod-sp-15', name: 'Fuser Unit Konica C3110', description: 'Fuser Unit for Konica Minolta bizhub C3110', productType: 'SPARE_PART' as const, companyId: company2.id, egsCode: 'EGS-SP-015', purchasePrice: 3200, wholesalePrice: 4800, retailPrice: 6000 },
   ];
 
-  const createdSpareParts: any[] = [];
+  const createdSpareParts: Awaited<ReturnType<typeof prisma.product.create>>[] = [];
   for (const p of sparePartsData) {
     const prod = await prisma.product.create({ data: p });
     createdSpareParts.push(prod);
@@ -400,7 +400,7 @@ async function main() {
     { id: 'mach-25', serialNumber: 'SN-2024-025', manufacturer: 'Xerox', model: 'WorkCentre 6515', isColor: true, paperSize: 'A4' as const, currentStatus: 'SCRAPPED' as const, purchaseDate: new Date('2023-08-15'), purchasePrice: 65000, productId: 'prod-m-07' },
   ];
 
-  const createdMachines: any[] = [];
+  const createdMachines: Awaited<ReturnType<typeof prisma.machine.create>>[] = [];
   for (const m of machinesData) {
     const mach = await prisma.machine.create({ data: m });
     createdMachines.push(mach);

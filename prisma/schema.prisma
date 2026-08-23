@@ -21,6 +21,36 @@ enum UserRole {
   SALES_EMPLOYEE
 }
 
+enum NotificationCategory {
+  GENERAL
+  SYSTEM
+  SERVICE_REQUEST
+  MACHINE
+  INVENTORY
+  PAYMENT
+  CONTRACT
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum NotificationType {
+  SYSTEM
+  SERVICE_REQUEST_CREATED
+  SERVICE_REQUEST_ASSIGNED
+  SERVICE_REQUEST_UPDATED
+  MACHINE_STATUS_CHANGED
+  CONTRACT_EXPIRING
+  LOW_STOCK
+  PAYMENT_PENDING
+  PAYMENT_APPROVED
+  PAYMENT_REJECTED
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -37,6 +67,8 @@ model User {
   expenses            Expense[]
   approvalLogs        ApprovalLog[]
   sessions            Session[]
+  notifications       Notification[] @relation("UserNotifications")
+  sentNotifications   Notification[] @relation("NotificationSender")
   engineer            Engineer?
   company             Company?      @relation(fields: [companyId], references: [id])
 }
@@ -50,6 +82,31 @@ model Session {
   updatedAt    DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id          String              @id @default(cuid())
+  userId      String
+  senderId    String?
+  title       String
+  message     String
+  type        NotificationType    @default(SYSTEM)
+  category    NotificationCategory @default(GENERAL)
+  entityType  String?
+  entityId    String?
+  actionUrl   String?
+  isRead      Boolean             @default(false)
+  readAt      DateTime?
+  priority    NotificationPriority @default(NORMAL)
+  metadata    Json?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  user   User  @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  sender User? @relation("NotificationSender", fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isRead, createdAt])
+  @@index([userId, createdAt])
 }
 
 // ═══════════════════════════════════════════════════════════

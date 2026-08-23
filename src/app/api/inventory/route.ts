@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth-helpers";
+import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
+import { notifyLowStockAfterMovement } from "@/lib/notifications";
 
 export async function GET(request: Request) {
   try {
@@ -28,8 +29,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireAuth();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const actor = await requirePageAccess("inventory");
+    if (!actor) {
+      const authed = await requireAuth();
+      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
+    }
     const body = await request.json();
     const { warehouseId, productId, quantity, movementType, referenceId, notes } = body;
 
@@ -63,6 +67,27 @@ export async function POST(request: Request) {
         include: { warehouse: true, product: true },
       });
     });
+
+    // Business event: warn inventory custodians when stock runs low.
+    if (!incoming) {
+      try {
+        const remaining = await prisma.warehouseInventory.findUnique({
+          where: { warehouseId_productId: { warehouseId, productId } },
+          select: { quantity: true },
+        });
+        if (remaining) {
+          void notifyLowStockAfterMovement({
+            productId,
+            productName: movement.product?.name ?? "",
+            warehouseName: movement.warehouse?.name ?? "",
+            remaining: remaining.quantity,
+            actorId: actor.id,
+          }).catch(() => undefined);
+        }
+      } catch {
+        // notification must never fail the movement
+      }
+    }
 
     return NextResponse.json(movement, { status: 201 });
   } catch (error) {

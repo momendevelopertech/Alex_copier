@@ -112,7 +112,8 @@ export type AlertKind =
   | "URGENT_REQUESTS"
   | "UNASSIGNED_REQUESTS"
   | "OVERDUE_INSTALLMENTS"
-  | "CONTRACTS_EXPIRING";
+  | "CONTRACTS_EXPIRING"
+  | "LOW_STOCK";
 
 export type AlertSeverity = "HIGH" | "MEDIUM";
 
@@ -166,6 +167,7 @@ export function buildAlerts(input: {
   unassignedRequests: number;
   overdueInstallments: { count: number; totalAmount: number };
   expiringContracts: ExpiringContract[];
+  lowStockItems?: number;
 }): DashboardAlert[] {
   const alerts: DashboardAlert[] = [];
 
@@ -192,6 +194,9 @@ export function buildAlerts(input: {
       count: input.expiringContracts.length,
       details: input.expiringContracts.slice(0, 5),
     });
+  }
+  if ((input.lowStockItems ?? 0) > 0) {
+    alerts.push({ kind: "LOW_STOCK", severity: "MEDIUM", href: "/inventory", count: input.lowStockItems ?? 0 });
   }
 
   alerts.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);

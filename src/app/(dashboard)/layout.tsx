@@ -23,6 +23,7 @@ const pageTitles: Record<string, string> = {
   "/companies": "companies.title",
   "/investors": "investors.title",
   "/suppliers": "suppliers.title",
+  "/notifications": "notifications.title",
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

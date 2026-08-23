@@ -24,6 +24,10 @@
 .DS_Store
 *.pem
 
+# local dev servers / tooling
+dev-*.log
+.opencode/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

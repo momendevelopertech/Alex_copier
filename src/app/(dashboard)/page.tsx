@@ -76,6 +76,10 @@ const ALERT_META: Record<AlertKind, { labelKey: string; className: string }> = {
     labelKey: "dashboard.alerts.CONTRACTS_EXPIRING",
     className: "border-amber-200 bg-amber-50 text-amber-800",
   },
+  LOW_STOCK: {
+    labelKey: "dashboard.alerts.LOW_STOCK",
+    className: "border-orange-200 bg-orange-50 text-orange-800",
+  },
 };
 
 const quickActions = [

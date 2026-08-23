@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
@@ -8,6 +9,7 @@ import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
 import ImportDialog from "@/components/ImportDialog";
 import PrinterLoader from "@/components/PrinterLoader";
+import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 
 interface CustomerLocation {
   id: string;
@@ -62,7 +64,8 @@ const emptyForm = {
 export default function CustomersPage() {
   const { t, dir, locale } = useI18n();
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [search, setSearch] = useState("");
+  const urlParams = useUrlParams(["q"]);
+  const [search, setSearchInput] = useSearchWithDefault(urlParams.q ?? "");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
@@ -106,7 +109,7 @@ export default function CustomersPage() {
   const hasActiveFilters = typeFilter !== "" || cityFilter !== "" || activeFilter !== "" || search !== "";
 
   const resetFilters = () => {
-    setSearch("");
+    setSearchInput(null);
     setTypeFilter("");
     setCityFilter("");
     setActiveFilter("");
@@ -373,13 +376,13 @@ export default function CustomersPage() {
 
           <div className="grid gap-4 mt-5 lg:grid-cols-2">
             <CustomerPanel title={t("customers.machines")}>
-              {selected.machines?.length ? selected.machines.map(machine => <div key={machine.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><span className="font-medium">{machine.serialNumber}</span><span>{[machine.manufacturer, machine.model].filter(Boolean).join(" ") || "—"} · {machine.currentStatus}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
+              {selected.machines?.length ? selected.machines.map(machine => <div key={machine.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><Link href={`/machines?serial=${encodeURIComponent(machine.serialNumber)}`} className="font-mono font-medium text-blue-600 hover:underline">{machine.serialNumber}</Link><span>{[machine.manufacturer, machine.model].filter(Boolean).join(" ") || "—"} · {machine.currentStatus}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
             </CustomerPanel>
             <CustomerPanel title={t("customers.serviceHistory")}>
-              {selected.serviceRequests?.length ? selected.serviceRequests.slice(0, 6).map(request => <div key={request.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><span className="font-medium">{request.requestNumber}</span><span>{request.machine?.serialNumber || "—"} · {request.status} · {date(request.createdAt)}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
+              {selected.serviceRequests?.length ? selected.serviceRequests.slice(0, 6).map(request => <div key={request.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><Link href={`/service-requests?focus=${request.id}`} className="font-medium text-blue-600 hover:underline">{request.requestNumber}</Link><span>{request.machine?.serialNumber || "—"} · {request.status} · {date(request.createdAt)}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
             </CustomerPanel>
             <CustomerPanel title={t("customers.contracts")}>
-              {selected.contracts?.length ? selected.contracts.map(contract => <div key={contract.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><span className="font-medium">{contract.contractNumber}</span><span>{contract.status} · {date(contract.endDate)}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
+              {selected.contracts?.length ? selected.contracts.map(contract => <div key={contract.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><Link href={`/contracts?focus=${contract.id}`} className="font-medium text-blue-600 hover:underline">{contract.contractNumber}</Link><span>{contract.status} · {date(contract.endDate)}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
             </CustomerPanel>
             <CustomerPanel title={t("customers.sales")}>
               {selected.orders?.length ? selected.orders.slice(0, 6).map(order => <div key={order.id} className="flex justify-between border-b border-gray-100 py-2 text-sm"><span>{date(order.orderDate)}</span><span>{order.total.toLocaleString()} · {order.status}</span></div>) : <p className="text-sm text-gray-400">{t("common.noData")}</p>}
@@ -400,7 +403,7 @@ export default function CustomersPage() {
       <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
         <SearchInput
           value={search}
-          onChange={setSearch}
+          onChange={setSearchInput}
           placeholder={t("customers.searchPlaceholder")}
         />
         <FilterSelect

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-helpers";
+import { LOW_STOCK_THRESHOLD } from "@/lib/notifications";
 import {
   OPEN_REQUEST_STATUSES,
   buildAlerts,
@@ -36,6 +37,7 @@ export async function GET() {
       engineerAssigned,
       overdueInstallmentAggregate,
       expiringContracts,
+      lowStockItems,
     ] = await Promise.all([
       prisma.company.findMany({ orderBy: { name: "asc" } }),
       prisma.machine.groupBy({ by: ["currentStatus"], _count: { _all: true } }),
@@ -76,6 +78,9 @@ export async function GET() {
         orderBy: { endDate: "asc" },
         take: 10,
         select: { id: true, contractNumber: true, endDate: true, customer: { select: { name: true } } },
+      }),
+      prisma.warehouseInventory.count({
+        where: { quantity: { lte: LOW_STOCK_THRESHOLD }, product: { isActive: true, productType: "SPARE_PART" } },
       }),
     ]);
 
@@ -126,6 +131,7 @@ export async function GET() {
           totalAmount: overdueInstallmentAggregate._sum.amount ?? 0,
         },
         expiringContracts: buildExpiringContracts(expiringContracts, now),
+        lowStockItems,
       }),
       recentRequests: toRecentRequestViews(recentRequests),
       engineerWorkload: buildEngineerWorkload(
