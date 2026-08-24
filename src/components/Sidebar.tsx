@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useI18n } from "@/i18n/context";
@@ -95,10 +95,21 @@ const navGroups: { key: string; items: NavItem[] }[] = [
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
   const pathname = usePathname();
   const { t } = useI18n();
   const { data: session } = useSession();
   const userRole = (session?.user as { role?: string })?.role;
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const updateDesktopState = () => setIsDesktop(mediaQuery.matches);
+    updateDesktopState();
+    mediaQuery.addEventListener("change", updateDesktopState);
+    return () => mediaQuery.removeEventListener("change", updateDesktopState);
+  }, []);
+
+  const isCollapsed = isDesktop && collapsed;
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -108,21 +119,23 @@ export default function Sidebar() {
   const sidebarContent = (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between p-4 border-b border-gray-700">
-        {!collapsed && (
+        {!isCollapsed && (
           <div>
-            <h1 className="text-white text-lg font-bold">اليكس كوبير</h1>
-            <p className="text-gray-400 text-xs">Alex Copier</p>
+            <h1 className="text-white text-[length:var(--text-subtitle)] font-bold">اليكس كوبير</h1>
+            <p className="text-gray-400 text-[length:var(--text-caption)]">Alex Copier</p>
           </div>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="text-gray-400 hover:text-white hidden lg:block"
+          aria-label={isCollapsed ? "Open menu" : t("common.close")}
+          className="hidden min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white lg:flex"
         >
-          {collapsed ? <Menu size={20} /> : <X size={20} />}
+          {isCollapsed ? <Menu size={20} /> : <X size={20} />}
         </button>
         <button
           onClick={() => setMobileOpen(false)}
-          className="text-gray-400 hover:text-white lg:hidden"
+          aria-label={t("common.close")}
+          className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white lg:hidden"
         >
           <X size={20} />
         </button>
@@ -136,10 +149,10 @@ export default function Sidebar() {
             <div
               key={group.key}
               className={
-                collapsed && groupIndex > 0 ? "mt-3 border-t border-gray-700 pt-3" : collapsed ? "" : "mb-4"
+                isCollapsed && groupIndex > 0 ? "mt-3 border-t border-gray-700 pt-3" : isCollapsed ? "" : "mb-4"
               }
             >
-              {!collapsed && (
+              {!isCollapsed && (
                 <p className="px-6 mb-1 text-[11px] font-semibold tracking-wide text-gray-500">
                   {t(group.key)}
                 </p>
@@ -152,15 +165,15 @@ export default function Sidebar() {
                     key={item.href}
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
-                    title={collapsed ? t(item.key) : undefined}
+                    title={isCollapsed ? t(item.key) : undefined}
                     className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg transition-colors ${
                       active
                         ? "bg-blue-600 text-white"
                         : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                    } ${collapsed ? "justify-center px-0" : ""}`}
+                    } ${isCollapsed ? "justify-center px-0" : ""}`}
                   >
                     <Icon size={20} className="shrink-0" />
-                    {!collapsed && <span className="text-sm whitespace-nowrap">{t(item.key)}</span>}
+                    {!isCollapsed && <span className="text-sm whitespace-nowrap">{t(item.key)}</span>}
                   </Link>
                 );
               })}
@@ -172,13 +185,13 @@ export default function Sidebar() {
       <div className="border-t border-gray-700 p-3">
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          title={collapsed ? t("navigation.logout") : undefined}
+          title={isCollapsed ? t("navigation.logout") : undefined}
           className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-colors text-gray-300 hover:bg-red-600/20 hover:text-red-400 ${
-            collapsed ? "justify-center px-0" : "w-[calc(100%-16px)]"
+            isCollapsed ? "justify-center px-0" : "w-[calc(100%-16px)]"
           }`}
         >
           <LogOut size={20} className="shrink-0" />
-          {!collapsed && <span className="text-sm whitespace-nowrap">{t("navigation.logout")}</span>}
+          {!isCollapsed && <span className="text-sm whitespace-nowrap">{t("navigation.logout")}</span>}
         </button>
       </div>
     </div>
@@ -188,21 +201,25 @@ export default function Sidebar() {
     <>
       <button
         onClick={() => setMobileOpen(true)}
-        className="fixed top-4 right-4 z-50 lg:hidden bg-gray-900 text-white p-2 rounded-lg"
+        aria-label="Open navigation menu"
+        aria-expanded={mobileOpen}
+        className={`fixed right-3 top-3 z-50 flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-gray-900 p-2 text-white shadow-lg transition-opacity lg:hidden ${mobileOpen ? "pointer-events-none opacity-0" : "opacity-100"}`}
       >
         <Menu size={24} />
       </button>
 
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden cursor-pointer"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
+      <div
+        className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 lg:hidden ${
+          mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        }`}
+        onClick={() => setMobileOpen(false)}
+        aria-hidden="true"
+      />
 
       <aside
-        className={`fixed lg:sticky top-0 right-0 h-screen bg-gray-900 z-40 transition-all duration-300 ${
-          collapsed ? "w-16" : "w-64"
+        id="dashboard-sidebar"
+        className={`fixed top-0 right-0 z-50 h-dvh w-[min(20rem,86vw)] bg-gray-900 shadow-2xl transition-transform duration-300 ease-out will-change-transform lg:sticky lg:z-40 lg:h-screen lg:shadow-none lg:transition-all ${
+          collapsed ? "lg:w-16" : "lg:w-64"
         } ${mobileOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"}`}
       >
         {sidebarContent}
