@@ -84,8 +84,22 @@ canvas {
 .responsive-table th,
 .responsive-table td {
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
   vertical-align: top;
+}
+
+.overflow-x-auto th,
+.responsive-table th {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  font-size: clamp(0.75rem, 0.7rem + 0.22vw, 0.875rem);
+  line-height: 1.35;
+}
+
+.overflow-x-auto td,
+.responsive-table td {
+  word-break: auto-phrase;
 }
 
 @media (max-width: 639px) {
