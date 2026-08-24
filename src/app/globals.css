@@ -12,6 +12,112 @@
   --font-mono: var(--font-geist-mono);
 }
 
+
+/* -- Responsive dashboard foundation ------------------------ */
+:root {
+  --dashboard-space: clamp(0.75rem, 2.5vw, 1.5rem);
+  --text-caption: clamp(0.72rem, 0.68rem + 0.2vw, 0.8rem);
+  --text-body: clamp(0.875rem, 0.84rem + 0.18vw, 1rem);
+  --text-subtitle: clamp(1rem, 0.92rem + 0.4vw, 1.25rem);
+  --text-title: clamp(1.25rem, 1.05rem + 0.9vw, 1.875rem);
+}
+
+html {
+  overflow-x: hidden;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-size: var(--text-body);
+  overflow-x: hidden;
+}
+
+h1 { font-size: var(--text-title); line-height: 1.25; }
+h2 { font-size: var(--text-subtitle); line-height: 1.35; }
+small, caption { font-size: var(--text-caption); }
+
+* {
+  min-width: 0;
+}
+
+button,
+a[href],
+input,
+select,
+textarea,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+button,
+a[href],
+select,
+input[type="checkbox"],
+input[type="radio"],
+[role="button"]:not([aria-disabled="true"]) {
+  min-height: 44px;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+/* Tables stay readable on phones and tablets without forcing the whole page to scroll. */
+.overflow-x-auto {
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-inline: contain;
+}
+
+.overflow-x-auto > table,
+.responsive-table {
+  min-width: min(44rem, 185vw);
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.overflow-x-auto th,
+.overflow-x-auto td,
+.responsive-table th,
+.responsive-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+@media (max-width: 639px) {
+  .overflow-x-auto > table th:first-child,
+  .overflow-x-auto > table td:first-child,
+  .responsive-table th:first-child,
+  .responsive-table td:first-child {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 1;
+    background: #fff;
+    box-shadow: -1px 0 0 rgb(226 232 240), 1px 0 0 rgb(226 232 240);
+  }
+
+  .overflow-x-auto > table thead th:first-child,
+  .responsive-table thead th:first-child {
+    z-index: 2;
+    background: #f8fafc;
+  }
+}
+
+/* Keep dialogs/dropdowns inside narrow viewports. */
+[role="dialog"] {
+  max-width: calc(100vw - 1rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

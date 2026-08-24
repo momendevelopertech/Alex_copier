@@ -34,11 +34,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const titleKey = pageTitles[pathname] || "dashboard.title";
 
   return (
-    <div className="flex min-h-screen bg-gray-50" dir="rtl">
+    <div className="flex min-h-screen overflow-x-hidden bg-gray-50" dir="rtl">
       <Sidebar />
-      <div className="flex-1 flex flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <Header title={t(titleKey)} />
-        <main className="flex-1 p-4 sm:p-6 overflow-auto">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-5 lg:p-6">
           <UIProvider>{children}</UIProvider>
         </main>
       </div>

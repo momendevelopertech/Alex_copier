@@ -123,7 +123,7 @@ export default function UIProvider({ children }: { children: ReactNode }) {
             <div
               role="dialog"
               aria-modal="true"
-              className="fixed left-1/2 top-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 cursor-default rounded-xl bg-white p-6 shadow-xl"
+              className="fixed left-1/2 top-1/2 w-[calc(100vw-1rem)] max-w-md -translate-x-1/2 -translate-y-1/2 cursor-default rounded-xl bg-white p-4 shadow-xl sm:p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="mb-2 text-lg font-semibold">
