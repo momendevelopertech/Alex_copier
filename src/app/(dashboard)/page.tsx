@@ -4,10 +4,7 @@ import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
 import Link from "next/link";
 import PrinterLoader from "@/components/PrinterLoader";
-import type {
-  AlertKind,
-  DashboardPayload,
-} from "@/lib/dashboard";
+import type { AlertKind, DashboardPayload } from "@/lib/dashboard";
 
 const PRIORITY_LABELS: Record<string, string> = {
   NORMAL: "عادي",
@@ -83,10 +80,26 @@ const ALERT_META: Record<AlertKind, { labelKey: string; className: string }> = {
 };
 
 const quickActions = [
-  { label: "dashboard.addMachine", href: "/machines", color: "bg-blue-50 text-blue-700 hover:bg-blue-100" },
-  { label: "dashboard.createServiceRequest", href: "/service-requests", color: "bg-amber-50 text-amber-700 hover:bg-amber-100" },
-  { label: "dashboard.newSale", href: "/sales", color: "bg-green-50 text-green-700 hover:bg-green-100" },
-  { label: "dashboard.addCustomer", href: "/customers", color: "bg-purple-50 text-purple-700 hover:bg-purple-100" },
+  {
+    label: "dashboard.addMachine",
+    href: "/machines",
+    color: "bg-blue-50 text-blue-700 hover:bg-blue-100",
+  },
+  {
+    label: "dashboard.createServiceRequest",
+    href: "/service-requests",
+    color: "bg-amber-50 text-amber-700 hover:bg-amber-100",
+  },
+  {
+    label: "dashboard.newSale",
+    href: "/sales",
+    color: "bg-green-50 text-green-700 hover:bg-green-100",
+  },
+  {
+    label: "dashboard.addCustomer",
+    href: "/customers",
+    color: "bg-purple-50 text-purple-700 hover:bg-purple-100",
+  },
 ];
 
 const fmt = (value: number) => value.toLocaleString();
@@ -141,30 +154,74 @@ export default function Dashboard() {
   }
 
   const kpis = [
-    { key: "openRequests", value: data.kpis.openRequests, href: "/service-requests", color: "bg-blue-500" },
-    { key: "urgentRequests", value: data.kpis.urgentRequests, href: "/service-requests", color: "bg-red-500" },
-    { key: "unassignedRequests", value: data.kpis.unassignedRequests, href: "/service-requests", color: "bg-amber-500" },
-    { key: "visitsThisMonth", value: data.kpis.visitsThisMonth, href: "/service-requests", color: "bg-cyan-500" },
-    { key: "activeContracts", value: data.kpis.activeContracts, href: "/contracts", color: "bg-purple-500" },
-    { key: "machinesInService", value: data.kpis.machinesInService, href: "/machines", color: "bg-orange-500" },
+    {
+      key: "openRequests",
+      value: data.kpis.openRequests,
+      href: "/service-requests",
+      color: "bg-blue-500",
+    },
+    {
+      key: "urgentRequests",
+      value: data.kpis.urgentRequests,
+      href: "/service-requests",
+      color: "bg-red-500",
+    },
+    {
+      key: "unassignedRequests",
+      value: data.kpis.unassignedRequests,
+      href: "/service-requests",
+      color: "bg-amber-500",
+    },
+    {
+      key: "visitsThisMonth",
+      value: data.kpis.visitsThisMonth,
+      href: "/service-requests",
+      color: "bg-cyan-500",
+    },
+    {
+      key: "activeContracts",
+      value: data.kpis.activeContracts,
+      href: "/contracts",
+      color: "bg-purple-500",
+    },
+    {
+      key: "machinesInService",
+      value: data.kpis.machinesInService,
+      href: "/machines",
+      color: "bg-orange-500",
+    },
   ];
 
-  const maxLoad = Math.max(1, ...data.engineerWorkload.map((row) => row.openAssigned + row.visitsThisMonth));
+  const maxLoad = Math.max(
+    1,
+    ...data.engineerWorkload.map(
+      (row) => row.openAssigned + row.visitsThisMonth,
+    ),
+  );
 
   return (
     <div dir="rtl">
       <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
         <h1 className="text-2xl font-bold">{t("dashboard.title")}</h1>
         <span className="text-xs text-gray-400">
-          {t("dashboard.updatedAt")}: {new Date(data.generatedAt).toLocaleString("ar-EG")}
+          {t("dashboard.updatedAt")}:{" "}
+          {new Date(data.generatedAt).toLocaleString("ar-EG")}
         </span>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         {kpis.map((kpi) => (
-          <Link key={kpi.key} href={kpi.href} className="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition">
-            <p className="text-gray-500 text-xs mb-1">{t(`dashboard.${kpi.key}`)}</p>
-            <div className={`inline-block min-w-[2.5rem] px-2 py-0.5 rounded-md ${kpi.color} text-white`}>
+          <Link
+            key={kpi.key}
+            href={kpi.href}
+            className="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition"
+          >
+            <p className="text-gray-500 text-xs mb-1">
+              {t(`dashboard.${kpi.key}`)}
+            </p>
+            <div
+              className={`inline-block min-w-[2.5rem] px-2 py-0.5 rounded-md ${kpi.color} text-white`}
+            >
               <span className="text-2xl font-bold">{fmt(kpi.value)}</span>
             </div>
           </Link>
@@ -187,19 +244,31 @@ export default function Dashboard() {
                       <span className="font-medium">
                         {t(meta.labelKey)} ({fmt(alert.count)})
                       </span>
-                      {typeof alert.totalAmount === "number" && alert.totalAmount > 0 && (
-                        <span className="text-sm font-bold">{fmt(alert.totalAmount)}</span>
-                      )}
+                      {typeof alert.totalAmount === "number" &&
+                        alert.totalAmount > 0 && (
+                          <span className="text-sm font-bold">
+                            {fmt(alert.totalAmount)}
+                          </span>
+                        )}
                     </div>
                     {alert.details && alert.details.length > 0 && (
                       <ul className="mt-2 space-y-1 text-sm opacity-90">
                         {alert.details.map((contract) => (
-                          <li key={contract.id} className="flex items-center justify-between gap-4 flex-wrap">
+                          <li
+                            key={contract.id}
+                            className="flex items-center justify-between gap-4 flex-wrap"
+                          >
                             <span>
                               {contract.contractNumber}
-                              {contract.customerName ? ` — ${contract.customerName}` : ""}
+                              {contract.customerName
+                                ? ` — ${contract.customerName}`
+                                : ""}
                             </span>
-                            <span className={contract.daysLeft <= 7 ? "font-bold" : ""}>
+                            <span
+                              className={
+                                contract.daysLeft <= 7 ? "font-bold" : ""
+                              }
+                            >
                               {contract.daysLeft} {t("dashboard.daysLeft")}
                             </span>
                           </li>
@@ -214,48 +283,85 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-md p-6 mb-8 overflow-x-auto">
-        <h2 className="text-lg font-semibold mb-4">{t("dashboard.monthlyPerformance")}</h2>
+      <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+        <h2 className="text-lg font-semibold mb-4">
+          {t("dashboard.monthlyPerformance")}
+        </h2>
         {data.companies.length === 0 ? (
           <p className="text-gray-400 text-sm">{t("common.noData")}</p>
         ) : (
-          <table className="w-full text-right min-w-[640px]">
-            <thead>
-              <tr className="border-b border-gray-200 text-gray-500 text-sm">
-                <th className="pb-2 px-2 font-medium">{t("companies.title")}</th>
-                <th className="pb-2 px-2 font-medium">{t("dashboard.salesThisMonth")}</th>
-                <th className="pb-2 px-2 font-medium">{t("dashboard.purchasesThisMonth")}</th>
-                <th className="pb-2 px-2 font-medium">{t("dashboard.expensesThisMonth")}</th>
-                <th className="pb-2 px-2 font-medium">{t("dashboard.collectedThisMonth")}</th>
-                <th className="pb-2 px-2 font-medium">{t("dashboard.openRequests")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.companies.map((company) => (
-                <tr key={company.id} className="border-b border-gray-50 last:border-0">
-                  <td className="py-3 px-2 font-medium whitespace-nowrap">{company.name}</td>
-                  <td className="py-3 px-2 text-green-700 font-medium">{fmt(company.sales)}</td>
-                  <td className="py-3 px-2 text-red-700">{fmt(company.purchases)}</td>
-                  <td className="py-3 px-2 text-orange-700">{fmt(company.expenses)}</td>
-                  <td className="py-3 px-2 text-emerald-700 font-medium">{fmt(company.collected)}</td>
-                  <td className="py-3 px-2">{fmt(company.openRequests)}</td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-right min-w-[640px]">
+              <thead>
+                <tr className="border-b border-gray-200 text-gray-500 text-sm">
+                  <th className="pb-2 px-2 font-medium">
+                    {t("companies.title")}
+                  </th>
+                  <th className="pb-2 px-2 font-medium">
+                    {t("dashboard.salesThisMonth")}
+                  </th>
+                  <th className="pb-2 px-2 font-medium">
+                    {t("dashboard.purchasesThisMonth")}
+                  </th>
+                  <th className="pb-2 px-2 font-medium">
+                    {t("dashboard.expensesThisMonth")}
+                  </th>
+                  <th className="pb-2 px-2 font-medium">
+                    {t("dashboard.collectedThisMonth")}
+                  </th>
+                  <th className="pb-2 px-2 font-medium">
+                    {t("dashboard.openRequests")}
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {data.companies.map((company) => (
+                  <tr
+                    key={company.id}
+                    className="border-b border-gray-50 last:border-0"
+                  >
+                    <td className="py-3 px-2 font-medium whitespace-nowrap">
+                      {company.name}
+                    </td>
+                    <td className="py-3 px-2 text-green-700 font-medium">
+                      {fmt(company.sales)}
+                    </td>
+                    <td className="py-3 px-2 text-red-700">
+                      {fmt(company.purchases)}
+                    </td>
+                    <td className="py-3 px-2 text-orange-700">
+                      {fmt(company.expenses)}
+                    </td>
+                    <td className="py-3 px-2 text-emerald-700 font-medium">
+                      {fmt(company.collected)}
+                    </td>
+                    <td className="py-3 px-2">{fmt(company.openRequests)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="bg-white rounded-xl shadow-md p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">{t("dashboard.maintenanceStatus")}</h2>
-            <Link href="/machines" className="text-sm text-blue-600 hover:underline">{t("machines.title")} ←</Link>
+            <h2 className="text-lg font-semibold">
+              {t("dashboard.maintenanceStatus")}
+            </h2>
+            <Link
+              href="/machines"
+              className="text-sm text-blue-600 hover:underline"
+            >
+              {t("machines.title")} ←
+            </Link>
           </div>
           <ul className="space-y-2">
             {MACHINE_STATUSES.map((status) => {
               const count = data.machineStatuses[status] ?? 0;
-              const active = status === "UNDER_MAINTENANCE" || status === "UNDER_INSPECTION";
+              const active =
+                status === "UNDER_MAINTENANCE" || status === "UNDER_INSPECTION";
               return (
                 <li
                   key={status}
@@ -270,16 +376,24 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-lg font-semibold mb-4">{t("dashboard.engineerWorkload")}</h2>
+          <h2 className="text-lg font-semibold mb-4">
+            {t("dashboard.engineerWorkload")}
+          </h2>
           {data.engineerWorkload.length === 0 ? (
             <p className="text-gray-400 text-sm">{t("common.noData")}</p>
           ) : (
             <table className="w-full text-right">
               <thead>
                 <tr className="border-b border-gray-200 text-gray-500 text-sm">
-                  <th className="pb-2 font-medium">{t("dashboard.engineer")}</th>
-                  <th className="pb-2 font-medium">{t("dashboard.assignedOpen")}</th>
-                  <th className="pb-2 font-medium">{t("dashboard.visitsCol")}</th>
+                  <th className="pb-2 font-medium">
+                    {t("dashboard.engineer")}
+                  </th>
+                  <th className="pb-2 font-medium">
+                    {t("dashboard.assignedOpen")}
+                  </th>
+                  <th className="pb-2 font-medium">
+                    {t("dashboard.visitsCol")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -287,19 +401,37 @@ export default function Dashboard() {
                   const total = row.openAssigned + row.visitsThisMonth;
                   const pressure = total / maxLoad;
                   const barColor =
-                    row.openAssigned >= 5 ? "bg-red-500" : row.openAssigned >= 3 ? "bg-amber-500" : "bg-blue-500";
+                    row.openAssigned >= 5
+                      ? "bg-red-500"
+                      : row.openAssigned >= 3
+                        ? "bg-amber-500"
+                        : "bg-blue-500";
                   return (
-                    <tr key={row.engineerId} className="border-b border-gray-50 last:border-0">
-                      <td className="py-2 font-medium whitespace-nowrap">{row.name}</td>
+                    <tr
+                      key={row.engineerId}
+                      className="border-b border-gray-50 last:border-0"
+                    >
+                      <td className="py-2 font-medium whitespace-nowrap">
+                        {row.name}
+                      </td>
                       <td className="py-2">
                         <div className="flex items-center gap-2">
                           <div className="w-full max-w-[120px] h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div className={`h-full ${barColor}`} style={{ width: `${Math.max(4, Math.round(pressure * 100))}%` }} />
+                            <div
+                              className={`h-full ${barColor}`}
+                              style={{
+                                width: `${Math.max(4, Math.round(pressure * 100))}%`,
+                              }}
+                            />
                           </div>
-                          <span className="font-bold">{fmt(row.openAssigned)}</span>
+                          <span className="font-bold">
+                            {fmt(row.openAssigned)}
+                          </span>
                         </div>
                       </td>
-                      <td className="py-2 text-gray-600">{fmt(row.visitsThisMonth)}</td>
+                      <td className="py-2 text-gray-600">
+                        {fmt(row.visitsThisMonth)}
+                      </td>
                     </tr>
                   );
                 })}
@@ -309,54 +441,89 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-md p-6 mb-8 overflow-x-auto">
-        <h2 className="text-lg font-semibold mb-4">{t("dashboard.serviceQueue")}</h2>
+      <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+        <h2 className="text-lg font-semibold mb-4">
+          {t("dashboard.serviceQueue")}
+        </h2>
         {data.recentRequests.length === 0 ? (
           <p className="text-gray-400 text-sm">{t("common.noData")}</p>
         ) : (
-          <table className="w-full text-right min-w-[720px]">
-            <thead>
-              <tr className="border-b border-gray-200 text-gray-500 text-sm">
-                <th className="pb-2 px-2 font-medium">#</th>
-                <th className="pb-2 px-2 font-medium">{t("common.description")}</th>
-                <th className="pb-2 px-2 font-medium">{t("serviceRequests.customer")}</th>
-                <th className="pb-2 px-2 font-medium">{t("machines.serialNumber")}</th>
-                <th className="pb-2 px-2 font-medium">{t("serviceRequests.priority")}</th>
-                <th className="pb-2 px-2 font-medium">{t("serviceRequests.status")}</th>
-                <th className="pb-2 px-2 font-medium">{t("dashboard.engineer")}</th>
-                <th className="pb-2 px-2 font-medium">{t("common.date")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.recentRequests.map((request) => (
-                <tr key={request.id} className="border-b border-gray-50 last:border-0">
-                  <td className="py-2 px-2 text-xs text-gray-500">{request.requestNumber}</td>
-                  <td className="py-2 px-2 text-sm max-w-[220px] truncate">{request.description}</td>
-                  <td className="py-2 px-2 text-sm whitespace-nowrap">{request.customerName}</td>
-                  <td className="py-2 px-2 text-xs text-gray-600">{request.machineSerial ?? "—"}</td>
-                  <td className="py-2 px-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${priorityColors[request.priority] || ""}`}>
-                      {PRIORITY_LABELS[request.priority] || request.priority}
-                    </span>
-                  </td>
-                  <td className="py-2 px-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[request.status] || "bg-gray-100 text-gray-800"}`}>
-                      {STATUS_LABELS[request.status] || request.status}
-                    </span>
-                  </td>
-                  <td className="py-2 px-2 text-sm whitespace-nowrap">{request.engineerName ?? "—"}</td>
-                  <td className="py-2 px-2 text-xs text-gray-400 whitespace-nowrap">
-                    {new Date(request.createdAt).toLocaleDateString("ar-EG")}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-right min-w-[720px]">
+              <thead>
+                <tr className="border-b border-gray-200 text-gray-500 text-sm">
+                  <th className="pb-2 px-2 font-medium">#</th>
+                  <th className="pb-2 px-2 font-medium">
+                    {t("common.description")}
+                  </th>
+                  <th className="pb-2 px-2 font-medium">
+                    {t("serviceRequests.customer")}
+                  </th>
+                  <th className="pb-2 px-2 font-medium">
+                    {t("machines.serialNumber")}
+                  </th>
+                  <th className="pb-2 px-2 font-medium">
+                    {t("serviceRequests.priority")}
+                  </th>
+                  <th className="pb-2 px-2 font-medium">
+                    {t("serviceRequests.status")}
+                  </th>
+                  <th className="pb-2 px-2 font-medium">
+                    {t("dashboard.engineer")}
+                  </th>
+                  <th className="pb-2 px-2 font-medium">{t("common.date")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {data.recentRequests.map((request) => (
+                  <tr
+                    key={request.id}
+                    className="border-b border-gray-50 last:border-0"
+                  >
+                    <td className="py-2 px-2 text-xs text-gray-500">
+                      {request.requestNumber}
+                    </td>
+                    <td className="py-2 px-2 text-sm max-w-[220px] truncate">
+                      {request.description}
+                    </td>
+                    <td className="py-2 px-2 text-sm whitespace-nowrap">
+                      {request.customerName}
+                    </td>
+                    <td className="py-2 px-2 text-xs text-gray-600">
+                      {request.machineSerial ?? "—"}
+                    </td>
+                    <td className="py-2 px-2">
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full ${priorityColors[request.priority] || ""}`}
+                      >
+                        {PRIORITY_LABELS[request.priority] || request.priority}
+                      </span>
+                    </td>
+                    <td className="py-2 px-2">
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full ${statusColors[request.status] || "bg-gray-100 text-gray-800"}`}
+                      >
+                        {STATUS_LABELS[request.status] || request.status}
+                      </span>
+                    </td>
+                    <td className="py-2 px-2 text-sm whitespace-nowrap">
+                      {request.engineerName ?? "—"}
+                    </td>
+                    <td className="py-2 px-2 text-xs text-gray-400 whitespace-nowrap">
+                      {new Date(request.createdAt).toLocaleDateString("ar-EG")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
       <div className="bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-lg font-semibold mb-4">{t("dashboard.quickActions")}</h2>
+        <h2 className="text-lg font-semibold mb-4">
+          {t("dashboard.quickActions")}
+        </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {quickActions.map((action) => (
             <Link
