@@ -85,17 +85,25 @@ export async function POST(request: Request) {
     }
 
     const passwordHash = await hash(password, 10);
-    const user = await prisma.user.create({
-      data: { name, email, passwordHash, role, companyId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        companyId: true,
-        isActive: true,
-        createdAt: true,
-      },
+    // Business rule: a user with the ENGINEER role always owns an engineer
+    // profile (assignments, visits, custody). Create both atomically.
+    const user = await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: { name, email, passwordHash, role, companyId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          companyId: true,
+          isActive: true,
+          createdAt: true,
+        },
+      });
+      if (role === "ENGINEER") {
+        await tx.engineer.create({ data: { userId: created.id, name } });
+      }
+      return created;
     });
 
     return NextResponse.json(user, { status: 201 });

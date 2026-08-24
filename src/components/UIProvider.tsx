@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
-import { CheckCircle2, XCircle, Info, X } from "lucide-react";
+import { CheckCircle2, XCircle, Info, X, AlertTriangle } from "lucide-react";
 import { useI18n } from "@/i18n/context";
 
 type ToastKind = "success" | "error" | "info";
@@ -117,32 +117,42 @@ export default function UIProvider({ children }: { children: ReactNode }) {
 
         {confirmState && (
           <div
-            className="fixed inset-0 z-[70] cursor-pointer bg-black/50"
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-[1px]"
             onClick={() => settle(false)}
           >
             <div
               role="dialog"
               aria-modal="true"
-              className="fixed left-1/2 top-1/2 w-[calc(100vw-1rem)] max-w-md -translate-x-1/2 -translate-y-1/2 cursor-default rounded-xl bg-white p-4 shadow-xl sm:p-6"
+              className="w-full max-w-md cursor-default overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="mb-2 text-lg font-semibold">
-                {confirmState.title || t("common.confirmTitle")}
-              </h2>
-              <p className="mb-6 text-sm text-gray-600">{confirmState.message}</p>
-              <div className="flex justify-end gap-2">
+              <div className="bg-gradient-to-r from-red-50 to-rose-50 px-4 pb-4 pt-5 sm:px-6">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
+                    <AlertTriangle size={20} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-lg font-semibold text-slate-900">
+                      {confirmState.title || t("common.confirmTitle")}
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">{confirmState.message}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col-reverse gap-2 px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
                 <button
                   type="button"
                   onClick={() => settle(false)}
-                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                 >
-                  <X size={15} className="ml-1 inline" />
+                  <X size={15} />
                   {t("common.cancel")}
                 </button>
                 <button
                   type="button"
                   onClick={() => settle(true)}
-                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                  className="inline-flex items-center justify-center rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500/40"
                 >
                   {confirmState.confirmLabel || t("common.confirm")}
                 </button>

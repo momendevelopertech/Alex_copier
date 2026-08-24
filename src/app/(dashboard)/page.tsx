@@ -79,28 +79,55 @@ const ALERT_META: Record<AlertKind, { labelKey: string; className: string }> = {
   },
 };
 
-const quickActions = [
-  {
-    label: "dashboard.addMachine",
-    href: "/machines",
-    color: "bg-blue-50 text-blue-700 hover:bg-blue-100",
-  },
-  {
-    label: "dashboard.createServiceRequest",
-    href: "/service-requests",
-    color: "bg-amber-50 text-amber-700 hover:bg-amber-100",
-  },
-  {
-    label: "dashboard.newSale",
-    href: "/sales",
-    color: "bg-green-50 text-green-700 hover:bg-green-100",
-  },
-  {
-    label: "dashboard.addCustomer",
-    href: "/customers",
-    color: "bg-purple-50 text-purple-700 hover:bg-purple-100",
-  },
-];
+const getQuickActions = (role?: string) => {
+  if (role === "ENGINEER") {
+    return [
+      {
+        label: "dashboard.serviceQueue",
+        href: "/service-requests",
+        color: "bg-amber-50 text-amber-700 hover:bg-amber-100",
+      },
+      {
+        label: "dashboard.openRequests",
+        href: "/service-requests",
+        color: "bg-blue-50 text-blue-700 hover:bg-blue-100",
+      },
+      {
+        label: "dashboard.urgentRequests",
+        href: "/service-requests",
+        color: "bg-red-50 text-red-700 hover:bg-red-100",
+      },
+      {
+        label: "dashboard.visitsThisMonth",
+        href: "/service-requests",
+        color: "bg-cyan-50 text-cyan-700 hover:bg-cyan-100",
+      },
+    ];
+  }
+
+  return [
+    {
+      label: "dashboard.addMachine",
+      href: "/machines",
+      color: "bg-blue-50 text-blue-700 hover:bg-blue-100",
+    },
+    {
+      label: "dashboard.createServiceRequest",
+      href: "/service-requests",
+      color: "bg-amber-50 text-amber-700 hover:bg-amber-100",
+    },
+    {
+      label: "dashboard.newSale",
+      href: "/sales",
+      color: "bg-green-50 text-green-700 hover:bg-green-100",
+    },
+    {
+      label: "dashboard.addCustomer",
+      href: "/customers",
+      color: "bg-purple-50 text-purple-700 hover:bg-purple-100",
+    },
+  ];
+};
 
 const fmt = (value: number) => value.toLocaleString();
 
@@ -109,6 +136,7 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardPayload | null>(null);
   const [failed, setFailed] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const isEngineerView = data?.role === "ENGINEER";
 
   useEffect(() => {
     let cancelled = false;
@@ -153,44 +181,71 @@ export default function Dashboard() {
     );
   }
 
-  const kpis = [
-    {
-      key: "openRequests",
-      value: data.kpis.openRequests,
-      href: "/service-requests",
-      color: "bg-blue-500",
-    },
-    {
-      key: "urgentRequests",
-      value: data.kpis.urgentRequests,
-      href: "/service-requests",
-      color: "bg-red-500",
-    },
-    {
-      key: "unassignedRequests",
-      value: data.kpis.unassignedRequests,
-      href: "/service-requests",
-      color: "bg-amber-500",
-    },
-    {
-      key: "visitsThisMonth",
-      value: data.kpis.visitsThisMonth,
-      href: "/service-requests",
-      color: "bg-cyan-500",
-    },
-    {
-      key: "activeContracts",
-      value: data.kpis.activeContracts,
-      href: "/contracts",
-      color: "bg-purple-500",
-    },
-    {
-      key: "machinesInService",
-      value: data.kpis.machinesInService,
-      href: "/machines",
-      color: "bg-orange-500",
-    },
-  ];
+  const kpis = isEngineerView
+    ? [
+        {
+          key: "openRequests",
+          value: data.kpis.openRequests,
+          href: "/service-requests",
+          color: "bg-blue-500",
+        },
+        {
+          key: "urgentRequests",
+          value: data.kpis.urgentRequests,
+          href: "/service-requests",
+          color: "bg-red-500",
+        },
+        {
+          key: "visitsThisMonth",
+          value: data.kpis.visitsThisMonth,
+          href: "/service-requests",
+          color: "bg-cyan-500",
+        },
+        {
+          key: "unassignedRequests",
+          value: data.kpis.unassignedRequests,
+          href: "/service-requests",
+          color: "bg-amber-500",
+        },
+      ]
+    : [
+        {
+          key: "openRequests",
+          value: data.kpis.openRequests,
+          href: "/service-requests",
+          color: "bg-blue-500",
+        },
+        {
+          key: "urgentRequests",
+          value: data.kpis.urgentRequests,
+          href: "/service-requests",
+          color: "bg-red-500",
+        },
+        {
+          key: "unassignedRequests",
+          value: data.kpis.unassignedRequests,
+          href: "/service-requests",
+          color: "bg-amber-500",
+        },
+        {
+          key: "visitsThisMonth",
+          value: data.kpis.visitsThisMonth,
+          href: "/service-requests",
+          color: "bg-cyan-500",
+        },
+        {
+          key: "activeContracts",
+          value: data.kpis.activeContracts,
+          href: "/contracts",
+          color: "bg-purple-500",
+        },
+        {
+          key: "machinesInService",
+          value: data.kpis.machinesInService,
+          href: "/machines",
+          color: "bg-orange-500",
+        },
+      ];
 
   const maxLoad = Math.max(
     1,
@@ -283,99 +338,103 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-md p-6 mb-8">
-        <h2 className="text-lg font-semibold mb-4">
-          {t("dashboard.monthlyPerformance")}
-        </h2>
-        {data.companies.length === 0 ? (
-          <p className="text-gray-400 text-sm">{t("common.noData")}</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-right min-w-[640px]">
-              <thead>
-                <tr className="border-b border-gray-200 text-gray-500 text-sm">
-                  <th className="pb-2 px-2 font-medium">
-                    {t("companies.title")}
-                  </th>
-                  <th className="pb-2 px-2 font-medium">
-                    {t("dashboard.salesThisMonth")}
-                  </th>
-                  <th className="pb-2 px-2 font-medium">
-                    {t("dashboard.purchasesThisMonth")}
-                  </th>
-                  <th className="pb-2 px-2 font-medium">
-                    {t("dashboard.expensesThisMonth")}
-                  </th>
-                  <th className="pb-2 px-2 font-medium">
-                    {t("dashboard.collectedThisMonth")}
-                  </th>
-                  <th className="pb-2 px-2 font-medium">
-                    {t("dashboard.openRequests")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.companies.map((company) => (
-                  <tr
-                    key={company.id}
-                    className="border-b border-gray-50 last:border-0"
-                  >
-                    <td className="py-3 px-2 font-medium whitespace-nowrap">
-                      {company.name}
-                    </td>
-                    <td className="py-3 px-2 text-green-700 font-medium">
-                      {fmt(company.sales)}
-                    </td>
-                    <td className="py-3 px-2 text-red-700">
-                      {fmt(company.purchases)}
-                    </td>
-                    <td className="py-3 px-2 text-orange-700">
-                      {fmt(company.expenses)}
-                    </td>
-                    <td className="py-3 px-2 text-emerald-700 font-medium">
-                      {fmt(company.collected)}
-                    </td>
-                    <td className="py-3 px-2">{fmt(company.openRequests)}</td>
+      {!isEngineerView && (
+        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+          <h2 className="text-lg font-semibold mb-4">
+            {t("dashboard.monthlyPerformance")}
+          </h2>
+          {data.companies.length === 0 ? (
+            <p className="text-gray-400 text-sm">{t("common.noData")}</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-right min-w-[640px]">
+                <thead>
+                  <tr className="border-b border-gray-200 text-gray-500 text-sm">
+                    <th className="pb-2 px-2 font-medium">
+                      {t("companies.title")}
+                    </th>
+                    <th className="pb-2 px-2 font-medium">
+                      {t("dashboard.salesThisMonth")}
+                    </th>
+                    <th className="pb-2 px-2 font-medium">
+                      {t("dashboard.purchasesThisMonth")}
+                    </th>
+                    <th className="pb-2 px-2 font-medium">
+                      {t("dashboard.expensesThisMonth")}
+                    </th>
+                    <th className="pb-2 px-2 font-medium">
+                      {t("dashboard.collectedThisMonth")}
+                    </th>
+                    <th className="pb-2 px-2 font-medium">
+                      {t("dashboard.openRequests")}
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                </thead>
+                <tbody>
+                  {data.companies.map((company) => (
+                    <tr
+                      key={company.id}
+                      className="border-b border-gray-50 last:border-0"
+                    >
+                      <td className="py-3 px-2 font-medium whitespace-nowrap">
+                        {company.name}
+                      </td>
+                      <td className="py-3 px-2 text-green-700 font-medium">
+                        {fmt(company.sales)}
+                      </td>
+                      <td className="py-3 px-2 text-red-700">
+                        {fmt(company.purchases)}
+                      </td>
+                      <td className="py-3 px-2 text-orange-700">
+                        {fmt(company.expenses)}
+                      </td>
+                      <td className="py-3 px-2 text-emerald-700 font-medium">
+                        {fmt(company.collected)}
+                      </td>
+                      <td className="py-3 px-2">{fmt(company.openRequests)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">
-              {t("dashboard.maintenanceStatus")}
-            </h2>
-            <Link
-              href="/machines"
-              className="text-sm text-blue-600 hover:underline"
-            >
-              {t("machines.title")} ←
-            </Link>
+        {!isEngineerView && (
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">
+                {t("dashboard.maintenanceStatus")}
+              </h2>
+              <Link
+                href="/machines"
+                className="text-sm text-blue-600 hover:underline"
+              >
+                {t("machines.title")} ←
+              </Link>
+            </div>
+            <ul className="space-y-2">
+              {MACHINE_STATUSES.map((status) => {
+                const count = data.machineStatuses[status] ?? 0;
+                const active =
+                  status === "UNDER_MAINTENANCE" || status === "UNDER_INSPECTION";
+                return (
+                  <li
+                    key={status}
+                    className={`flex items-center justify-between border rounded-lg px-3 py-2 ${machineStatusChip[status]} ${active && count > 0 ? "ring-2 ring-offset-1 ring-orange-300" : ""}`}
+                  >
+                    <span className="text-sm">{t(`machines.${status}`)}</span>
+                    <span className="font-bold">{fmt(count)}</span>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
-          <ul className="space-y-2">
-            {MACHINE_STATUSES.map((status) => {
-              const count = data.machineStatuses[status] ?? 0;
-              const active =
-                status === "UNDER_MAINTENANCE" || status === "UNDER_INSPECTION";
-              return (
-                <li
-                  key={status}
-                  className={`flex items-center justify-between border rounded-lg px-3 py-2 ${machineStatusChip[status]} ${active && count > 0 ? "ring-2 ring-offset-1 ring-orange-300" : ""}`}
-                >
-                  <span className="text-sm">{t(`machines.${status}`)}</span>
-                  <span className="font-bold">{fmt(count)}</span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        )}
 
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className={`bg-white rounded-xl shadow-md p-6 ${isEngineerView ? "lg:col-span-2" : ""}`}>
           <h2 className="text-lg font-semibold mb-4">
             {t("dashboard.engineerWorkload")}
           </h2>
@@ -525,7 +584,7 @@ export default function Dashboard() {
           {t("dashboard.quickActions")}
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {quickActions.map((action) => (
+          {getQuickActions(data.role).map((action) => (
             <Link
               key={action.label}
               href={action.href}

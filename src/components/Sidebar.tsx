@@ -22,7 +22,6 @@ import {
   Wallet,
   Receipt,
   BarChart3,
-  Settings,
   Building2,
   Truck,
   PieChart,
@@ -87,7 +86,7 @@ const navGroups: { key: string; items: NavItem[] }[] = [
     items: [
       { key: "navigation.reports", href: "/reports", icon: BarChart3, page: "reports" },
       { key: "navigation.companies", href: "/companies", icon: Building2, page: "companies" },
-      { key: "navigation.settings", href: "/settings", icon: Settings, page: "settings" },
+      { key: "navigation.users", href: "/users", icon: Users, page: "settings" },
     ],
   },
 ];
@@ -218,7 +217,7 @@ export default function Sidebar() {
 
       <aside
         id="dashboard-sidebar"
-        className={`fixed top-0 right-0 z-50 h-dvh w-[min(20rem,86vw)] bg-gray-900 shadow-2xl transition-transform duration-300 ease-out will-change-transform lg:sticky lg:z-40 lg:h-screen lg:shadow-none lg:transition-all ${
+        className={`fixed top-0 right-0 z-50 h-screen w-[min(20rem,86vw)] bg-gray-900 shadow-2xl transition-transform duration-300 ease-out will-change-transform lg:sticky lg:z-40 lg:top-0 lg:h-screen lg:shadow-none lg:transition-all ${
           collapsed ? "lg:w-16" : "lg:w-64"
         } ${mobileOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"}`}
       >

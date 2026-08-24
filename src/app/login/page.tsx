@@ -7,13 +7,13 @@ import { Printer, Mail, Lock, LogIn, User, Shield } from "lucide-react";
 import PrinterLoader from "@/components/PrinterLoader";
 
 const testAccounts = [
-  { name: "عمر حسن", email: "omar@alex-copier.com", password: "password123", role: "المدير العام", color: "bg-purple-100 text-purple-700" },
-  { name: "سارة مدير الشركة", email: "sarah@jmal-ahlat.com", password: "password123", role: "مدير الشركة", color: "bg-blue-100 text-blue-700" },
-  { name: "أحمد المحاسب", email: "ahmed@alex-copier.com", password: "password123", role: "المحاسب", color: "bg-green-100 text-green-700" },
-  { name: "محمد الصيانة", email: "mohamed@alex-copier.com", password: "password123", role: "مدير الصيانة", color: "bg-orange-100 text-orange-700" },
-  { name: "علي الورشة", email: "ali@alex-copier.com", password: "password123", role: "مدير الورشة", color: "bg-yellow-100 text-yellow-700" },
-  { name: "خالد المهندس", email: "khaled@alex-copier.com", password: "password123", role: "مهندس", color: "bg-cyan-100 text-cyan-700" },
-  { name: "فاطمة المبيعات", email: "fatma@alex-copier.com", password: "password123", role: "موظف مبيعات", color: "bg-pink-100 text-pink-700" },
+  { name: "رضا", email: "reza@alex-copier.com", password: "password123", role: "المدير العام", color: "bg-purple-100 text-purple-700" },
+  { name: "سارة محمد", email: "sarah@jmal-ahlat.com", password: "password123", role: "مدير الشركة", color: "bg-blue-100 text-blue-700" },
+  { name: "عمرو", email: "amr.accountant@alex-copier.com", password: "password123", role: "المحاسب", color: "bg-green-100 text-green-700" },
+  { name: "عمرو", email: "amr.maintenance@alex-copier.com", password: "password123", role: "مدير الصيانة", color: "bg-orange-100 text-orange-700" },
+  { name: "علي خالد", email: "ali@alex-copier.com", password: "password123", role: "مدير الورشة", color: "bg-yellow-100 text-yellow-700" },
+  { name: "أحمد علي", email: "ahmed.ali@alex-copier.com", password: "password123", role: "مهندس", color: "bg-cyan-100 text-cyan-700" },
+  { name: "فاطمة عبدالله", email: "fatma@alex-copier.com", password: "password123", role: "موظف مبيعات", color: "bg-pink-100 text-pink-700" },
 ];
 
 export default function LoginPage() {

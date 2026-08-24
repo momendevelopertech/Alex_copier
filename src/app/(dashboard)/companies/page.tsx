@@ -212,9 +212,10 @@ export default function CompaniesPage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {<Save size={16} />}{<Save size={16} />}{saving ? t("common.saving") : t("common.save")}
+                <Save size={16} />
+                {saving ? t("common.saving") : t("common.save")}
               </button>
             </div>
           </form>

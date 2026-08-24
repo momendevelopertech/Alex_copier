@@ -15,7 +15,8 @@
     "finance": "المالية",
     "settlements": "التسويات",
     "reports": "التقارير",
-    "settings": "الإعدادات",
+    "settings": "المستخدمون",
+    "users": "المستخدمون",
     "companies": "الشركات",
     "logout": "تسجيل الخروج",
     "notifications": "الإشعارات",
@@ -290,6 +291,8 @@
     "searchPlaceholder": "ابحث بالاسم أو الهاتف أو البريد أو المهارة...",
     "linkedAccount": "حساب الدخول المرتبط",
     "workload": "طلبات مفتوحة",
+    "selectedAccount": "بيانات الحساب المختار",
+    "passwordHidden": "مخفي — يتم استخدام الحساب الحالي لتسجيل الدخول",
     "selectAccountOptional": "ربط بحساب مستخدم (اختياري)",
     "noLinkedAccount": "لا يوجد حساب مرتبط",
     "accountLinked": "تم تحديث ربط الحساب",
@@ -523,8 +526,11 @@
     "estimatedProfit": "الربح المقدر",
     "comingSoon": "قريباً..."
   },
+  "users": {
+    "title": "المستخدمون"
+  },
   "settings": {
-    "title": "الإعدادات",
+    "title": "المستخدمون",
     "language": "اللغة",
     "company": "الشركة",
     "users": "المستخدمون",

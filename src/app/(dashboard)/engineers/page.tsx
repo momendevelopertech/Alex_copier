@@ -70,6 +70,7 @@ export default function EngineersPage() {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [selectedAccount, setSelectedAccount] = useState<LinkableUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Engineer | null>(null);
   const [linkDraft, setLinkDraft] = useState<{ engineerId: string; userId: string }>({ engineerId: "", userId: "" });
@@ -182,9 +183,21 @@ const [savingLink, setSavingLink] = useState(false);
       body: JSON.stringify(body),
     });
     setForm(emptyForm);
+    setSelectedAccount(null);
     setShowForm(false);
     fetchEngineers();
     fetchLinkableUsers();
+  };
+
+  const handleUserSelection = (userId: string) => {
+    const selectedUser = linkableUsers.find((user) => user.id === userId) ?? null;
+    setSelectedAccount(selectedUser);
+    setForm((prev) => ({
+      ...prev,
+      userId,
+      name: prev.name || selectedUser?.name || "",
+      email: prev.email || selectedUser?.email || "",
+    }));
   };
 
   const handleDelete = async (id: string) => {
@@ -224,7 +237,13 @@ const [savingLink, setSavingLink] = useState(false);
   };
 
   const setField = (field: string, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === "userId" && value === "") {
+        setSelectedAccount(null);
+      }
+      return next;
+    });
   };
 
   // Users available for linking: unlinked accounts + the one already linked to the selected engineer.
@@ -237,7 +256,7 @@ const [savingLink, setSavingLink] = useState(false);
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("engineers.title")}</h1>
         <button
-          onClick={() => { setShowForm(!showForm); setSelected(null); }}
+          onClick={() => { setShowForm(!showForm); setSelected(null); setSelectedAccount(null); setForm(emptyForm); }}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
         >
           {showForm ? (<><X size={16} />{t("common.cancel")}</>) : (<><Plus size={16} />{t("engineers.addEngineer")}</>)}
@@ -272,7 +291,7 @@ const [savingLink, setSavingLink] = useState(false);
             />
             <select
               value={form.userId}
-              onChange={(e) => setField("userId", e.target.value)}
+              onChange={(e) => handleUserSelection(e.target.value)}
               className="border rounded-lg px-4 py-2 w-full"
             >
               <option value="">{t("engineers.selectAccountOptional")}</option>
@@ -280,6 +299,17 @@ const [savingLink, setSavingLink] = useState(false);
                 <option key={u.id} value={u.id}>{u.name} — {u.email}</option>
               ))}
             </select>
+
+            {selectedAccount && (
+              <div className="md:col-span-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+                <div className="font-medium mb-1">{t("engineers.selectedAccount")}</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div><span className="font-medium">{t("engineers.name")}: </span>{selectedAccount.name}</div>
+                  <div><span className="font-medium">{t("customers.email")}: </span>{selectedAccount.email}</div>
+                  <div className="md:col-span-2"><span className="font-medium">{t("settings.password")}: </span>{t("engineers.passwordHidden")}</div>
+                </div>
+              </div>
+            )}
             <input
               type="number"
               placeholder={t("engineers.baseSalary")}
@@ -329,40 +359,40 @@ const [savingLink, setSavingLink] = useState(false);
               {t("common.close")}
             </button>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
-            <div><span className="text-gray-500">{t("customers.phone")}:</span> {selected.phone || "—"}</div>
-            <div><span className="text-gray-500">{t("customers.email")}:</span> {selected.email || "—"}</div>
-            <div><span className="text-gray-500">{t("engineers.baseSalary")}:</span> {selected.baseSalary.toLocaleString()}</div>
-            <div><span className="text-gray-500">{t("engineers.transportAllowance")}:</span> {selected.transportAllowance.toLocaleString()}</div>
-            <div><span className="text-gray-500">{t("engineers.commissionRate")}:</span> {selected.commissionRate}%</div>
-            <div><span className="text-gray-500">{t("engineers.workload")}:</span> {selected.openAssignedCount ?? 0}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 text-sm mb-4">
+            <div className="rounded-xl bg-slate-50 p-3"><span className="block text-gray-500 mb-1">{t("customers.phone")}</span><span className="font-medium">{selected.phone || "—"}</span></div>
+            <div className="rounded-xl bg-slate-50 p-3"><span className="block text-gray-500 mb-1">{t("customers.email")}</span><span className="font-medium">{selected.email || selected.user?.email || "—"}</span></div>
+            <div className="rounded-xl bg-slate-50 p-3"><span className="block text-gray-500 mb-1">{t("engineers.baseSalary")}</span><span className="font-medium">{selected.baseSalary.toLocaleString()}</span></div>
+            <div className="rounded-xl bg-slate-50 p-3"><span className="block text-gray-500 mb-1">{t("engineers.transportAllowance")}</span><span className="font-medium">{selected.transportAllowance.toLocaleString()}</span></div>
+            <div className="rounded-xl bg-slate-50 p-3"><span className="block text-gray-500 mb-1">{t("engineers.commissionRate")}</span><span className="font-medium">{selected.commissionRate}%</span></div>
+            <div className="rounded-xl bg-slate-50 p-3"><span className="block text-gray-500 mb-1">{t("engineers.workload")}</span><span className="font-medium">{selected.openAssignedCount ?? 0}</span></div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end mb-4 border-t border-gray-100 pt-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">{t("engineers.linkedAccount")}</label>
-              <select
-                value={detailLinkUserId}
-                onChange={(e) =>
-                  setLinkDraft({ engineerId: selected.id, userId: e.target.value })
-                }
-                className="border rounded-lg px-3 py-2 w-full"
-              >
-                <option value="">{t("engineers.noLinkedAccount")}</option>
-                {availableForDetail.map((u) => (
-                  <option key={u.id} value={u.id}>{u.name} — {u.email}</option>
-                ))}
-              </select>
-            </div>
-            <button
-              onClick={saveLinkedUser}
-              disabled={savingLink || detailLinkUserId === (selected.user?.id ?? "")}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed justify-self-start"
-            >
-              {<Save size={14} className="inline-block me-1" />}{<Save size={14} className="inline-block me-1" />}{savingLink ? t("common.loading") : t("common.save")}
-            </button>
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] gap-4 items-end mb-4 border-t border-gray-100 pt-4">
+           <div>
+             <label className="block text-sm font-medium mb-1">{t("engineers.linkedAccount")}</label>
+             <select
+               value={detailLinkUserId}
+               onChange={(e) =>
+                 setLinkDraft({ engineerId: selected.id, userId: e.target.value })
+               }
+               className="border rounded-lg px-3 py-2.5 w-full bg-white"
+             >
+               <option value="">{t("engineers.noLinkedAccount")}</option>
+               {availableForDetail.map((u) => (
+                 <option key={u.id} value={u.id}>{u.name} — {u.email}</option>
+               ))}
+             </select>
+           </div>
+           <button
+             onClick={saveLinkedUser}
+             disabled={savingLink || detailLinkUserId === (selected.user?.id ?? "")}
+             className="bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
+           >
+             <Save size={16} />
+             {savingLink ? t("common.loading") : t("common.save")}
+           </button>
           </div>
-
           {selected.areas.length > 0 && (
             <div className="mb-4">
               <h3 className="text-lg font-semibold mb-2">{t("engineers.areas")}</h3>
@@ -422,6 +452,7 @@ const [savingLink, setSavingLink] = useState(false);
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("engineers.name")}</th>
+                <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("customers.email")}</th>
                 <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("customers.phone")}</th>
                 <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("engineers.baseSalary")}</th>
                 <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("engineers.transportAllowance")}</th>
@@ -435,7 +466,7 @@ const [savingLink, setSavingLink] = useState(false);
             <tbody className="divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="py-10">
+                  <td colSpan={10} className="py-10">
                     <div className="flex items-center justify-center">
                       <PrinterLoader size="sm" label={t("common.loading")} />
                     </div>
@@ -443,7 +474,7 @@ const [savingLink, setSavingLink] = useState(false);
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-8 text-gray-400">
+                  <td colSpan={10} className="text-center py-8 text-gray-400">
                     {t("common.noData")}
                   </td>
                 </tr>
@@ -455,6 +486,7 @@ const [savingLink, setSavingLink] = useState(false);
                     onClick={() => setSelected(engineer)}
                   >
                     <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">{engineer.name}</td>
+                    <td className="px-4 py-3 text-sm whitespace-nowrap" dir="ltr">{engineer.email || engineer.user?.email || "—"}</td>
                     <td className="px-4 py-3 text-sm whitespace-nowrap"><span dir="ltr">{engineer.phone || "—"}</span></td>
                     <td className="px-4 py-3 text-sm">{engineer.baseSalary.toLocaleString()}</td>
                     <td className="px-4 py-3 text-sm">{engineer.transportAllowance.toLocaleString()}</td>
@@ -470,20 +502,22 @@ const [savingLink, setSavingLink] = useState(false);
                         {engineer.openAssignedCount ?? 0}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{engineer.user?.name ?? "—"}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{engineer.user?.name || engineer.user?.email || "—"}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${engineer.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-                        {engineer.isActive ? (locale === "ar" ? "نعم" : "Yes") : (locale === "ar" ? "لا" : "No")}
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${engineer.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${engineer.isActive ? "bg-green-500" : "bg-red-500"}`} />
+                        {engineer.isActive ? t("common.active") : t("common.inactive")}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(engineer.id); }}
-                        className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 text-xs font-medium text-red-600 transition hover:bg-red-100"
                         title={t("common.delete")}
                         aria-label={t("common.delete")}
                       >
-                        <Trash2 size={14} className="inline-block me-1" />{t("common.delete")}
+                        <Trash2 size={14} />
+                        {t("common.delete")}
                       </button>
                     </td>
                   </tr>

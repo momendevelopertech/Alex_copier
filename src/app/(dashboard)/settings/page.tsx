@@ -8,7 +8,7 @@ import FilterSelect from "@/components/FilterSelect";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useConfirm } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
-import { Plus, Pencil, Power, Eye, EyeOff, X } from "lucide-react";
+import { Plus, Pencil, Power, Eye, EyeOff, X, Trash2 } from "lucide-react";
 
 interface User {
   id: string;
@@ -41,16 +41,15 @@ const emptyForm = {
 };
 
 export default function SettingsPage() {
-  const { t, locale, setLocale, dir } = useI18n();
+  const { t, locale, dir } = useI18n();
   const confirmAction = useConfirm();
-  
+
   const { data: session } = useSession();
   const meId = (session?.user as { id?: string })?.id;
 
-  const [activeTab, setActiveTab] = useState<"language" | "users">("language");
   const [users, setUsers] = useState<User[]>([]);
   const [usersLoaded, setUsersLoaded] = useState(false);
-  const loading = activeTab === "users" && !usersLoaded;
+  const loading = !usersLoaded;
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [banner, setBanner] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -73,7 +72,7 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
-    if (activeTab !== "users" || usersLoaded) return;
+    if (usersLoaded) return;
     let cancelled = false;
     fetch("/api/users")
       .then((r) => r.json())
@@ -88,7 +87,7 @@ export default function SettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, usersLoaded]);
+  }, [usersLoaded]);
 
   const filteredUsers = users.filter(
     (user) =>
@@ -182,65 +181,40 @@ export default function SettingsPage() {
     }
   };
 
-  const tabs = [
-    { key: "language" as const, label: t("settings.language"), icon: "🌐" },
-    { key: "users" as const, label: t("settings.users"), icon: "👥" },
-  ];
+  const handleDelete = async (user: User) => {
+    if (user.id === meId) {
+      setBanner({ type: "error", text: "لا يمكنك حذف حسابك الشخصي" });
+      return;
+    }
+
+    if (!(await confirmAction({ message: `${t("common.deleteConfirm")}\n${user.name} — ${user.email}` }))) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/users/${user.id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        setBanner({
+          type: "error",
+          text: apiErrorMessage(data, t, "settings.actionFailed"),
+        });
+        return;
+      }
+
+      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+      setBanner({ type: "success", text: t("common.deletedSuccessfully") });
+    } catch {
+      setBanner({ type: "error", text: t("settings.actionFailed") });
+    }
+  };
 
   return (
     <div dir={dir}>
-      <h1 className="text-xl sm:text-2xl font-bold mb-6">{t("settings.title")}</h1>
+      <h1 className="text-xl sm:text-2xl font-bold mb-6">{t("users.title")}</h1>
 
-      <div className="flex gap-2 mb-6">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              activeTab === tab.key
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"
-            }`}
-          >
-            {tab.icon} {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === "language" && (
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-lg font-semibold mb-4">{t("settings.language")}</h2>
-          <div className="flex gap-4">
-            <button
-              onClick={() => setLocale("ar")}
-              className={`px-6 py-4 rounded-xl border-2 text-center transition ${
-                locale === "ar"
-                  ? "border-blue-600 bg-blue-50 text-blue-700"
-                  : "border-gray-200 hover:border-gray-400"
-              }`}
-            >
-              <div className="text-2xl mb-1">🇪🇬</div>
-              <div className="font-semibold">العربية</div>
-              <div className="text-xs text-gray-500 mt-1">Right to Left</div>
-            </button>
-            <button
-              onClick={() => setLocale("en")}
-              className={`px-6 py-4 rounded-xl border-2 text-center transition ${
-                locale === "en"
-                  ? "border-blue-600 bg-blue-50 text-blue-700"
-                  : "border-gray-200 hover:border-gray-400"
-              }`}
-            >
-              <div className="text-2xl mb-1">🇬🇧</div>
-              <div className="font-semibold">English</div>
-              <div className="text-xs text-gray-500 mt-1">Left to Right</div>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {activeTab === "users" && (
-        <div className="space-y-3">
+      <div className="space-y-3">
           {banner && (
             <div
               className={`rounded-lg px-4 py-3 text-sm flex items-center justify-between ${
@@ -305,7 +279,7 @@ export default function SettingsPage() {
                         <tr key={user.id} className={`hover:bg-gray-50 ${!user.isActive ? "opacity-60" : ""}`}>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-3">
-                              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${ROLE_BADGES[user.role] || "bg-gray-100 text-gray-700"}`}>
+                              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold ${ROLE_BADGES[user.role] || "bg-gray-100 text-gray-700"}`}>
                                 {initials}
                               </span>
                               <div className="min-w-0">
@@ -343,23 +317,33 @@ export default function SettingsPage() {
                                 onClick={() => openEdit(user)}
                                 title={t("settings.editUser")}
                                 aria-label={t("settings.editUser")}
-                                className="rounded-lg p-2 text-gray-400 transition hover:bg-blue-50 hover:text-blue-600"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-blue-50 hover:text-blue-600"
                               >
-                                <Pencil size={16} />
+                                <Pencil size={18} />
                               </button>
                               {!isSelf && (
-                                <button
-                                  onClick={() => toggleStatus(user)}
-                                  title={t(user.isActive ? "settings.suspendAction" : "settings.activateAction")}
-                                  aria-label={t(user.isActive ? "settings.suspendAction" : "settings.activateAction")}
-                                  className={`rounded-lg p-2 transition ${
-                                    user.isActive
-                                      ? "text-gray-400 hover:bg-red-50 hover:text-red-600"
-                                      : "text-gray-400 hover:bg-green-50 hover:text-green-600"
-                                  }`}
-                                >
-                                  <Power size={16} />
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() => toggleStatus(user)}
+                                    title={t(user.isActive ? "settings.suspendAction" : "settings.activateAction")}
+                                    aria-label={t(user.isActive ? "settings.suspendAction" : "settings.activateAction")}
+                                    className={`inline-flex h-9 w-9 items-center justify-center rounded-lg transition ${
+                                      user.isActive
+                                        ? "text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                        : "text-gray-500 hover:bg-green-50 hover:text-green-600"
+                                    }`}
+                                  >
+                                    <Power size={18} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(user)}
+                                    title={t("common.delete")}
+                                    aria-label={t("common.delete")}
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-red-50 hover:text-red-600"
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
+                                </>
                               )}
                             </div>
                           </td>
@@ -377,7 +361,6 @@ export default function SettingsPage() {
             )}
           </div>
         </div>
-      )}
 
       {modalOpen && (
         <div

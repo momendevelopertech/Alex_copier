@@ -252,6 +252,8 @@ export function toRecentRequestViews(rows: {
 }
 
 export interface DashboardPayload {
+  role?: string;
+  view?: "MANAGEMENT" | "ENGINEER";
   monthStart: string;
   generatedAt: string;
   kpis: {

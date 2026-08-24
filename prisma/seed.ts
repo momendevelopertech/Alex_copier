@@ -106,12 +106,11 @@ async function main() {
   const passwordHash = await bcrypt.hash('password123', 10);
 
   const users = [
-    { id: 'user-omar', name: 'عمر أحمد', email: 'omar@alex-copier.com', role: 'GENERAL_MANAGER' as const, companyId: company1.id },
-    { id: 'user-sarah', name: 'سارة محمد', email: 'sarah@jmal-ahlat.com', role: 'COMPANY_MANAGER' as const, companyId: company1.id },
-    { id: 'user-ahmed', name: 'أحمد عبدالرحمن', email: 'ahmed@alex-copier.com', role: 'ACCOUNTANT' as const, companyId: company1.id },
-    { id: 'user-mohamed', name: 'محمد حسن', email: 'mohamed@alex-copier.com', role: 'MAINTENANCE_MANAGER' as const, companyId: company1.id },
+    { id: 'user-reza', name: 'رضا', email: 'reza@alex-copier.com', role: 'GENERAL_MANAGER' as const, companyId: company1.id },
+    { id: 'user-sara', name: 'سارة محمد', email: 'sarah@jmal-ahlat.com', role: 'COMPANY_MANAGER' as const, companyId: company1.id },
+    { id: 'user-amr-accountant', name: 'عمرو', email: 'amr.accountant@alex-copier.com', role: 'ACCOUNTANT' as const, companyId: company1.id },
+    { id: 'user-amr-maintenance', name: 'عمرو', email: 'amr.maintenance@alex-copier.com', role: 'MAINTENANCE_MANAGER' as const, companyId: company1.id },
     { id: 'user-ali', name: 'علي خالد', email: 'ali@alex-copier.com', role: 'WORKSHOP_MANAGER' as const, companyId: company1.id },
-    { id: 'user-khaled', name: 'خالد إبراهيم', email: 'khaled@alex-copier.com', role: 'ENGINEER' as const, companyId: null },
     { id: 'user-fatma', name: 'فاطمة عبدالله', email: 'fatma@alex-copier.com', role: 'SALES_EMPLOYEE' as const, companyId: company1.id },
   ];
 
@@ -119,10 +118,10 @@ async function main() {
     await prisma.user.create({ data: { ...u, passwordHash } });
   }
 
-  const user1 = await prisma.user.findUnique({ where: { id: 'user-omar' } });
-  const user2 = await prisma.user.findUnique({ where: { id: 'user-sarah' } });
-  const user3 = await prisma.user.findUnique({ where: { id: 'user-ahmed' } });
-  const user4 = await prisma.user.findUnique({ where: { id: 'user-mohamed' } });
+  const user1 = await prisma.user.findUnique({ where: { id: 'user-reza' } });
+  const user2 = await prisma.user.findUnique({ where: { id: 'user-sara' } });
+  const user3 = await prisma.user.findUnique({ where: { id: 'user-amr-accountant' } });
+  const user4 = await prisma.user.findUnique({ where: { id: 'user-amr-maintenance' } });
   const user5 = await prisma.user.findUnique({ where: { id: 'user-ali' } });
   const user7 = await prisma.user.findUnique({ where: { id: 'user-fatma' } });
   if (!user1 || !user2 || !user3 || !user4 || !user5 || !user7) throw new Error('Users not found');
@@ -237,9 +236,23 @@ async function main() {
 
   const createdEngineers: Awaited<ReturnType<typeof prisma.engineer.create>>[] = [];
   for (const engData of engineersData) {
+    const engineerUser = await prisma.user.upsert({
+      where: { email: engData.email },
+      update: { name: engData.name, role: 'ENGINEER', isActive: true },
+      create: {
+        id: `user-${engData.id}`,
+        name: engData.name,
+        email: engData.email,
+        passwordHash,
+        role: 'ENGINEER',
+        companyId: null,
+      },
+    });
+
     const eng = await prisma.engineer.create({
       data: {
         id: engData.id,
+        userId: engineerUser.id,
         name: engData.name,
         phone: engData.phone,
         email: engData.email,

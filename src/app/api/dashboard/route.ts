@@ -19,10 +19,75 @@ export async function GET() {
     const user = await requireAuth();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    const userRole = (user as { role?: string }).role ?? "";
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const openStatuses = [...OPEN_REQUEST_STATUSES];
     const expiryLimit = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    const engineer = userRole === "ENGINEER"
+      ? await prisma.engineer.findUnique({
+          where: { userId: user.id },
+          select: { id: true, name: true },
+        })
+      : null;
+
+    if (userRole === "ENGINEER" && engineer) {
+      const engineerId = engineer.id;
+      const [myOpenRequests, myUrgentRequests, myVisits, myAssignedOpen, myRecentRequests] = await Promise.all([
+        prisma.serviceRequest.count({ where: { engineerId, status: { in: openStatuses } } }),
+        prisma.serviceRequest.count({ where: { engineerId, status: { in: openStatuses }, priority: { in: ["URGENT", "EMERGENCY"] } } }),
+        prisma.visit.count({ where: { engineerId, visitedAt: { gte: monthStart } } }),
+        prisma.serviceRequest.groupBy({
+          by: ["engineerId"],
+          where: { engineerId, status: { in: openStatuses } },
+          _count: { _all: true },
+        }),
+        prisma.serviceRequest.findMany({
+          where: { engineerId, status: { in: openStatuses } },
+          orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+          take: 6,
+          select: {
+            id: true, requestNumber: true, description: true, priority: true, status: true, createdAt: true,
+            customer: { select: { name: true } },
+            machine: { select: { serialNumber: true } },
+            engineer: { select: { name: true } },
+          },
+        }),
+      ]);
+
+      const payload = {
+        role: userRole,
+        view: "ENGINEER" as const,
+        monthStart: monthStart.toISOString(),
+        generatedAt: now.toISOString(),
+        kpis: {
+          openRequests: myOpenRequests,
+          urgentRequests: myUrgentRequests,
+          unassignedRequests: 0,
+          visitsThisMonth: myVisits,
+          activeContracts: 0,
+          machinesInService: 0,
+        },
+        machineStatuses: {},
+        companies: [],
+        alerts: buildAlerts({
+          urgentRequests: myUrgentRequests,
+          unassignedRequests: 0,
+          overdueInstallments: { count: 0, totalAmount: 0 },
+          expiringContracts: [],
+          lowStockItems: 0,
+        }),
+        recentRequests: toRecentRequestViews(myRecentRequests),
+        engineerWorkload: buildEngineerWorkload(
+          [{ engineerId, _count: { _all: myVisits } }],
+          [{ engineerId, _count: { _all: myAssignedOpen[0]?._count._all ?? 0 } }],
+          [{ id: engineer.id, name: engineer.name }]
+        ),
+      };
+
+      return NextResponse.json(payload);
+    }
 
     const [
       companies,
@@ -111,6 +176,8 @@ export async function GET() {
     );
 
     const payload = {
+      role: userRole,
+      view: "MANAGEMENT" as const,
       monthStart: monthStart.toISOString(),
       generatedAt: now.toISOString(),
       kpis: {

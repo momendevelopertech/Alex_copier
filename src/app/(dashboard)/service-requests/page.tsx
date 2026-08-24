@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
@@ -30,7 +31,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 interface Customer { id: string; name: string; locations?: Location[]; }
-interface Engineer { id: string; name: string; }
+interface Engineer { id: string; name: string; user?: { id?: string | null } | null; userId?: string | null; }
 interface Machine { id: string; serialNumber: string; model?: string | null; currentOwnerId?: string | null; customerLocationId?: string | null; }
 interface Location { id: string; name: string; }
 interface ProblemDetail { id: string; description: string; }
@@ -74,9 +75,14 @@ const statusColors: Record<string, string> = {
 
 export default function ServiceRequestsPage() {
   const { t, dir } = useI18n();
+  const { data: session } = useSession();
+  const userRole = (session?.user as { role?: string } | undefined)?.role;
+  const isEngineer = userRole === "ENGINEER";
+  const canManageRequests = ["GENERAL_MANAGER", "COMPANY_MANAGER", "MAINTENANCE_MANAGER", "WORKSHOP_MANAGER"].includes(userRole ?? "");
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [engineers, setEngineers] = useState<Engineer[]>([]);
+  const myEngineerId = engineers.find((engineer) => engineer.user?.id === session?.user?.id || engineer.userId === session?.user?.id)?.id ?? null;
   const [machines, setMachines] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -164,18 +170,27 @@ export default function ServiceRequestsPage() {
     );
   };
 
-  const filtered = requests.filter(request =>
-    (!statusFilter || request.status === statusFilter) &&
-    (!priorityFilter || request.priority === priorityFilter) &&
-    (!engineerFilter || request.engineerId === engineerFilter) &&
-    inDateRange(request.createdAt, dateFrom, dateTo) &&
-    (matchesQuery(request.requestNumber, search) ||
-      matchesQuery(request.description, search) ||
-      matchesQuery(request.customer?.name, search) ||
-      matchesQuery(request.machine?.serialNumber, search) ||
-      matchesQuery(request.engineer?.name, search))
-  );
-  const hasActiveFilters = statusFilter !== "" || priorityFilter !== "" || engineerFilter !== "" || dateFrom !== "" || dateTo !== "" || search !== "";
+  const filtered = requests.filter((request) => {
+    if (isEngineer && myEngineerId && request.engineerId !== myEngineerId) {
+      return false;
+    }
+    if (isEngineer && !myEngineerId) {
+      return false;
+    }
+
+    return (
+      (!statusFilter || request.status === statusFilter) &&
+      (!priorityFilter || request.priority === priorityFilter) &&
+      (!engineerFilter || request.engineerId === engineerFilter) &&
+      inDateRange(request.createdAt, dateFrom, dateTo) &&
+      (matchesQuery(request.requestNumber, search) ||
+        matchesQuery(request.description, search) ||
+        matchesQuery(request.customer?.name, search) ||
+        matchesQuery(request.machine?.serialNumber, search) ||
+        matchesQuery(request.engineer?.name, search))
+    );
+  });
+  const hasActiveFilters = statusFilter !== "" || priorityFilter !== "" || (!isEngineer && engineerFilter !== "") || dateFrom !== "" || dateTo !== "" || search !== "";
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
@@ -209,9 +224,11 @@ export default function ServiceRequestsPage() {
     <div dir={dir}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("serviceRequests.title")}</h1>
-        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2">
-          {t("serviceRequests.newRequest")}
-        </button>
+        {canManageRequests && (
+          <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2">
+            {t("serviceRequests.newRequest")}
+          </button>
+        )}
       </div>
 
       {showForm && (
@@ -249,7 +266,9 @@ export default function ServiceRequestsPage() {
           <SearchInput value={search} onChange={setSearchInput} placeholder={t("serviceRequests.searchPlaceholder")} />
           <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("serviceRequests.status")} — ${t("common.all")}`} className="md:w-40" />
           <FilterSelect value={priorityFilter} onChange={(v) => { setPriorityFilter(v); setPage(1); }} options={Object.entries(PRIORITY_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("serviceRequests.priorityFilter")} — ${t("common.all")}`} className="md:w-36" />
-          <FilterSelect value={engineerFilter} onChange={(v) => { setEngineerFilter(v); setPage(1); }} options={engineers.map((e) => ({ value: e.id, label: e.name }))} allLabel={`${t("serviceRequests.engineerFilter")} — ${t("common.all")}`} className="md:w-44" />
+          {!isEngineer && (
+            <FilterSelect value={engineerFilter} onChange={(v) => { setEngineerFilter(v); setPage(1); }} options={engineers.map((e) => ({ value: e.id, label: e.name }))} allLabel={`${t("serviceRequests.engineerFilter")} — ${t("common.all")}`} className="md:w-44" />
+          )}
           <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={(v) => { setDateFrom(v); setPage(1); }} onToChange={(v) => { setDateTo(v); setPage(1); }} />
           {hasActiveFilters && (
             <button onClick={() => { setSearchInput(null); setStatusFilter(""); setPriorityFilter(""); setEngineerFilter(""); setDateFrom(""); setDateTo(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
@@ -315,8 +334,8 @@ export default function ServiceRequestsPage() {
                     <td className="px-4 py-3 text-sm text-center">{req.problems.length}</td>
                     <td className="px-4 py-3 text-sm">{renderStars(req.customerRating)}</td>
                     <td className="px-4 py-3 text-sm">
-                      <div className="flex gap-1">
-                        {req.status !== "CLOSED" && req.status !== "RESOLVED" && req.status !== "NOT_RESOLVED" && (
+                      <div className="flex gap-1 flex-wrap">
+                        {canManageRequests && req.status !== "CLOSED" && req.status !== "RESOLVED" && req.status !== "NOT_RESOLVED" && (
                           <>
                             <button onClick={() => setAssigningId(assigningId === req.id ? null : req.id)} className="text-purple-600 hover:underline text-xs">
                               {t("serviceRequests.assign")}
@@ -329,11 +348,26 @@ export default function ServiceRequestsPage() {
                             </button>
                           </>
                         )}
-                        {req.status === "RESOLVED" && (
+
+                        {isEngineer && req.engineerId === myEngineerId && req.status !== "CLOSED" && req.status !== "RESOLVED" && req.status !== "NOT_RESOLVED" && (
+                          <>
+                            <button onClick={() => handleStatus(req.id, "VISITED")} className="text-amber-600 hover:underline text-xs">
+                              {t("serviceRequests.visited")}
+                            </button>
+                            <button onClick={() => handleStatus(req.id, "RESOLVED")} className="text-green-600 hover:underline text-xs">
+                              {t("common.resolve")}
+                            </button>
+                            <button onClick={() => handleStatus(req.id, "NOT_RESOLVED")} className="text-red-600 hover:underline text-xs">
+                              {t("common.notResolve")}
+                            </button>
+                          </>
+                        )}
+
+                        {(canManageRequests || (isEngineer && req.engineerId === myEngineerId)) && req.status === "RESOLVED" && (
                           <button onClick={() => handleStatus(req.id, "CLOSED")} className="text-gray-600 hover:underline text-xs">{t("serviceRequests.closed")}</button>
                         )}
                       </div>
-                      {assigningId === req.id && (
+                      {assigningId === req.id && canManageRequests && (
                         <div className="mt-2 flex gap-1">
                           <select value={assignEngineerId} onChange={(e) => setAssignEngineerId(e.target.value)} className="border rounded-lg px-2 py-1 text-xs">
                             <option value="">{t("serviceRequests.selectEngineer")}</option>

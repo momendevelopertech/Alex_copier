@@ -15,7 +15,8 @@
     "finance": "Finance",
     "settlements": "Settlements",
     "reports": "Reports",
-    "settings": "Settings",
+    "settings": "Users",
+    "users": "Users",
     "companies": "Companies",
     "logout": "Logout",
     "notifications": "Notifications",
@@ -275,6 +276,8 @@
     "searchPlaceholder": "Search by name, phone, email, or skill...",
     "linkedAccount": "Linked login account",
     "workload": "Open requests",
+    "selectedAccount": "Selected account details",
+    "passwordHidden": "Hidden — the existing account login is used",
     "selectAccountOptional": "Link user account (optional)",
     "noLinkedAccount": "No linked account",
     "accountLinked": "Account link updated",
@@ -507,8 +510,11 @@
     "estimatedProfit": "Estimated Profit",
     "comingSoon": "Coming soon..."
   },
+  "users": {
+    "title": "Users"
+  },
   "settings": {
-    "title": "Settings",
+    "title": "Users",
     "language": "Language",
     "company": "Company",
     "users": "Users",

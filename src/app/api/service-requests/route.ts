@@ -55,6 +55,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized", code: authed ? "FORBIDDEN" : "UNAUTHORIZED" }, { status: authed ? 403 : 401 });
     }
 
+    const actorRole = (actor as { role?: string }).role;
+    const allowedCreateRoles = ["GENERAL_MANAGER", "COMPANY_MANAGER", "MAINTENANCE_MANAGER", "WORKSHOP_MANAGER"];
+    if (!actorRole || !allowedCreateRoles.includes(actorRole)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const body = await request.json();
     const { problems, ...data } = body;
 

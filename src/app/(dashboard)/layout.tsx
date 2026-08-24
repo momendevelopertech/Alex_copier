@@ -20,7 +20,8 @@ const pageTitles: Record<string, string> = {
   "/finance": "finance.title",
   "/settlements": "settlements.title",
   "/reports": "reports.title",
-  "/settings": "settings.title",
+  "/users": "users.title",
+  "/settings": "users.title",
   "/companies": "companies.title",
   "/investors": "investors.title",
   "/suppliers": "suppliers.title",
@@ -34,11 +35,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const titleKey = pageTitles[pathname] || "dashboard.title";
 
   return (
-    <div className="flex min-h-screen overflow-x-hidden bg-gray-50" dir="rtl">
+    <div className="flex h-screen overflow-hidden bg-gray-50" dir="rtl">
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col min-h-0">
         <Header title={t(titleKey)} />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-5 lg:p-6">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 lg:p-6">
           <UIProvider>{children}</UIProvider>
         </main>
       </div>

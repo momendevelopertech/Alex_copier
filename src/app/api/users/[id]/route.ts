@@ -6,6 +6,94 @@ import { ROLES } from "@/lib/permissions";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const admin = await requireRole("GENERAL_MANAGER");
+    if (!admin) {
+      const authed = await requireAuth();
+      return NextResponse.json(
+        { error: authed ? "Forbidden" : "Unauthorized", code: authed ? "FORBIDDEN" : "UNAUTHORIZED" },
+        { status: authed ? 403 : 401 }
+      );
+    }
+
+    const { id } = await params;
+    const target = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        engineer: true,
+      },
+    });
+
+    if (!target) {
+      return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
+    }
+
+    if (target.id === admin.id) {
+      return NextResponse.json({ error: "لا يمكنك حذف حسابك الشخصي" }, { status: 400 });
+    }
+
+    if (target.role === "ENGINEER") {
+      const engineerId = target.engineer?.id;
+      if (engineerId) {
+        const hasLinkedRecords = await prisma.$transaction(async (tx) => {
+          const [assignments, visits, settlements, custody, salaries, warranties] = await Promise.all([
+            tx.serviceRequest.count({ where: { engineerId } }),
+            tx.visit.count({ where: { engineerId } }),
+            tx.settlement.count({ where: { engineerId } }),
+            tx.sparePartCustody.count({ where: { engineerId } }),
+            tx.engineerSalary.count({ where: { engineerId } }),
+            tx.warranty.count({ where: { engineerId } }),
+          ]);
+
+          return assignments + visits + settlements + custody + salaries + warranties > 0;
+        });
+
+        if (hasLinkedRecords) {
+          return NextResponse.json(
+            { error: "لا يمكن حذف هذا المستخدم لأنه لديه سجلات مرتبطة مثل الطلبات أو الزيارات أو المواد المخصصة." },
+            { status: 409 }
+          );
+        }
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const engineerProfile = await tx.engineer.findUnique({ where: { userId: id } });
+
+      if (engineerProfile) {
+        await tx.serviceRequest.updateMany({
+          where: { engineerId: engineerProfile.id },
+          data: { engineerId: null },
+        });
+        await tx.settlement.updateMany({
+          where: { engineerId: engineerProfile.id },
+          data: { engineerId: null },
+        });
+        await tx.warranty.updateMany({
+          where: { engineerId: engineerProfile.id },
+          data: { engineerId: null },
+        });
+        await tx.engineer.delete({ where: { id: engineerProfile.id } });
+      }
+
+      await tx.session.deleteMany({ where: { userId: id } });
+      await tx.notification.deleteMany({
+        where: { OR: [{ userId: id }, { senderId: id }] },
+      });
+      await tx.user.delete({ where: { id } });
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[users] DELETE failed:", error);
+    return NextResponse.json({ error: "Failed to delete user" }, { status: 500 });
+  }
+}
+
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -98,18 +186,41 @@ export async function PUT(
       return NextResponse.json({ error: "لا توجد بيانات للتحديث" }, { status: 400 });
     }
 
-    const user = await prisma.user.update({
-      where: { id },
-      data,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        companyId: true,
-        isActive: true,
-        createdAt: true,
-      },
+    // Business rule: ENGINEER users always keep a matching engineer profile.
+    // Role/status changes sync the profile (create / reactivate / deactivate).
+    const newRole = (data.role as string | undefined) ?? target.role;
+    const newActive = (data.isActive as boolean | undefined) ?? target.isActive;
+    const roleChanged = "role" in data && data.role !== target.role;
+
+    const user = await prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id },
+        data,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          companyId: true,
+          isActive: true,
+          createdAt: true,
+        },
+      });
+
+      const profile = await tx.engineer.findUnique({ where: { userId: id } });
+      if (newRole === "ENGINEER") {
+        if (!profile) {
+          await tx.engineer.create({ data: { userId: id, name: updated.name, isActive: newActive } });
+        } else if (roleChanged || "isActive" in data) {
+          await tx.engineer.update({ where: { id: profile.id }, data: { isActive: newActive } });
+        }
+      } else if (profile && (roleChanged || ("isActive" in data && !newActive))) {
+        // Leaving the engineer role (or suspending the account) hides the
+        // technician from assignment lists without destroying work history.
+        await tx.engineer.update({ where: { id: profile.id }, data: { isActive: false } });
+      }
+
+      return updated;
     });
 
     return NextResponse.json(user);
