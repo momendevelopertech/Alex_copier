@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import FormModal from "@/components/FormModal";
+import SelectWithAdd from "@/components/SelectWithAdd";
 import { CheckCircle2, Plus, Save } from "lucide-react";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
 import ExportButton from "@/components/ExportButton";
@@ -33,6 +35,8 @@ const CAN_VERIFY_ROLES = ["GENERAL_MANAGER", "ACCOUNTANT", "COMPANY_MANAGER"];
 
 export default function SettlementsPage() {
   const { t, dir } = useI18n();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   
   const { success: toastSuccess, error: toastError } = useToast();
   const { data: session } = useSession();
@@ -64,6 +68,13 @@ export default function SettlementsPage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  useEffect(() => {
+    if (searchParams.get("add") === "1") {
+      setShowForm(true);
+      router.replace("/settlements", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,13 +156,29 @@ export default function SettlementsPage() {
               {companies.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">{t("common.customer")}</label>
-            <select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className={INPUT}>
-              <option value="">{t("settlements.selectCustomer")}</option>
-              {customers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-            </select>
-          </div>
+          <SelectWithAdd
+            label={t("common.customer")}
+            value={form.customerId}
+            onChange={(v) => setForm({ ...form, customerId: v })}
+            options={customers.map((c) => ({ value: c.id, label: c.name }))}
+            placeholder={t("settlements.selectCustomer")}
+            quickAddTitle="إضافة عميل جديد"
+            quickAddFields={[
+              { key: "name", label: "اسم العميل", required: true },
+              { key: "phone", label: "الهاتف", placeholder: "01xxxxxxxxx" },
+              { key: "companyName", label: "اسم الشركة" },
+              { key: "email", label: "البريد الإلكتروني", type: "email" },
+              { key: "address", label: "العنوان" },
+              { key: "city", label: "المدينة" },
+              { key: "customerType", label: "نوع العميل", type: "select", options: [{ value: "INDIVIDUAL", label: "فرد" }, { value: "COMPANY", label: "شركة" }] },
+              { key: "whatsapp", label: "واتساب" },
+            ]}
+            quickAddEndpoint="/api/customers"
+            onQuickAddSuccess={(item) => {
+              setCustomers((prev) => [...prev, item]);
+              setForm((f) => ({ ...f, customerId: item.id }));
+            }}
+          />
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">{t("common.engineer")}</label>
             <select value={form.engineerId} onChange={(e) => setForm({ ...form, engineerId: e.target.value })} className={INPUT}>

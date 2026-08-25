@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
@@ -72,6 +73,8 @@ const emptyForm = {
 
 export default function MachinesPage() {
   const { t, dir, locale } = useI18n();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const confirmAction = useConfirm();
 const { success: toastSuccess } = useToast();
   
@@ -101,6 +104,13 @@ const { success: toastSuccess } = useToast();
   useEffect(() => {
     fetchMachines();
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("add") === "1") {
+      setShowForm(true);
+      router.replace("/machines", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const filtered = machines.filter(
     (m) =>

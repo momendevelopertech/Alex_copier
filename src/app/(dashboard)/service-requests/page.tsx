@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
@@ -13,6 +14,7 @@ import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 import FormModal from "@/components/FormModal";
+import SelectWithAdd from "@/components/SelectWithAdd";
 
 const PRIORITY_LABELS: Record<string, string> = {
   NORMAL: "عادي",
@@ -76,6 +78,8 @@ const statusColors: Record<string, string> = {
 
 export default function ServiceRequestsPage() {
   const { t, dir } = useI18n();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { data: session } = useSession();
   const userRole = (session?.user as { role?: string } | undefined)?.role;
   const isEngineer = userRole === "ENGINEER";
@@ -125,6 +129,13 @@ export default function ServiceRequestsPage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  useEffect(() => {
+    if (searchParams.get("add") === "1") {
+      setShowForm(true);
+      router.replace("/service-requests", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,13 +250,30 @@ export default function ServiceRequestsPage() {
 
       <FormModal open={showForm} onClose={() => setShowForm(false)} title={t("serviceRequests.newRequest")}>
         <form onSubmit={handleCreate} className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-slate-700">{t("serviceRequests.selectCustomer")}</label>
-            <select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className={inputClass} required>
-              <option value="">{t("serviceRequests.selectCustomer")}</option>
-              {customers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-            </select>
-          </div>
+          <SelectWithAdd
+            label={t("serviceRequests.selectCustomer")}
+            value={form.customerId}
+            onChange={(v) => setForm({ ...form, customerId: v, locationId: "", machineId: "" })}
+            options={customers.map((c) => ({ value: c.id, label: c.name }))}
+            placeholder={t("serviceRequests.selectCustomer")}
+            required
+            quickAddTitle="إضافة عميل جديد"
+            quickAddFields={[
+              { key: "name", label: "اسم العميل", required: true },
+              { key: "phone", label: "الهاتف", placeholder: "01xxxxxxxxx" },
+              { key: "companyName", label: "اسم الشركة" },
+              { key: "email", label: "البريد الإلكتروني", type: "email" },
+              { key: "address", label: "العنوان" },
+              { key: "city", label: "المدينة" },
+              { key: "customerType", label: "نوع العميل", type: "select", options: [{ value: "INDIVIDUAL", label: "فرد" }, { value: "COMPANY", label: "شركة" }] },
+              { key: "whatsapp", label: "واتساب" },
+            ]}
+            quickAddEndpoint="/api/customers"
+            onQuickAddSuccess={(item) => {
+              setCustomers((prev) => [...prev, item]);
+              setForm((f) => ({ ...f, customerId: item.id, locationId: "", machineId: "" }));
+            }}
+          />
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-slate-700">{t("machineDetails.location")}</label>
             <select value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value, machineId: "" })} className={inputClass}>

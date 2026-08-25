@@ -1,17 +1,19 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
-import { Eye, Pencil, Plus, Save, X } from "lucide-react";
+import { Eye, Pencil, Plus, Printer, Save, X } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
 import FormModal from "@/components/FormModal";
+import SelectWithAdd from "@/components/SelectWithAdd";
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CASH: "نقدي",
@@ -61,6 +63,8 @@ const getProductTierPrice = (product: Product | undefined, tier: string) => {
 
 export default function SalesPage() {
   const { t, dir } = useI18n();
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   const { success: toastSuccess, error: toastError } = useToast();
   const [orders, setOrders] = useState<SalesOrder[]>([]);
@@ -157,6 +161,13 @@ export default function SalesPage() {
 
   useEffect(() => { fetchData(); }, []);
 
+  useEffect(() => {
+    if (searchParams.get("add") === "1") {
+      setShowForm(true);
+      router.replace("/sales", { scroll: false });
+    }
+  }, [searchParams, router]);
+
   const updateItemRow = (index: number, next: Partial<ItemRow>) => {
     setItemRows((current) => current.map((row, rowIndex) => {
       if (rowIndex !== index) return row;
@@ -241,7 +252,30 @@ export default function SalesPage() {
         <form onSubmit={handleCreate} className="space-y-5">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("companies.selectCompany")}</label><select value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required><option value="">{t("companies.selectCompany")}</option>{companies.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></div>
-            <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("sales.selectCustomer")}</label><select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required><option value="">{t("sales.selectCustomer")}</option>{customers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></div>
+            <SelectWithAdd
+              label={t("sales.customer")}
+              value={form.customerId}
+              onChange={(v) => setForm({ ...form, customerId: v })}
+              options={customers.map((c) => ({ value: c.id, label: c.name }))}
+              placeholder={t("sales.selectCustomer")}
+              required
+              quickAddTitle="إضافة عميل جديد"
+              quickAddFields={[
+                { key: "name", label: "اسم العميل", required: true },
+                { key: "phone", label: "الهاتف", placeholder: "01xxxxxxxxx" },
+                { key: "companyName", label: "اسم الشركة" },
+                { key: "email", label: "البريد الإلكتروني", type: "email" },
+                { key: "address", label: "العنوان" },
+                { key: "city", label: "المدينة" },
+                { key: "customerType", label: "نوع العميل", type: "select", options: [{ value: "INDIVIDUAL", label: "فرد" }, { value: "COMPANY", label: "شركة" }] },
+                { key: "whatsapp", label: "واتساب" },
+              ]}
+              quickAddEndpoint="/api/customers"
+              onQuickAddSuccess={(item) => {
+                setCustomers((prev) => [...prev, item]);
+                setForm((f) => ({ ...f, customerId: item.id }));
+              }}
+            />
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">المهندس (اختياري)</label><select value={form.engineerId} onChange={(e) => setForm({ ...form, engineerId: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="">المهندس (اختياري)</option>{engineers.map((engineer) => (<option key={engineer.id} value={engineer.id}>{engineer.name}</option>))}</select></div>
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">نوع الطلب</label><select value={form.orderType} onChange={(e) => setForm({ ...form, orderType: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="MACHINE_SALE">{ORDER_TYPE_LABELS.MACHINE_SALE}</option><option value="SPARE_PART_SALE">{ORDER_TYPE_LABELS.SPARE_PART_SALE}</option></select></div>
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">طريقة الدفع</label><select value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="CASH">{PAYMENT_METHOD_LABELS.CASH}</option><option value="CREDIT">{PAYMENT_METHOD_LABELS.CREDIT}</option><option value="INSTALLMENT">{PAYMENT_METHOD_LABELS.INSTALLMENT}</option><option value="MIXED">{PAYMENT_METHOD_LABELS.MIXED}</option></select></div>
@@ -401,6 +435,9 @@ export default function SalesPage() {
                           </button>
                           <button onClick={(e) => { e.stopPropagation(); openEdit(order); }} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2 text-xs font-medium text-blue-600 transition hover:bg-blue-100" title={t("common.edit")}>
                             <Pencil size={14} />{t("common.edit")}
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); window.open(`/api/invoices?type=sale&id=${order.id}`, "_blank"); }} className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-2 text-xs font-medium text-green-600 transition hover:bg-green-100" title="طباعة الفاتورة">
+                            <Printer size={14} />
                           </button>
                           {order.items.length > 0 && (
                             <button onClick={() => setExpandedId(expandedId === order.id ? null : order.id)} className="text-blue-600 hover:underline text-xs">

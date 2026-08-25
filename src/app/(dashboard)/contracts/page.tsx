@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
-import { Plus, Save, Pencil, Eye } from "lucide-react";
+import { Plus, Printer, Save, Pencil, Eye } from "lucide-react";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 import FormModal from "@/components/FormModal";
+import SelectWithAdd from "@/components/SelectWithAdd";
 
 const TYPE_LABELS: Record<string, string> = {
   MAINTENANCE_ONLY: "صيانة فقط",
@@ -73,6 +75,8 @@ const toInputDate = (date: Date) => date.toISOString().slice(0, 10);
 
 export default function ContractsPage() {
   const { t, dir } = useI18n();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -118,6 +122,13 @@ export default function ContractsPage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  useEffect(() => {
+    if (searchParams.get("add") === "1") {
+      setShowForm(true);
+      router.replace("/contracts", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,13 +239,30 @@ export default function ContractsPage() {
       <FormModal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); setForm({ customerId: "", contractType: "MAINTENANCE_ONLY", startDate: "", endDate: "", value: "", amountPaid: "", paymentMethod: "CASH", billingCycle: "MONTHLY", notes: "", machineIds: [] }); }} title={editingId ? t("common.edit") : t("contracts.addContract")} wide>
         <form onSubmit={editingId ? handleUpdate : handleCreate} className="space-y-5">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-slate-700">{t("contracts.selectCustomer")}</label>
-                <select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                  <option value="">{t("contracts.selectCustomer")}</option>
-                  {customers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-                </select>
-              </div>
+              <SelectWithAdd
+                label={t("contracts.selectCustomer")}
+                value={form.customerId}
+                onChange={(v) => setForm({ ...form, customerId: v })}
+                options={customers.map((c) => ({ value: c.id, label: c.name }))}
+                placeholder={t("contracts.selectCustomer")}
+                required
+              quickAddTitle="إضافة عميل جديد"
+              quickAddFields={[
+                { key: "name", label: "اسم العميل", required: true },
+                { key: "phone", label: "الهاتف", placeholder: "01xxxxxxxxx" },
+                { key: "companyName", label: "اسم الشركة" },
+                { key: "email", label: "البريد الإلكتروني", type: "email" },
+                { key: "address", label: "العنوان" },
+                { key: "city", label: "المدينة" },
+                { key: "customerType", label: "نوع العميل", type: "select", options: [{ value: "INDIVIDUAL", label: "فرد" }, { value: "COMPANY", label: "شركة" }] },
+                { key: "whatsapp", label: "واتساب" },
+              ]}
+                quickAddEndpoint="/api/customers"
+                onQuickAddSuccess={(item) => {
+                  setCustomers((prev) => [...prev, item]);
+                  setForm((f) => ({ ...f, customerId: item.id }));
+                }}
+              />
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-slate-700">{t("contracts.type")}</label>
                 <select value={form.contractType} onChange={(e) => setForm({ ...form, contractType: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -381,6 +409,9 @@ export default function ContractsPage() {
                         </button>
                         <button onClick={() => openEdit(c)} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2 text-xs font-medium text-blue-600 transition hover:bg-blue-100" title={t("common.edit")}>
                           <Pencil size={14} />{t("common.edit")}
+                        </button>
+                        <button onClick={() => window.open(`/api/invoices?type=contract&id=${c.id}`, "_blank")} className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-2 text-xs font-medium text-green-600 transition hover:bg-green-100" title="طباعة العقد">
+                          <Printer size={14} />
                         </button>
                         <button onClick={() => handleStatusToggle(c.id, c.status)} className={`text-xs hover:underline ${c.status === "ACTIVE" ? "text-red-600" : "text-green-600"}`}>
                           {c.status === "ACTIVE" ? t("contracts.terminate") : t("contracts.activate")}

@@ -8,6 +8,7 @@ import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 import FormModal from "@/components/FormModal";
 import { Plus, Save, Trash2, X } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useConfirm, useToast } from "@/components/UIProvider";
 
 interface Investor {
@@ -29,6 +30,8 @@ const emptyForm = {
 
 export default function InvestorsPage() {
   const { t, dir } = useI18n();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const confirmAction = useConfirm();
   const { success: toastSuccess } = useToast();
   const [investors, setInvestors] = useState<Investor[]>([]);
@@ -52,6 +55,13 @@ export default function InvestorsPage() {
   useEffect(() => {
     fetchInvestors();
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("add") === "1") {
+      setShowForm(true);
+      router.replace("/investors", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const filtered = investors.filter(
     (i) =>

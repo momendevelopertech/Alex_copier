@@ -8,6 +8,7 @@ import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
 import { Eye, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import PrinterLoader from "@/components/PrinterLoader";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
 import FormModal from "@/components/FormModal";
@@ -69,6 +70,8 @@ const TYPE_BADGES: Record<string, string> = {
 
 export default function ProductsPage() {
   const { t, dir } = useI18n();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const confirmAction = useConfirm();
   const { success: toastSuccess, error: toastError } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
@@ -105,6 +108,13 @@ export default function ProductsPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("add") === "1") {
+      setShowForm(true);
+      router.replace("/products", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const filtered = products.filter(
     (p) =>

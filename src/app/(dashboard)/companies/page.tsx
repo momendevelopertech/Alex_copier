@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
 import PrinterLoader from "@/components/PrinterLoader";
 import { apiErrorMessage } from "@/lib/api-client";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useToast, useConfirm } from "@/components/UIProvider";
 import { Pencil, Plus, Save, Trash2 } from "lucide-react";
 import FormModal from "@/components/FormModal";
@@ -45,6 +46,8 @@ const emptyForm = {
 
 export default function CompaniesPage() {
   const { t, dir } = useI18n();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [companies, setCompanies] = useState<CompanyData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -70,6 +73,13 @@ export default function CompaniesPage() {
   useEffect(() => {
     fetchCompanies();
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("add") === "1") {
+      setShowForm(true);
+      router.replace("/companies", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const totalSales = companies.reduce((s, c) => s + c.totalSales, 0);
   const totalPurchases = companies.reduce((s, c) => s + c.totalPurchases, 0);

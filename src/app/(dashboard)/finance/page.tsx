@@ -9,6 +9,7 @@ import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
 import { Plus, Save, X } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
+import { useSearchParams, useRouter } from "next/navigation";
 import FormModal from "@/components/FormModal";
 
 interface Company { id: string; name: string; }
@@ -19,6 +20,8 @@ interface Expense {
 
 export default function FinancePage() {
   const { t, dir } = useI18n();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +45,13 @@ export default function FinancePage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  useEffect(() => {
+    if (searchParams.get("add") === "1") {
+      setShowForm(true);
+      router.replace("/finance", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const filtered = expenses.filter(expense =>
     (!companyFilter || expense.companyId === companyFilter) &&

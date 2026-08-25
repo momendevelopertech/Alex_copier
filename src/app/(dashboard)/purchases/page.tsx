@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
-import { Plus, Save, X } from "lucide-react";
+import { Plus, Printer, Save, X } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 import FormModal from "@/components/FormModal";
+import SelectWithAdd from "@/components/SelectWithAdd";
 
 interface Supplier { id: string; name: string; }
 interface Company { id: string; name: string; }
@@ -37,6 +39,8 @@ const statusColors: Record<string, string> = {
 
 export default function PurchasesPage() {
   const { t, dir } = useI18n();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -68,6 +72,13 @@ export default function PurchasesPage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  useEffect(() => {
+    if (searchParams.get("add") === "1") {
+      setShowForm(true);
+      router.replace("/purchases", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const filtered = orders.filter(order =>
     (!statusFilter || order.status === statusFilter) &&
@@ -144,13 +155,27 @@ export default function PurchasesPage() {
                 {companies.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
               </select>
             </div>
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-slate-700">{t("purchases.selectSupplier")}</label>
-              <select value={form.supplierId} onChange={(e) => setForm({ ...form, supplierId: e.target.value })} className={inputClass} required>
-                <option value="">{t("purchases.selectSupplier")}</option>
-                {suppliers.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
-              </select>
-            </div>
+            <SelectWithAdd
+              label={t("purchases.selectSupplier")}
+              value={form.supplierId}
+              onChange={(v) => setForm({ ...form, supplierId: v })}
+              options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+              placeholder={t("purchases.selectSupplier")}
+              required
+              quickAddTitle="إضافة مورد جديد"
+              quickAddFields={[
+                { key: "name", label: "اسم المورد", required: true },
+                { key: "contactName", label: "اسم التواصل" },
+                { key: "phone", label: "الهاتف", placeholder: "01xxxxxxxxx" },
+                { key: "email", label: "البريد الإلكتروني", type: "email" },
+                { key: "address", label: "العنوان" },
+              ]}
+              quickAddEndpoint="/api/suppliers"
+              onQuickAddSuccess={(item) => {
+                setSuppliers((prev) => [...prev, item]);
+                setForm((f) => ({ ...f, supplierId: item.id }));
+              }}
+            />
           </div>
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-slate-700">{t("common.notes")}</label>
@@ -224,6 +249,7 @@ export default function PurchasesPage() {
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.status")}</th>
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("purchases.total")}</th>
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.date")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -239,6 +265,11 @@ export default function PurchasesPage() {
                     </td>
                     <td className="px-4 py-3 text-sm">{order.total.toLocaleString()}</td>
                     <td className="px-4 py-3 text-sm">{new Date(order.orderDate || order.createdAt).toLocaleDateString("ar-EG")}</td>
+                    <td className="px-4 py-3">
+                      <button onClick={() => window.open(`/api/invoices?type=purchase&id=${order.id}`, "_blank")} className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-2 text-xs font-medium text-green-600 transition hover:bg-green-100" title="طباعة الفاتورة">
+                        <Printer size={14} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useI18n } from "@/i18n/context";
 import { useSession, signOut } from "next-auth/react";
 import { hasPageAccess, type Page } from "@/lib/permissions";
@@ -30,6 +30,7 @@ import {
   LogOut,
   Menu,
   X,
+  Plus,
 } from "lucide-react";
 
 interface NavItem {
@@ -37,6 +38,7 @@ interface NavItem {
   href: string;
   icon: typeof LayoutDashboard;
   page?: Page;
+  canAdd?: boolean;
 }
 
 const navGroups: { key: string; items: NavItem[] }[] = [
@@ -50,28 +52,28 @@ const navGroups: { key: string; items: NavItem[] }[] = [
   {
     key: "navigation.group.salesCustomers",
     items: [
-      { key: "navigation.sales", href: "/sales", icon: DollarSign, page: "sales" },
-      { key: "navigation.customers", href: "/customers", icon: Users, page: "customers" },
-      { key: "navigation.contracts", href: "/contracts", icon: FileText, page: "contracts" },
-      { key: "navigation.returns", href: "/returns", icon: RotateCcw, page: "returns" },
-      { key: "navigation.machines", href: "/machines", icon: Printer, page: "machines" },
+      { key: "navigation.sales", href: "/sales", icon: DollarSign, page: "sales", canAdd: true },
+      { key: "navigation.customers", href: "/customers", icon: Users, page: "customers", canAdd: true },
+      { key: "navigation.contracts", href: "/contracts", icon: FileText, page: "contracts", canAdd: true },
+      { key: "navigation.returns", href: "/returns", icon: RotateCcw, page: "returns", canAdd: true },
+      { key: "navigation.machines", href: "/machines", icon: Printer, page: "machines", canAdd: true },
     ],
   },
   {
     key: "navigation.group.purchasing",
     items: [
-      { key: "navigation.purchases", href: "/purchases", icon: ShoppingCart, page: "purchases" },
-      { key: "navigation.suppliers", href: "/suppliers", icon: Truck, page: "suppliers" },
+      { key: "navigation.purchases", href: "/purchases", icon: ShoppingCart, page: "purchases", canAdd: true },
+      { key: "navigation.suppliers", href: "/suppliers", icon: Truck, page: "suppliers", canAdd: true },
       { key: "navigation.inventory", href: "/inventory", icon: Package, page: "inventory" },
-      { key: "navigation.warehouses", href: "/warehouses", icon: Warehouse, page: "warehouses" },
-      { key: "navigation.products", href: "/products", icon: Boxes, page: "products" },
+      { key: "navigation.warehouses", href: "/warehouses", icon: Warehouse, page: "warehouses", canAdd: true },
+      { key: "navigation.products", href: "/products", icon: Boxes, page: "products", canAdd: true },
     ],
   },
   {
     key: "navigation.group.maintenance",
     items: [
-      { key: "navigation.serviceRequests", href: "/service-requests", icon: AlertTriangle, page: "serviceRequests" },
-      { key: "navigation.engineers", href: "/engineers", icon: Wrench, page: "engineers" },
+      { key: "navigation.serviceRequests", href: "/service-requests", icon: AlertTriangle, page: "serviceRequests", canAdd: true },
+      { key: "navigation.engineers", href: "/engineers", icon: Wrench, page: "engineers", canAdd: true },
       { key: "navigation.workshop", href: "/workshop", icon: Cog, page: "workshop" },
     ],
   },
@@ -79,16 +81,16 @@ const navGroups: { key: string; items: NavItem[] }[] = [
     key: "navigation.group.finance",
     items: [
       { key: "navigation.finance", href: "/finance", icon: Wallet, page: "finance" },
-      { key: "navigation.settlements", href: "/settlements", icon: Receipt, page: "settlements" },
-      { key: "navigation.investors", href: "/investors", icon: PieChart, page: "investors" },
+      { key: "navigation.settlements", href: "/settlements", icon: Receipt, page: "settlements", canAdd: true },
+      { key: "navigation.investors", href: "/investors", icon: PieChart, page: "investors", canAdd: true },
     ],
   },
   {
     key: "navigation.group.admin",
     items: [
       { key: "navigation.reports", href: "/reports", icon: BarChart3, page: "reports" },
-      { key: "navigation.companies", href: "/companies", icon: Building2, page: "companies" },
-      { key: "navigation.users", href: "/users", icon: Users, page: "settings" },
+      { key: "navigation.companies", href: "/companies", icon: Building2, page: "companies", canAdd: true },
+      { key: "navigation.users", href: "/users", icon: Users, page: "settings", canAdd: true },
     ],
   },
 ];
@@ -98,6 +100,7 @@ export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const { t } = useI18n();
   const { data: session } = useSession();
   const userRole = (session?.user as { role?: string })?.role;
@@ -162,20 +165,35 @@ export default function Sidebar() {
                 const Icon = item.icon;
                 const active = isActive(item.href);
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    title={isCollapsed ? t(item.key) : undefined}
-                    className={`flex items-center gap-3 rounded-lg transition-colors min-h-11 ${
-                      active
-                        ? "bg-blue-600 text-white"
-                        : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                    } ${isCollapsed ? "justify-center mx-0 px-0" : "px-4 py-2.5 mx-2"}`}
-                  >
-                    <Icon size={isCollapsed ? 22 : 20} className="shrink-0" />
-                    {!isCollapsed && <span className="text-sm whitespace-nowrap">{t(item.key)}</span>}
-                  </Link>
+                  <div key={item.href} className={`flex items-center ${isCollapsed ? "" : "mx-2"}`}>
+                    <Link
+                      href={item.href}
+                      onClick={() => setMobileOpen(false)}
+                      title={isCollapsed ? t(item.key) : undefined}
+                      className={`flex flex-1 items-center gap-3 rounded-lg transition-colors min-h-11 ${
+                        active
+                          ? "bg-blue-600 text-white"
+                          : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                      } ${isCollapsed ? "justify-center px-0" : "px-4 py-2.5"}`}
+                    >
+                      <Icon size={isCollapsed ? 22 : 20} className="shrink-0" />
+                      {!isCollapsed && <span className="text-sm whitespace-nowrap">{t(item.key)}</span>}
+                    </Link>
+                    {!isCollapsed && item.canAdd && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setMobileOpen(false);
+                          router.push(`${item.href}?add=1`);
+                        }}
+                        title={`إضافة ${t(item.key)}`}
+                        className="ms-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-800 hover:text-white"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>

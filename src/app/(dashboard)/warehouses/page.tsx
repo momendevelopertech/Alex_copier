@@ -8,6 +8,7 @@ import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
 import { Pencil, Plus, Save, Trash2, Box, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import PrinterLoader from "@/components/PrinterLoader";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
 import FormModal from "@/components/FormModal";
@@ -72,6 +73,8 @@ const emptyForm = { name: "", companyId: "", isMain: false };
 
 export default function WarehousesPage() {
   const { t, dir } = useI18n();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const lang = dir === "rtl" ? "ar" : "en";
   const confirmAction = useConfirm();
   const { success: toastSuccess, error: toastError } = useToast();
@@ -108,6 +111,13 @@ export default function WarehousesPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("add") === "1") {
+      setShowForm(true);
+      router.replace("/warehouses", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const openDetail = async (warehouse: Warehouse) => {
     setDetailWarehouse(warehouse);

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, RotateCcw, ArrowDownLeft, ArrowUpRight, Trash2, Pencil, Eye } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Plus, RotateCcw, ArrowDownLeft, ArrowUpRight, Trash2, Pencil, Eye, Printer } from "lucide-react";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import FormModal from "@/components/FormModal";
@@ -81,6 +82,8 @@ const statusClasses: Record<string, string> = {
 
 export default function ReturnsPage() {
   const { t, dir } = useI18n();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { success: toastSuccess, error: toastError } = useToast();
   const [returns, setReturns] = useState<ReturnRecord[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -134,6 +137,13 @@ export default function ReturnsPage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  useEffect(() => {
+    if (searchParams.get("add") === "1") {
+      setShowForm(true);
+      router.replace("/returns", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const fetchSalesOrders = async (companyId: string) => {
     setSalesOrdersLoading(true);
@@ -426,6 +436,9 @@ export default function ReturnsPage() {
                       <div className="flex gap-2">
                         <button onClick={() => setViewingReturn(item)} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2 text-xs font-medium text-gray-600 transition hover:bg-gray-100" title={t("common.view")}>
                           <Eye size={14} />
+                        </button>
+                        <button onClick={() => window.open(`/api/invoices?type=return&id=${item.id}`, "_blank")} className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-2 text-xs font-medium text-green-600 transition hover:bg-green-100" title="طباعة المرتجع">
+                          <Printer size={14} />
                         </button>
                         {item.status === "PENDING" && (
                           <>
