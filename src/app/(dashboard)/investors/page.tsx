@@ -6,7 +6,8 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
-import { Plus, Trash2, X } from "lucide-react";
+import FormModal from "@/components/FormModal";
+import { Plus, Save, Trash2, X } from "lucide-react";
 import { useConfirm, useToast } from "@/components/UIProvider";
 
 interface Investor {
@@ -107,133 +108,99 @@ export default function InvestorsPage() {
   };
 
   return (
-    <div dir={dir}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("investors.title")}</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
-        >
-          {showForm ? (<><X size={16} />{t("common.cancel")}</>) : (<><Plus size={16} />{t("investors.addInvestor")}</>)}
-        </button>
-      </div>
+    <div dir={dir} className="space-y-5">
+      <div className="space-y-5">
+        <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>
+            <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">{t("investors.title")}</h1>
+          </div>
+          <button onClick={() => setShowForm(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"><Plus size={16} />{t("investors.addInvestor")}</button>
+        </div>
 
-      {showForm && (
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">{t("investors.addInvestor")}</h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <input
-              type="text"
-              placeholder={t("investors.name")}
-              value={form.name}
-              onChange={(e) => setField("name", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-              required
-            />
-            <input
-              type="text"
-              placeholder={t("customers.phone")}
-              value={form.phone}
-              onChange={(e) => setField("phone", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            />
-            <input
-              type="email"
-              placeholder={t("customers.email")}
-              value={form.email}
-              onChange={(e) => setField("email", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            />
-            <input
-              type="number"
-              step="0.01"
-              placeholder={t("investors.ownershipPct") + " %"}
-              value={form.ownershipPct}
-              onChange={(e) => setField("ownershipPct", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-              required
-            />
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
-            >
-              {t("common.save")}
-            </button>
+        <FormModal open={showForm} onClose={() => setShowForm(false)} title={t("investors.addInvestor")}>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("investors.name")}</label><input type="text" placeholder={t("investors.name")} value={form.name} onChange={(e) => setField("name", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required /></div>
+            <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("customers.phone")}</label><input type="text" placeholder={t("customers.phone")} value={form.phone} onChange={(e) => setField("phone", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+            <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("customers.email")}</label><input type="email" placeholder={t("customers.email")} value={form.email} onChange={(e) => setField("email", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+            <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("investors.ownershipPct")}</label><input type="number" step="0.01" placeholder={t("investors.ownershipPct") + " %"} value={form.ownershipPct} onChange={(e) => setField("ownershipPct", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required /></div>
+            <div className="flex flex-col-reverse gap-3 pt-1 md:col-span-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"><X size={16} className="ms-1 inline-block" />{t("common.cancel")}</button>
+              <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"><Save size={16} />{t("common.save")}</button>
+            </div>
           </form>
-        </div>
-      )}
+        </FormModal>
 
-      <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder={t("investors.searchPlaceholder")}
-        />
-        {hasActiveFilters && (
-          <button onClick={() => setSearch("")} className="text-sm text-gray-500 hover:text-gray-700 underline">
-            {t("common.resetFilters")}
-          </button>
-        )}
-        <div className="md:ms-auto">
-          <ExportButton filename="investors" getExport={exportInvestors} disabled={filtered.length === 0} />
-        </div>
-      </div>
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-2 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder={t("investors.searchPlaceholder")}
+            />
+            {hasActiveFilters && (
+              <button onClick={() => setSearch("")} className="text-sm text-gray-500 hover:text-gray-700 underline">
+                {t("common.resetFilters")}
+              </button>
+            )}
+            <div className="md:ms-auto">
+              <ExportButton filename="investors" getExport={exportInvestors} disabled={filtered.length === 0} />
+            </div>
+          </div>
 
-      <div className="bg-white rounded-xl overflow-hidden shadow-md">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("investors.name")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("customers.phone")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("customers.email")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("investors.ownershipPct")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.actions")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="py-10">
-                    <div className="flex items-center justify-center">
-                      <PrinterLoader size="sm" label={t("common.loading")} />
-                    </div>
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="text-center py-8 text-gray-400">
-                    {t("common.noData")}
-                  </td>
-                </tr>
-              ) : (
-                paged.map((investor) => (
-                  <tr key={investor.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium">{investor.name}</td>
-                    <td className="px-4 py-3 text-sm">{investor.phone || "â€”"}</td>
-                    <td className="px-4 py-3 text-sm">{investor.email || "â€”"}</td>
-                    <td className="px-4 py-3 text-sm">{investor.ownershipPct}%</td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleDelete(investor.id)}
-                        className="text-red-600 hover:text-red-800 text-sm"
-                      >
-                        <Trash2 size={14} className="inline-block me-1" />{t("common.delete")}
-                      </button>
-                    </td>
+          {loading ? (
+            <div className="flex min-h-[320px] w-full items-center justify-center px-4 py-8">
+              <PrinterLoader size="md" label={t("common.loading")} />
+            </div>
+          ) : investors.length === 0 ? (
+            <div className="flex min-h-[200px] items-center justify-center">
+              <p className="text-sm text-gray-400">{t("common.noData")}</p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex min-h-[200px] items-center justify-center">
+              <p className="text-sm text-gray-400">{t("common.noData")}</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("investors.name")}</th>
+                    <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("customers.phone")}</th>
+                    <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("customers.email")}</th>
+                    <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("investors.ownershipPct")}</th>
+                    <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.actions")}</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {paged.map((investor) => (
+                    <tr key={investor.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm font-medium">{investor.name}</td>
+                      <td className="px-4 py-3 text-sm">{investor.phone || "—"}</td>
+                      <td className="px-4 py-3 text-sm">{investor.email || "—"}</td>
+                      <td className="px-4 py-3 text-sm">{investor.ownershipPct}%</td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleDelete(investor.id)}
+                          className="text-red-600 hover:text-red-800 text-sm"
+                        >
+                          <Trash2 size={14} className="inline-block me-1" />{t("common.delete")}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <Pagination
+            currentPage={safePage}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            totalItems={filtered.length}
+            pageSize={PAGE_SIZE}
+          />
         </div>
-        <Pagination
-          currentPage={safePage}
-          totalPages={totalPages}
-          onPageChange={setPage}
-          totalItems={filtered.length}
-          pageSize={PAGE_SIZE}
-        />
       </div>
     </div>
   );

@@ -40,7 +40,7 @@ export async function GET(
     }
 
     return NextResponse.json(customer);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Failed to fetch customer" }, { status: 500 });
   }
 }
@@ -58,18 +58,33 @@ export async function PUT(
     if ("name" in body && (typeof body.name !== "string" || body.name.trim() === "")) {
       return NextResponse.json({ error: "اسم العميل مطلوب", code: "NAME_REQUIRED" }, { status: 400 });
     }
-    for (const field of [
-      "name", "companyName", "contactPerson", "phone", "whatsapp",
-      "email", "address", "city", "governorate", "taxNumber", "tradeRegister", "paymentTerms",
-    ] as const) {
-      if (field in body && typeof body[field] === "string") {
-        body[field] = body[field].trim() === "" ? null : body[field].trim();
-      }
-    }
+
+    const {
+      name, phone, email, address, customerType, taxNumber, creditLimit,
+      companyName, contactPerson, whatsapp, city, governorate, gpsLat, gpsLng, tradeRegister, paymentTerms,
+    } = body;
+
+    const updateData: Record<string, unknown> = {};
+    if (name !== undefined) updateData.name = name.trim();
+    if (phone !== undefined) updateData.phone = phone;
+    if (email !== undefined) updateData.email = email;
+    if (address !== undefined) updateData.address = address;
+    if (customerType !== undefined) updateData.customerType = customerType;
+    if (taxNumber !== undefined) updateData.taxNumber = taxNumber;
+    if (creditLimit !== undefined) updateData.creditLimit = Number(creditLimit);
+    if (companyName !== undefined) updateData.companyName = companyName;
+    if (contactPerson !== undefined) updateData.contactPerson = contactPerson;
+    if (whatsapp !== undefined) updateData.whatsapp = whatsapp;
+    if (city !== undefined) updateData.city = city;
+    if (governorate !== undefined) updateData.governorate = governorate;
+    if (gpsLat !== undefined) updateData.gpsLat = gpsLat != null ? Number(gpsLat) : null;
+    if (gpsLng !== undefined) updateData.gpsLng = gpsLng != null ? Number(gpsLng) : null;
+    if (tradeRegister !== undefined) updateData.tradeRegister = tradeRegister;
+    if (paymentTerms !== undefined) updateData.paymentTerms = paymentTerms;
 
     const customer = await prisma.customer.update({
       where: { id },
-      data: body,
+      data: updateData,
       include: {
         locations: true,
         ledgers: true,
@@ -77,7 +92,10 @@ export async function PUT(
     });
 
     return NextResponse.json(customer);
-  } catch (error) {
+  } catch (error: unknown) {
+    if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
+      return NextResponse.json({ error: "Customer not found", code: "NOT_FOUND" }, { status: 404 });
+    }
     console.error("[customers] PUT failed:", error);
     return NextResponse.json({ error: "Failed to update customer", code: "UPDATE_FAILED" }, { status: 500 });
   }
@@ -92,21 +110,26 @@ export async function DELETE(
     if (!actor && response) return response;
     const { id } = await params;
 
-    const [machinesCount, requestsCount, contractsCount] = await Promise.all([
+    const [machinesCount, requestsCount, contractsCount, salesOrdersCount, settlementsCount] = await Promise.all([
       prisma.machine.count({ where: { currentOwnerId: id } }),
       prisma.serviceRequest.count({ where: { customerId: id } }),
       prisma.contract.count({ where: { customerId: id } }),
+      prisma.salesOrder.count({ where: { customerId: id } }),
+      prisma.settlement.count({ where: { customerId: id } }),
     ]);
-    if (machinesCount + requestsCount + contractsCount > 0) {
+    if (machinesCount + requestsCount + contractsCount + salesOrdersCount + settlementsCount > 0) {
       return NextResponse.json(
-        { error: "لا يمكن حذف عميل مرتبط بماكينات أو عقود أو طلبات صيانة", code: "CUSTOMER_IN_USE" },
+        { error: "لا يمكن حذف عميل مرتبط بماكينات أو عقود أو طلبات صيانة أو أوامر بيع أو تسوية", code: "CUSTOMER_IN_USE" },
         { status: 409 },
       );
     }
 
     await prisma.customer.delete({ where: { id } });
     return NextResponse.json({ message: "Customer deleted" });
-  } catch (error) {
+  } catch (error: unknown) {
+    if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
+      return NextResponse.json({ error: "Customer not found", code: "NOT_FOUND" }, { status: 404 });
+    }
     console.error("[customers] DELETE failed:", error);
     return NextResponse.json({ error: "Failed to delete customer", code: "DELETE_FAILED" }, { status: 500 });
   }

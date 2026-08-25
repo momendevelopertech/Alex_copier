@@ -62,15 +62,15 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  settlements         Settlement[]  @relation("SettlementCollectedBy")
-  verifiedSettlements Settlement[]  @relation("SettlementVerifiedBy")
+  settlements         Settlement[]   @relation("SettlementCollectedBy")
+  verifiedSettlements Settlement[]   @relation("SettlementVerifiedBy")
   expenses            Expense[]
   approvalLogs        ApprovalLog[]
   sessions            Session[]
   notifications       Notification[] @relation("UserNotifications")
   sentNotifications   Notification[] @relation("NotificationSender")
   engineer            Engineer?
-  company             Company?      @relation(fields: [companyId], references: [id])
+  company             Company?       @relation(fields: [companyId], references: [id])
 }
 
 model Session {
@@ -85,22 +85,22 @@ model Session {
 }
 
 model Notification {
-  id          String              @id @default(cuid())
-  userId      String
-  senderId    String?
-  title       String
-  message     String
-  type        NotificationType    @default(SYSTEM)
-  category    NotificationCategory @default(GENERAL)
-  entityType  String?
-  entityId    String?
-  actionUrl   String?
-  isRead      Boolean             @default(false)
-  readAt      DateTime?
-  priority    NotificationPriority @default(NORMAL)
-  metadata    Json?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  id         String               @id @default(cuid())
+  userId     String
+  senderId   String?
+  title      String
+  message    String
+  type       NotificationType     @default(SYSTEM)
+  category   NotificationCategory @default(GENERAL)
+  entityType String?
+  entityId   String?
+  actionUrl  String?
+  isRead     Boolean              @default(false)
+  readAt     DateTime?
+  priority   NotificationPriority @default(NORMAL)
+  metadata   Json?
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
 
   user   User  @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
   sender User? @relation("NotificationSender", fields: [senderId], references: [id], onDelete: SetNull)
@@ -135,6 +135,7 @@ model Company {
   ledgers               CustomerLedger[]
   suppliers             Supplier[]
   products              Product[]
+  returnTransactions    ReturnTransaction[]
   warehouses            Warehouse[]
   purchaseOrders        PurchaseOrder[]
   salesOrders           SalesOrder[]
@@ -176,6 +177,7 @@ model Customer {
   machineOwnerships MachineOwnerHistory[]
   machines          Machine[]
   settlements       Settlement[]
+  returns           ReturnTransaction[]
 }
 
 model CustomerLocation {
@@ -222,9 +224,10 @@ model Supplier {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  company        Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company        Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
   purchaseOrders PurchaseOrder[]
   invoices       PurchaseInvoice[]
+  returns        ReturnTransaction[]
 }
 
 model Engineer {
@@ -249,6 +252,7 @@ model Engineer {
   user            User?              @relation(fields: [userId], references: [id])
   settlements     Settlement[]
   warranties      Warranty[]
+  salesOrders     SalesOrder[]
 }
 
 model EngineerArea {
@@ -344,6 +348,18 @@ enum TransactionType {
   SCRAP
 }
 
+enum ReturnType {
+  SALE_RETURN
+  PURCHASE_RETURN
+}
+
+enum ReturnStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
 enum ReadingSource {
   MANUAL
   OCR
@@ -355,6 +371,8 @@ enum StockMovementType {
   INTER_COMPANY_IN
   INTER_COMPANY_OUT
   SALE_OUT
+  SALE_RETURN_IN
+  PURCHASE_RETURN_OUT
   ENGINEER_CUSTODY_OUT
   ENGINEER_RETURN
   CONSUMED
@@ -381,6 +399,7 @@ model Product {
   purchasePrice  Float?
   wholesalePrice Float?
   retailPrice    Float?
+  pricingTiers   Json?
   isActive       Boolean     @default(true)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
@@ -392,6 +411,7 @@ model Product {
   inventoryItems           WarehouseInventory[]
   custodies                SparePartCustody[]
   stockMovements           StockMovement[]
+  returnTransactions       ReturnTransaction[]
   sparePartCompatibilities SparePartCompatibility[] @relation("SparePartCompat")
   compatibleMachines       SparePartCompatibility[] @relation("CompatibleMachine")
 }
@@ -477,9 +497,10 @@ model Warehouse {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company        Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  inventory      WarehouseInventory[]
-  stockMovements StockMovement[]
+  company            Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  inventory          WarehouseInventory[]
+  stockMovements     StockMovement[]
+  returnTransactions ReturnTransaction[]
 }
 
 model WarehouseInventory {
@@ -507,6 +528,34 @@ model StockMovement {
 
   warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
   product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ReturnTransaction {
+  id               String       @id @default(cuid())
+  companyId        String
+  type             ReturnType
+  salesOrderId     String?
+  salesOrderItemId String?
+  priceTier        String?
+  warehouseId      String?
+  customerId       String?
+  supplierId       String?
+  productId        String
+  quantity         Int
+  unitPrice        Float
+  total            Float
+  reason           String?
+  status           ReturnStatus @default(PENDING)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  salesOrder     SalesOrder?     @relation(fields: [salesOrderId], references: [id])
+  salesOrderItem SalesOrderItem? @relation(fields: [salesOrderItemId], references: [id])
+  warehouse      Warehouse?      @relation(fields: [warehouseId], references: [id])
+  customer       Customer?       @relation(fields: [customerId], references: [id])
+  supplier       Supplier?       @relation(fields: [supplierId], references: [id])
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model SparePartCustody {
@@ -657,6 +706,7 @@ enum ContractStatus {
 
 enum BillingCycle {
   MONTHLY
+  HALF_YEARLY
   QUARTERLY
   YEARLY
 }
@@ -665,12 +715,14 @@ model SalesOrder {
   id            String           @id @default(cuid())
   companyId     String
   customerId    String
+  engineerId    String?
   orderType     OrderType
   status        SalesOrderStatus @default(DRAFT)
   total         Float            @default(0)
   discount      Float            @default(0)
   discountType  DiscountType     @default(FIXED)
   taxRate       Float            @default(0)
+  isTaxInvoice  Boolean          @default(false)
   paymentMethod PaymentMethod
   paymentStatus PaymentStatus    @default(PENDING)
   notes         String?
@@ -678,10 +730,12 @@ model SalesOrder {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
-  company      Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  customer     Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  company      Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer     Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  engineer     Engineer?           @relation(fields: [engineerId], references: [id])
   items        SalesOrderItem[]
   installments Installment[]
+  returns      ReturnTransaction[]
 }
 
 model SalesOrderItem {
@@ -694,8 +748,9 @@ model SalesOrderItem {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
-  product    Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  salesOrder SalesOrder          @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  product    Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  returns    ReturnTransaction[]
 }
 
 model Installment {
@@ -721,6 +776,8 @@ model Contract {
   startDate           DateTime
   endDate             DateTime
   value               Float
+  amountPaid          Float          @default(0)
+  paymentMethod       PaymentMethod  @default(CASH)
   billingCycle        BillingCycle
   visitLimit          Int?
   costPerCopy         Float?

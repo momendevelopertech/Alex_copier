@@ -9,6 +9,7 @@ import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
 import { Plus, Save, X } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
+import FormModal from "@/components/FormModal";
 
 interface Supplier { id: string; name: string; }
 interface Company { id: string; name: string; }
@@ -121,55 +122,69 @@ export default function PurchasesPage() {
     fetchData();
   };
 
+  const inputClass = "w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500";
+
   return (
-    <div dir={dir}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("purchases.title")}</h1>
-        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"><Plus size={16} />{t("purchases.addOrder")}</button>
+    <div dir={dir} className="space-y-5">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>
+          <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">{t("purchases.title")}</h1>
+        </div>
+        <button onClick={() => setShowForm(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"><Plus size={16} />{t("purchases.addOrder")}</button>
       </div>
 
-      {showForm && (
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <select value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })} className="border rounded-lg px-4 py-2" required>
+      <FormModal open={showForm} onClose={() => setShowForm(false)} title={t("purchases.addOrder")}>
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">{t("companies.selectCompany")}</label>
+              <select value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })} className={inputClass} required>
                 <option value="">{t("companies.selectCompany")}</option>
                 {companies.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
               </select>
-              <select value={form.supplierId} onChange={(e) => setForm({ ...form, supplierId: e.target.value })} className="border rounded-lg px-4 py-2" required>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">{t("purchases.selectSupplier")}</label>
+              <select value={form.supplierId} onChange={(e) => setForm({ ...form, supplierId: e.target.value })} className={inputClass} required>
                 <option value="">{t("purchases.selectSupplier")}</option>
                 {suppliers.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
               </select>
-              <textarea placeholder={t("common.notes")} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="border rounded-lg px-4 py-2" rows={2} />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("common.notes")}</label>
+            <textarea placeholder={t("common.notes")} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={inputClass} rows={2} />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-sm text-slate-700">{t("purchases.items")}</h3>
+              <button type="button" onClick={addRow} className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"><Plus size={16} />{t("purchases.addRow")}</button>
             </div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="font-medium">{t("purchases.items")}</h3>
-                <button type="button" onClick={addRow} className="text-blue-600 hover:underline text-sm"><Plus size={16} />{t("purchases.addRow")}</button>
-              </div>
               {itemRows.map((row, idx) => (
-                <div key={idx} className="flex gap-2 items-center">
-                  <select value={row.productId} onChange={(e) => updateRow(idx, "productId", e.target.value)} className="border rounded-lg px-4 py-2 flex-1">
+                <div key={idx} className="grid gap-2 rounded-lg border border-gray-200 bg-slate-50 p-3 sm:grid-cols-[1fr_100px_120px_auto]">
+                  <select value={row.productId} onChange={(e) => updateRow(idx, "productId", e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">{t("purchases.selectProduct")}</option>
                     {products.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
                   </select>
-                  <input type="number" placeholder={t("purchases.quantity")} value={row.quantity} onChange={(e) => updateRow(idx, "quantity", e.target.value)} className="border rounded-lg px-4 py-2 w-24" min="1" />
-                  <input type="number" placeholder={t("purchases.unitPrice")} value={row.unitPrice} onChange={(e) => updateRow(idx, "unitPrice", e.target.value)} className="border rounded-lg px-4 py-2 w-32" min="0" step="0.01" />
-                  {itemRows.length > 1 && (<button type="button" onClick={() => removeRow(idx)} className="text-red-600 hover:text-red-800 text-lg font-bold px-2">×</button>)}
+                  <input type="number" placeholder={t("purchases.quantity")} value={row.quantity} onChange={(e) => updateRow(idx, "quantity", e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" min="1" />
+                  <input type="number" placeholder={t("purchases.unitPrice")} value={row.unitPrice} onChange={(e) => updateRow(idx, "unitPrice", e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" min="0" step="0.01" />
+                  {itemRows.length > 1 && (<button type="button" onClick={() => removeRow(idx)} className="rounded-lg border border-red-200 bg-red-50 px-2 text-red-600 transition hover:bg-red-100">×</button>)}
                 </div>
               ))}
             </div>
-            <div className="flex gap-2">
-              <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"><Save size={16} />{t("common.save")}</button>
-              <button type="button" onClick={() => setShowForm(false)} className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 inline-flex items-center gap-2"><X size={16} />{t("common.cancel")}</button>
-            </div>
-          </form>
-        </div>
-      )}
+          </div>
+          <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"><X size={16} className="ms-1 inline-block" />{t("common.cancel")}</button>
+            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"><Save size={16} />{t("common.save")}</button>
+          </div>
+        </form>
+      </FormModal>
 
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
-          <SearchInput value={search} onChange={setSearch} placeholder={t("purchases.searchPlaceholder")} />
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-2 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
+          <div className="min-w-[220px] flex-1"><SearchInput value={search} onChange={setSearch} placeholder={t("purchases.searchPlaceholder")} /></div>
           <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("common.status")} — ${t("common.all")}`} className="md:w-40" />
           <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} — ${t("common.all")}`} className="md:w-40" />
           <FilterSelect value={supplierFilter} onChange={(v) => { setSupplierFilter(v); setPage(1); }} options={suppliers.map((s) => ({ value: s.id, label: s.name }))} allLabel={`${t("purchases.supplier")} — ${t("common.all")}`} className="md:w-44" />
@@ -188,18 +203,27 @@ export default function PurchasesPage() {
             <PrinterLoader size="md" label={t("common.loading")} />
           </div>
         )
-        : orders.length === 0 ? <p className="text-gray-500">{t("common.noData")}</p>
+        : orders.length === 0 ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <p className="text-sm text-gray-400">{t("common.noData")}</p>
+          </div>
+        )
+        : filtered.length === 0 ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <p className="text-sm text-gray-400">{t("common.noData")}</p>
+          </div>
+        )
         : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("purchases.orderNumber")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.company")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("purchases.supplier")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.status")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("purchases.total")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.date")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("purchases.orderNumber")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.company")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("purchases.supplier")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.status")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("purchases.total")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.date")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">

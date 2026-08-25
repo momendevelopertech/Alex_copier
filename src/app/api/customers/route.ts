@@ -14,7 +14,7 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(customers);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Failed to fetch customers" }, { status: 500 });
   }
 }
@@ -27,15 +27,59 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
     }
     const body = await request.json();
+    const { companyId, name, phone, email, address, customerType, taxNumber, creditLimit, companyName, contactPerson, whatsapp, city, governorate, gpsLat, gpsLng, tradeRegister, paymentTerms } = body;
+
+    if (!name || typeof name !== "string" || name.trim() === "") {
+      return NextResponse.json({ error: "اسم العميل مطلوب", code: "NAME_REQUIRED" }, { status: 400 });
+    }
+
+    if (companyId) {
+      const company = await prisma.company.findUnique({ where: { id: String(companyId) }, select: { id: true } });
+      if (!company) {
+        return NextResponse.json({ error: "الشركة غير موجودة", code: "COMPANY_NOT_FOUND" }, { status: 400 });
+      }
+    }
+
     const customer = await prisma.customer.create({
-      data: body,
+      data: {
+        name: name.trim(),
+        phone: phone ?? undefined,
+        email: email ?? undefined,
+        address: address ?? undefined,
+        customerType: customerType ?? undefined,
+        taxNumber: taxNumber ?? undefined,
+        creditLimit: creditLimit != null ? Number(creditLimit) : undefined,
+        companyName: companyName ?? undefined,
+        contactPerson: contactPerson ?? undefined,
+        whatsapp: whatsapp ?? undefined,
+        city: city ?? undefined,
+        governorate: governorate ?? undefined,
+        gpsLat: gpsLat != null ? Number(gpsLat) : undefined,
+        gpsLng: gpsLng != null ? Number(gpsLng) : undefined,
+        tradeRegister: tradeRegister ?? undefined,
+        paymentTerms: paymentTerms ?? undefined,
+      },
       include: {
         locations: true,
         ledgers: true,
       },
     });
-    return NextResponse.json(customer, { status: 201 });
-  } catch (error) {
+
+    if (companyId) {
+      await prisma.customerLedger.upsert({
+        where: { customerId_companyId: { customerId: customer.id, companyId: String(companyId) } },
+        update: {},
+        create: { customerId: customer.id, companyId: String(companyId), balance: 0 },
+      });
+    }
+
+    const customerWithLedger = await prisma.customer.findUnique({
+      where: { id: customer.id },
+      include: { locations: true, ledgers: true },
+    });
+
+    return NextResponse.json(customerWithLedger ?? customer, { status: 201 });
+  } catch {
     return NextResponse.json({ error: "Failed to create customer" }, { status: 500 });
   }
 }

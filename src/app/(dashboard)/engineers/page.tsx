@@ -6,9 +6,10 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
-import { Plus, Save, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Trash2, Package, Eye } from "lucide-react";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
+import FormModal from "@/components/FormModal";
 
 interface EngineerArea {
   id: string;
@@ -25,6 +26,17 @@ interface LinkedUser {
   id: string;
   name: string;
   email: string;
+}
+
+interface SalesOrder {
+  id: string;
+  orderNumber: string;
+  total: number;
+  orderDate: string;
+  status: string;
+  customer?: { id: string; name: string } | null;
+  company?: { id: string; name: string; nameAr?: string | null } | null;
+  items?: { id: string; quantity: number; unitPrice: number; product?: { id: string; name: string } | null }[];
 }
 
 interface Engineer {
@@ -69,12 +81,13 @@ export default function EngineersPage() {
   const [linkableUsers, setLinkableUsers] = useState<LinkableUser[]>([]);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [selectedAccount, setSelectedAccount] = useState<LinkableUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Engineer | null>(null);
-  const [linkDraft, setLinkDraft] = useState<{ engineerId: string; userId: string }>({ engineerId: "", userId: "" });
-const [savingLink, setSavingLink] = useState(false);
+  const [engineerSales, setEngineerSales] = useState<SalesOrder[]>([]);
+  const [salesLoading, setSalesLoading] = useState(false);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
 
@@ -86,6 +99,40 @@ const [savingLink, setSavingLink] = useState(false);
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchEngineerSales = async (engineerId: string) => {
+    setSalesLoading(true);
+    try {
+      const res = await fetch(`/api/engineers/${engineerId}/sales`);
+      const data = await res.json();
+      setEngineerSales(Array.isArray(data) ? data : []);
+    } catch {
+      setEngineerSales([]);
+    } finally {
+      setSalesLoading(false);
+    }
+  };
+
+  const openEngineerDetail = (engineer: Engineer) => {
+    setSelected(engineer);
+    fetchEngineerSales(engineer.id);
+  };
+
+  const openEditEngineer = (engineer: Engineer) => {
+    setSelected(null);
+    setForm({
+      name: engineer.name,
+      phone: engineer.phone || "",
+      email: engineer.email || "",
+      baseSalary: String(engineer.baseSalary || ""),
+      transportAllowance: String(engineer.transportAllowance || ""),
+      commissionRate: String(engineer.commissionRate || ""),
+      areas: engineer.areas?.map((a) => a.areaName).join(", ") || "",
+      userId: engineer.user?.id || "",
+    });
+    setEditingId(engineer.id);
+    setShowForm(true);
   };
 
   const fetchLinkableUsers = async () => {
@@ -115,11 +162,6 @@ const [savingLink, setSavingLink] = useState(false);
       cancelled = true;
     };
   }, []);
-
-  // Draft value for the linked-account select: falls back to the selected engineer's
-  // current link until the user picks a different account.
-  const detailLinkUserId =
-    selected && linkDraft.engineerId === selected.id ? linkDraft.userId : (selected?.user?.id ?? "");
 
   const filtered = engineers.filter(
     (e) =>
@@ -177,13 +219,14 @@ const [savingLink, setSavingLink] = useState(false);
         ? form.areas.split(",").map((a) => a.trim()).filter(Boolean)
         : [],
     };
-    await fetch("/api/engineers", {
-      method: "POST",
+    await fetch(editingId ? `/api/engineers/${editingId}` : "/api/engineers", {
+      method: editingId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
     setForm(emptyForm);
     setSelectedAccount(null);
+    setEditingId(null);
     setShowForm(false);
     fetchEngineers();
     fetchLinkableUsers();
@@ -214,28 +257,6 @@ const [savingLink, setSavingLink] = useState(false);
     setSelected(null);
   };
 
-  const saveLinkedUser = async () => {
-    if (!selected) return;
-    setSavingLink(true);
-    try {
-      const res = await fetch(`/api/engineers/${selected.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: detailLinkUserId || null }),
-      });
-      const payload = await res.json().catch(() => null);
-      if (res.ok) {
-        toastSuccess(t("engineers.accountLinked"));
-        await fetchEngineers();
-        await fetchLinkableUsers();
-      } else {
-        toastError(apiErrorMessage(payload, t));
-      }
-    } finally {
-      setSavingLink(false);
-    }
-  };
-
   const setField = (field: string, value: string) => {
     setForm((prev) => {
       const next = { ...prev, [field]: value };
@@ -246,209 +267,206 @@ const [savingLink, setSavingLink] = useState(false);
     });
   };
 
-  // Users available for linking: unlinked accounts + the one already linked to the selected engineer.
-  const availableForDetail = linkableUsers.filter(
-    (u) => !u.linkedEngineerId || u.linkedEngineerId === selected?.id
-  );
-
   return (
-    <div dir={dir}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("engineers.title")}</h1>
+    <div dir={dir} className="space-y-5">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>
+          <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">{t("engineers.title")}</h1>
+        </div>
         <button
-          onClick={() => { setShowForm(!showForm); setSelected(null); setSelectedAccount(null); setForm(emptyForm); }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
+          onClick={() => { setShowForm(true); setSelected(null); setSelectedAccount(null); setForm(emptyForm); }}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
         >
-          {showForm ? (<><X size={16} />{t("common.cancel")}</>) : (<><Plus size={16} />{t("engineers.addEngineer")}</>)}
+          <Plus size={16} />{t("engineers.addEngineer")}
         </button>
       </div>
 
-      {showForm && (
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">{t("engineers.addEngineer")}</h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <input
-              type="text"
-              placeholder={t("engineers.name")}
-              value={form.name}
-              onChange={(e) => setField("name", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-              required
-            />
-            <input
-              type="text"
-              placeholder={t("customers.phone")}
-              value={form.phone}
-              onChange={(e) => setField("phone", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            />
-            <input
-              type="email"
-              placeholder={t("customers.email")}
-              value={form.email}
-              onChange={(e) => setField("email", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            />
+      <FormModal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? t("engineers.editEngineer") : t("engineers.addEngineer")} wide>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("engineers.name")}</label>
+            <input type="text" value={form.name} onChange={(e) => setField("name", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("customers.phone")}</label>
+            <input type="text" value={form.phone} onChange={(e) => setField("phone", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("customers.email")}</label>
+            <input type="email" value={form.email} onChange={(e) => setField("email", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("engineers.linkedAccount")}</label>
             <select
               value={form.userId}
               onChange={(e) => handleUserSelection(e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">{t("engineers.selectAccountOptional")}</option>
               {linkableUsers.filter((u) => !u.linkedEngineerId).map((u) => (
                 <option key={u.id} value={u.id}>{u.name} — {u.email}</option>
               ))}
             </select>
+          </div>
 
-            {selectedAccount && (
-              <div className="md:col-span-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
-                <div className="font-medium mb-1">{t("engineers.selectedAccount")}</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <div><span className="font-medium">{t("engineers.name")}: </span>{selectedAccount.name}</div>
-                  <div><span className="font-medium">{t("customers.email")}: </span>{selectedAccount.email}</div>
-                  <div className="md:col-span-2"><span className="font-medium">{t("settings.password")}: </span>{t("engineers.passwordHidden")}</div>
+          {selectedAccount && (
+            <div className="md:col-span-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+              <div className="font-medium mb-1">{t("engineers.selectedAccount")}</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div><span className="font-medium">{t("engineers.name")}: </span>{selectedAccount.name}</div>
+                <div><span className="font-medium">{t("customers.email")}: </span>{selectedAccount.email}</div>
+                <div className="md:col-span-2"><span className="font-medium">{t("settings.password")}: </span>{t("engineers.passwordHidden")}</div>
+              </div>
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("engineers.baseSalary")}</label>
+            <input type="number" value={form.baseSalary} onChange={(e) => setField("baseSalary", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("engineers.transportAllowance")}</label>
+            <input type="number" value={form.transportAllowance} onChange={(e) => setField("transportAllowance", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("engineers.commissionRate")} %</label>
+            <input type="number" value={form.commissionRate} onChange={(e) => setField("commissionRate", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="space-y-1.5 md:col-span-2">
+            <label className="block text-sm font-medium text-slate-700">{t("engineers.areas")}</label>
+            <input
+              type="text"
+              placeholder={locale === "ar" ? "مفصولة بفاصلة" : "comma separated"}
+              value={form.areas}
+              onChange={(e) => setField("areas", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end md:col-span-2 lg:col-span-3">
+            <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
+            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">{t("common.save")}</button>
+          </div>
+        </form>
+      </FormModal>
+
+      <FormModal open={!!selected} onClose={() => { setSelected(null); setEngineerSales([]); }} title={selected ? selected.name : ""} wide>
+        {selected && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 text-sm mb-4">
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("customers.phone")}</span><span className="mt-1 block font-medium text-slate-800" dir="ltr">{selected.phone || "—"}</span></div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("customers.email")}</span><span className="mt-1 block font-medium text-slate-800">{selected.email || selected.user?.email || "—"}</span></div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("engineers.baseSalary")}</span><span className="mt-1 block font-medium text-slate-800">{selected.baseSalary.toLocaleString()}</span></div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("engineers.transportAllowance")}</span><span className="mt-1 block font-medium text-slate-800">{selected.transportAllowance.toLocaleString()}</span></div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("engineers.commissionRate")}</span><span className="mt-1 block font-medium text-slate-800">{selected.commissionRate}%</span></div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("engineers.workload")}</span><span className="mt-1 block font-medium text-slate-800">{selected.openAssignedCount ?? 0}</span></div>
+            </div>
+
+            {selected.areas.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold text-slate-900 mb-2">{t("engineers.areas")}</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selected.areas.map((area) => (
+                    <span key={area.id} className="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{area.areaName}</span>
+                  ))}
                 </div>
               </div>
             )}
-            <input
-              type="number"
-              placeholder={t("engineers.baseSalary")}
-              value={form.baseSalary}
-              onChange={(e) => setField("baseSalary", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            />
-            <input
-              type="number"
-              placeholder={t("engineers.transportAllowance")}
-              value={form.transportAllowance}
-              onChange={(e) => setField("transportAllowance", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            />
-            <input
-              type="number"
-              placeholder={`${t("engineers.commissionRate")} %`}
-              value={form.commissionRate}
-              onChange={(e) => setField("commissionRate", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            />
-            <input
-              type="text"
-              placeholder={`${t("engineers.areas")} (${locale === "ar" ? "مفصولة بفاصلة" : "comma separated"})`}
-              value={form.areas}
-              onChange={(e) => setField("areas", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full md:col-span-2"
-            />
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
-            >
-              {t("common.save")}
-            </button>
-          </form>
-        </div>
-      )}
 
-      {selected && (
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">{selected.name}</h2>
-            <button
-              onClick={() => setSelected(null)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              {t("common.close")}
-            </button>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 text-sm mb-4">
-            <div className="rounded-xl bg-slate-50 p-3"><span className="block text-gray-500 mb-1">{t("customers.phone")}</span><span className="font-medium">{selected.phone || "—"}</span></div>
-            <div className="rounded-xl bg-slate-50 p-3"><span className="block text-gray-500 mb-1">{t("customers.email")}</span><span className="font-medium">{selected.email || selected.user?.email || "—"}</span></div>
-            <div className="rounded-xl bg-slate-50 p-3"><span className="block text-gray-500 mb-1">{t("engineers.baseSalary")}</span><span className="font-medium">{selected.baseSalary.toLocaleString()}</span></div>
-            <div className="rounded-xl bg-slate-50 p-3"><span className="block text-gray-500 mb-1">{t("engineers.transportAllowance")}</span><span className="font-medium">{selected.transportAllowance.toLocaleString()}</span></div>
-            <div className="rounded-xl bg-slate-50 p-3"><span className="block text-gray-500 mb-1">{t("engineers.commissionRate")}</span><span className="font-medium">{selected.commissionRate}%</span></div>
-            <div className="rounded-xl bg-slate-50 p-3"><span className="block text-gray-500 mb-1">{t("engineers.workload")}</span><span className="font-medium">{selected.openAssignedCount ?? 0}</span></div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] gap-4 items-end mb-4 border-t border-gray-100 pt-4">
-           <div>
-             <label className="block text-sm font-medium mb-1">{t("engineers.linkedAccount")}</label>
-             <select
-               value={detailLinkUserId}
-               onChange={(e) =>
-                 setLinkDraft({ engineerId: selected.id, userId: e.target.value })
-               }
-               className="border rounded-lg px-3 py-2.5 w-full bg-white"
-             >
-               <option value="">{t("engineers.noLinkedAccount")}</option>
-               {availableForDetail.map((u) => (
-                 <option key={u.id} value={u.id}>{u.name} — {u.email}</option>
-               ))}
-             </select>
-           </div>
-           <button
-             onClick={saveLinkedUser}
-             disabled={savingLink || detailLinkUserId === (selected.user?.id ?? "")}
-             className="bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2"
-           >
-             <Save size={16} />
-             {savingLink ? t("common.loading") : t("common.save")}
-           </button>
-          </div>
-          {selected.areas.length > 0 && (
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold mb-2">{t("engineers.areas")}</h3>
-              <div className="flex flex-wrap gap-2">
-                {selected.areas.map((area) => (
-                  <span key={area.id} className="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {area.areaName}
-                  </span>
-                ))}
+            {selected.skills.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold text-slate-900 mb-2">{t("engineers.skills")}</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selected.skills.map((skill) => (
+                    <span key={skill.id} className="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      {skill.modelType} ({locale === "ar" ? "مستوى" : "level"} {skill.skillLevel})
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {selected.skills.length > 0 && (
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold mb-2">{t("engineers.skills")}</h3>
-              <div className="flex flex-wrap gap-2">
-                {selected.skills.map((skill) => (
-                  <span key={skill.id} className="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    {skill.modelType} ({locale === "ar" ? "مستوى" : "level"} {skill.skillLevel})
-                  </span>
-                ))}
+            {salesLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <PrinterLoader size="sm" label={t("common.loading")} />
               </div>
+            ) : engineerSales.length > 0 ? (
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-slate-900">{t("engineers.salesHistory")}</h3>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                    <Package size={13} />{engineerSales.length}
+                  </span>
+                </div>
+                <div className="overflow-x-auto rounded-xl border border-gray-200">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2.5 text-start text-xs font-medium text-gray-500">{t("sales.orderNumber")}</th>
+                        <th className="px-4 py-2.5 text-start text-xs font-medium text-gray-500">{t("serviceRequests.customer")}</th>
+                        <th className="px-4 py-2.5 text-start text-xs font-medium text-gray-500">{t("warehouses.company")}</th>
+                        <th className="px-4 py-2.5 text-start text-xs font-medium text-gray-500">{t("sales.items")}</th>
+                        <th className="px-4 py-2.5 text-start text-xs font-medium text-gray-500">{t("sales.total")}</th>
+                        <th className="px-4 py-2.5 text-start text-xs font-medium text-gray-500">{t("warehouses.date")}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {engineerSales.map((sale) => (
+                        <tr key={sale.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-2.5 text-sm font-medium">{sale.orderNumber}</td>
+                          <td className="px-4 py-2.5 text-sm">{sale.customer?.name || "—"}</td>
+                          <td className="px-4 py-2.5 text-sm">{sale.company?.nameAr || sale.company?.name || "—"}</td>
+                          <td className="px-4 py-2.5 text-sm">{sale.items?.map((item) => item.product?.name).filter(Boolean).join(", ") || "—"}</td>
+                          <td className="px-4 py-2.5 text-sm font-semibold">{sale.total.toLocaleString()}</td>
+                          <td className="px-4 py-2.5 text-sm text-gray-500">{new Date(sale.orderDate).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-GB")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setSelected(null)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.close")}</button>
+              <button onClick={() => openEditEngineer(selected)} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700">
+                <Pencil size={14} />{t("common.edit")}
+              </button>
+              <button onClick={() => { handleDelete(selected.id); setSelected(null); }} className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700">
+                <Trash2 size={14} />{t("common.delete")}
+              </button>
             </div>
-          )}
-
-          <div className="mt-4 flex gap-2">
-            <button
-              onClick={() => handleDelete(selected.id)}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 text-sm"
-            >
-              <Trash2 size={14} className="inline-block me-1" />{t("common.delete")}
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder={t("engineers.searchPlaceholder")}
-        />
-        {hasActiveFilters && (
-          <button onClick={() => setSearch("")} className="text-sm text-gray-500 hover:text-gray-700 underline">
-            {t("common.resetFilters")}
-          </button>
+          </>
         )}
-        <div className="md:ms-auto">
-          <ExportButton filename="engineers" getExport={exportEngineers} disabled={filtered.length === 0} />
-        </div>
-      </div>
+      </FormModal>
 
-      <div className="bg-white rounded-xl overflow-hidden shadow-md">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px]">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-2 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
+          <div className="min-w-[220px] flex-1"><SearchInput value={search} onChange={setSearch} placeholder={t("engineers.searchPlaceholder")} /></div>
+          {hasActiveFilters && (
+            <button onClick={() => setSearch("")} className="text-sm text-gray-500 hover:text-gray-700 underline">
+              {t("common.resetFilters")}
+            </button>
+          )}
+          <div className="md:ms-auto">
+            <ExportButton filename="engineers" getExport={exportEngineers} disabled={filtered.length === 0} />
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex min-h-[320px] w-full items-center justify-center px-4 py-8">
+            <PrinterLoader size="md" label={t("common.loading")} />
+          </div>
+        ) : engineers.length === 0 ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <p className="text-sm text-gray-400">{t("common.noData")}</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <p className="text-sm text-gray-400">{t("common.noData")}</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px]">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("engineers.name")}</th>
@@ -464,26 +482,11 @@ const [savingLink, setSavingLink] = useState(false);
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {loading ? (
-                <tr>
-                  <td colSpan={10} className="py-10">
-                    <div className="flex items-center justify-center">
-                      <PrinterLoader size="sm" label={t("common.loading")} />
-                    </div>
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="text-center py-8 text-gray-400">
-                    {t("common.noData")}
-                  </td>
-                </tr>
-              ) : (
-                paged.map((engineer) => (
+              {paged.map((engineer) => (
                   <tr
                     key={engineer.id}
                     className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => setSelected(engineer)}
+                    onClick={() => openEngineerDetail(engineer)}
                   >
                     <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">{engineer.name}</td>
                     <td className="px-4 py-3 text-sm whitespace-nowrap" dir="ltr">{engineer.email || engineer.user?.email || "—"}</td>
@@ -510,22 +513,24 @@ const [savingLink, setSavingLink] = useState(false);
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDelete(engineer.id); }}
-                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 text-xs font-medium text-red-600 transition hover:bg-red-100"
-                        title={t("common.delete")}
-                        aria-label={t("common.delete")}
-                      >
-                        <Trash2 size={14} />
-                        {t("common.delete")}
-                      </button>
+                      <div className="flex gap-2">
+                        <button onClick={(e) => { e.stopPropagation(); openEngineerDetail(engineer); }} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2 text-xs font-medium text-gray-600 transition hover:bg-gray-100" title={t("common.view")}>
+                          <Eye size={14} />{t("common.view")}
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); openEditEngineer(engineer); }} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2 text-xs font-medium text-blue-600 transition hover:bg-blue-100" title={t("common.edit")}>
+                          <Pencil size={14} />{t("common.edit")}
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDelete(engineer.id); }} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 text-xs font-medium text-red-600 transition hover:bg-red-100" title={t("common.delete")}>
+                          <Trash2 size={14} />{t("common.delete")}
+                        </button>
+                      </div>
                     </td>
                   </tr>
-                ))
-              )}
+                ))}
             </tbody>
           </table>
         </div>
+        )}
         <Pagination
           currentPage={safePage}
           totalPages={totalPages}

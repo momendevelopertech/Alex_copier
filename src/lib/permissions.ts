@@ -26,7 +26,8 @@ export type Page =
   | "reports"
   | "settings"
   | "suppliers"
-  | "investors";
+  | "investors"
+  | "returns";
 
 export const ROLE_PERMISSIONS: Record<Role, Page[]> = {
   // المدير العام — يشوف كل حاجة (ادمن)
@@ -34,7 +35,7 @@ export const ROLE_PERMISSIONS: Record<Role, Page[]> = {
     "dashboard", "machines", "customers", "engineers",
     "serviceRequests", "contracts", "purchases", "sales",
     "inventory", "warehouses", "products", "workshop", "finance", "companies",
-    "settlements", "reports", "settings", "suppliers", "investors",
+    "settlements", "reports", "settings", "suppliers", "investors", "returns",
   ],
 
   // مدير الشركة — إدارة شاملة لشركته
@@ -42,13 +43,13 @@ export const ROLE_PERMISSIONS: Record<Role, Page[]> = {
     "dashboard", "machines", "customers", "engineers",
     "serviceRequests", "contracts", "purchases", "sales",
     "inventory", "warehouses", "products", "workshop", "finance", "settlements",
-    "reports", "suppliers",
+    "reports", "suppliers", "returns",
   ],
 
   // المحاسب — المالية والفواتير والتقارير
   ACCOUNTANT: [
     "dashboard", "purchases", "sales", "finance",
-    "settlements", "reports", "companies",
+    "settlements", "reports", "companies", "returns",
   ],
 
   // مدير الصيانة — طلبات الصيانة والمهندسين والورشة
@@ -69,7 +70,7 @@ export const ROLE_PERMISSIONS: Record<Role, Page[]> = {
 
   // موظف المبيعات — العملاء والمبيعات والعقود
   SALES_EMPLOYEE: [
-    "dashboard", "customers", "sales", "contracts", "machines",
+    "dashboard", "customers", "sales", "contracts", "machines", "returns",
   ],
 };
 

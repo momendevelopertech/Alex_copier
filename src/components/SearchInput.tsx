@@ -15,10 +15,10 @@ export default function SearchInput({ value, onChange, placeholder, className = 
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="border border-gray-300 rounded-lg pl-9 pr-4 py-2 w-full md:w-80 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="border border-gray-300 rounded-lg ps-9 pe-4 py-2 w-full md:w-80 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <svg
-        className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+        className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -32,7 +32,7 @@ export default function SearchInput({ value, onChange, placeholder, className = 
           type="button"
           onClick={() => onChange("")}
           title="✕"
-          className="absolute left-[2rem] top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          className="absolute start-[2rem] top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
         >
           ✕
         </button>

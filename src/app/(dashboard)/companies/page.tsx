@@ -5,7 +5,8 @@ import { useI18n } from "@/i18n/context";
 import PrinterLoader from "@/components/PrinterLoader";
 import { apiErrorMessage } from "@/lib/api-client";
 import { useToast, useConfirm } from "@/components/UIProvider";
-import { Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Save, Trash2 } from "lucide-react";
+import FormModal from "@/components/FormModal";
 
 interface CompanyData {
   id: string;
@@ -146,17 +147,18 @@ export default function CompaniesPage() {
   }
 
   return (
-    <div dir={dir}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
+    <div dir={dir} className="space-y-5">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("companies.title")}</h1>
+          <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>
+          <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">{t("companies.title")}</h1>
           <p className="text-gray-500 mt-1">{t("companies.overview")}</p>
         </div>
         <button
           onClick={openCreate}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
         >
-          {showForm && !editingId ? (<><X size={16} />{t("common.cancel")}</>) : (<><Plus size={16} />{t("companies.addCompany")}</>)}
+          <Plus size={16} />{t("companies.addCompany")}
         </button>
       </div>
 
@@ -172,70 +174,66 @@ export default function CompaniesPage() {
         </div>
       )}
 
-      {showForm && (
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">
-            {editingId ? t("companies.editCompany") : t("companies.addCompany")}
-          </h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(
-              [
-                ["name", t("companies.legalName")],
-                ["nameAr", t("companies.tradeName")],
-                ["taxNumber", t("companies.taxNumber")],
-                ["tradeRegister", t("companies.tradeRegister")],
-                ["phone", t("common.phone")],
-                ["email", t("customers.email")],
-              ] as const
-            ).map(([field, label]) => (
-              <div key={field}>
-                <label className="mb-1 block text-sm font-medium">{label}</label>
-                <input
-                  type={field === "email" ? "email" : "text"}
-                  value={form[field]}
-                  onChange={(e) => setForm({ ...form, [field]: e.target.value })}
-                  className="w-full rounded-lg border px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
-                  required={field === "name"}
-                />
-              </div>
-            ))}
-            <div className="md:col-span-2 lg:col-span-3">
-              <label className="mb-1 block text-sm font-medium">{t("customers.address")}</label>
+      <FormModal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? t("companies.editCompany") : t("companies.addCompany")} wide>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {(
+            [
+              ["name", t("companies.legalName")],
+              ["nameAr", t("companies.tradeName")],
+              ["taxNumber", t("companies.taxNumber")],
+              ["tradeRegister", t("companies.tradeRegister")],
+              ["phone", t("common.phone")],
+              ["email", t("customers.email")],
+            ] as const
+          ).map(([field, label]) => (
+            <div key={field} className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">{label}</label>
               <input
-                type="text"
-                value={form.address}
-                onChange={(e) => setForm({ ...form, address: e.target.value })}
-                className="w-full rounded-lg border px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
+                type={field === "email" ? "email" : "text"}
+                value={form[field]}
+                onChange={(e) => setForm({ ...form, [field]: e.target.value })}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required={field === "name"}
               />
             </div>
-            <div className="md:col-span-2 lg:col-span-3 flex justify-end">
-              <button
-                type="submit"
-                disabled={saving}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Save size={16} />
-                {saving ? t("common.saving") : t("common.save")}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+          ))}
+          <div className="space-y-1.5 md:col-span-2 lg:col-span-3">
+            <label className="block text-sm font-medium text-slate-700">{t("customers.address")}</label>
+            <input
+              type="text"
+              value={form.address}
+              onChange={(e) => setForm({ ...form, address: e.target.value })}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="md:col-span-2 lg:col-span-3 flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Save size={16} />
+              {saving ? t("common.saving") : t("common.save")}
+            </button>
+          </div>
+        </form>
+      </FormModal>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-xl shadow-md p-5 border-r-4 border-blue-500">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm border-r-4 border-blue-500">
           <p className="text-sm text-gray-500">{t("companies.allCompanies")}</p>
           <p className="text-3xl font-bold mt-1">{companies.length}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-md p-5 border-r-4 border-green-500">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm border-r-4 border-green-500">
           <p className="text-sm text-gray-500">{t("companies.totalRevenue")}</p>
           <p className="text-3xl font-bold mt-1 text-green-600">{totalSales.toLocaleString("ar-EG")} ج.م</p>
         </div>
-        <div className="bg-white rounded-xl shadow-md p-5 border-r-4 border-red-500">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm border-r-4 border-red-500">
           <p className="text-sm text-gray-500">{t("companies.totalExpenses")}</p>
           <p className="text-3xl font-bold mt-1 text-red-600">{totalPurchases.toLocaleString("ar-EG")} ج.م</p>
         </div>
-        <div className="bg-white rounded-xl shadow-md p-5 border-r-4 border-purple-500">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm border-r-4 border-purple-500">
           <p className="text-sm text-gray-500">{t("companies.netProfit")}</p>
           <p className={`text-3xl font-bold mt-1 ${totalNetProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
             {totalNetProfit.toLocaleString("ar-EG")} ج.م
@@ -243,15 +241,15 @@ export default function CompaniesPage() {
         </div>
       </div>
 
-      <div className="mb-5"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("common.company")}...`} className="w-full rounded-lg border px-4 py-2 md:max-w-md" /></div>
+      <div className="mb-5"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("common.company")}...`} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 md:max-w-md" /></div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {companies.filter(company => [company.name, company.nameAr].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())).map((company) => (
           <div
             key={company.id}
             onClick={() => setSelectedId(selectedId === company.id ? null : company.id)}
-            className={`bg-white rounded-xl shadow-md p-6 cursor-pointer transition-all hover:shadow-lg border-2 ${
-              selectedId === company.id ? "border-blue-500" : "border-transparent"
+            className={`rounded-2xl border border-slate-200 bg-white shadow-sm p-6 cursor-pointer transition-all hover:shadow-lg ${
+              selectedId === company.id ? "ring-2 ring-blue-500" : ""
             }`}
           >
             <div className="flex items-center gap-3 mb-4">
@@ -298,7 +296,7 @@ export default function CompaniesPage() {
       </div>
 
       {selected && (
-        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold">{selected.name} — تفاصيل</h2>
             <div className="flex items-center gap-3">

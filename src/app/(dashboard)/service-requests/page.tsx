@@ -12,6 +12,7 @@ import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
+import FormModal from "@/components/FormModal";
 
 const PRIORITY_LABELS: Record<string, string> = {
   NORMAL: "عادي",
@@ -220,50 +221,68 @@ export default function ServiceRequestsPage() {
     ]),
   });
 
+  const inputClass = "w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500";
+
   return (
-    <div dir={dir}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("serviceRequests.title")}</h1>
+    <div dir={dir} className="space-y-5">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>
+          <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">{t("serviceRequests.title")}</h1>
+        </div>
         {canManageRequests && (
-          <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2">
-            {t("serviceRequests.newRequest")}
+          <button onClick={() => setShowForm(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700">
+            <span className="text-lg leading-none">+</span>{t("serviceRequests.newRequest")}
           </button>
         )}
       </div>
 
-      {showForm && (
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="border rounded-lg px-4 py-2" required>
+      <FormModal open={showForm} onClose={() => setShowForm(false)} title={t("serviceRequests.newRequest")}>
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("serviceRequests.selectCustomer")}</label>
+            <select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className={inputClass} required>
               <option value="">{t("serviceRequests.selectCustomer")}</option>
               {customers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
             </select>
-            <select value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value, machineId: "" })} className="border rounded-lg px-4 py-2">
-              <option value="">{t("machineDetails.location")} ({t("common.selectOption")})</option>
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("machineDetails.location")}</label>
+            <select value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value, machineId: "" })} className={inputClass}>
+              <option value="">{t("common.selectOption")}</option>
               {customers.find(customer => customer.id === form.customerId)?.locations?.map(location => <option key={location.id} value={location.id}>{location.name}</option>)}
             </select>
-            <select value={form.machineId} onChange={(e) => setForm({ ...form, machineId: e.target.value })} className="border rounded-lg px-4 py-2">
-              <option value="">{t("serviceRequests.machine")} ({t("common.selectOption")})</option>
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("serviceRequests.machine")}</label>
+            <select value={form.machineId} onChange={(e) => setForm({ ...form, machineId: e.target.value })} className={inputClass}>
+              <option value="">{t("common.selectOption")}</option>
               {machines.filter(machine => machine.currentOwnerId === form.customerId && (!form.locationId || machine.customerLocationId === form.locationId)).map(machine => <option key={machine.id} value={machine.id}>{machine.serialNumber}{machine.model ? ` · ${machine.model}` : ""}</option>)}
             </select>
-            <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} className="border rounded-lg px-4 py-2">
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("serviceRequests.priority")}</label>
+            <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} className={inputClass}>
               <option value="NORMAL">{PRIORITY_LABELS.NORMAL}</option>
               <option value="IMPORTANT">{PRIORITY_LABELS.IMPORTANT}</option>
               <option value="URGENT">{PRIORITY_LABELS.URGENT}</option>
               <option value="EMERGENCY">{PRIORITY_LABELS.EMERGENCY}</option>
             </select>
-            <textarea placeholder={t("common.description")} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="border rounded-lg px-4 py-2 md:col-span-2" rows={3} required />
-            <div className="md:col-span-2 flex gap-2">
-              <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"><Save size={16} />{t("common.save")}</button>
-              <button type="button" onClick={() => setShowForm(false)} className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 inline-flex items-center gap-2"><X size={16} />{t("common.cancel")}</button>
-            </div>
-          </form>
-        </div>
-      )}
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("common.description")}</label>
+            <textarea placeholder={t("common.description")} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={inputClass} rows={3} required />
+          </div>
+          <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"><X size={16} className="ms-1 inline-block" />{t("common.cancel")}</button>
+            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"><Save size={16} />{t("common.save")}</button>
+          </div>
+        </form>
+      </FormModal>
 
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
-          <SearchInput value={search} onChange={setSearchInput} placeholder={t("serviceRequests.searchPlaceholder")} />
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-2 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
+          <div className="min-w-[220px] flex-1"><SearchInput value={search} onChange={setSearchInput} placeholder={t("serviceRequests.searchPlaceholder")} /></div>
           <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("serviceRequests.status")} — ${t("common.all")}`} className="md:w-40" />
           <FilterSelect value={priorityFilter} onChange={(v) => { setPriorityFilter(v); setPage(1); }} options={Object.entries(PRIORITY_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("serviceRequests.priorityFilter")} — ${t("common.all")}`} className="md:w-36" />
           {!isEngineer && (
@@ -284,23 +303,29 @@ export default function ServiceRequestsPage() {
             <PrinterLoader size="md" label={t("common.loading")} />
           </div>
         ) : requests.length === 0 ? (
-          <p className="text-gray-500">{t("common.noData")}</p>
+          <div className="flex min-h-[200px] items-center justify-center">
+            <p className="text-sm text-gray-400">{t("common.noData")}</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <p className="text-sm text-gray-400">{t("common.noData")}</p>
+          </div>
         ) : (
           <>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("serviceRequests.requestNumber")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("serviceRequests.customer")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("serviceRequests.machine")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("serviceRequests.priority")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("serviceRequests.status")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("serviceRequests.engineer")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.date")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("serviceRequests.problems")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("serviceRequests.rating")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.actions")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("serviceRequests.requestNumber")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("serviceRequests.customer")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("serviceRequests.machine")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("serviceRequests.priority")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("serviceRequests.status")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("serviceRequests.engineer")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.date")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("serviceRequests.problems")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("serviceRequests.rating")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -369,7 +394,7 @@ export default function ServiceRequestsPage() {
                       </div>
                       {assigningId === req.id && canManageRequests && (
                         <div className="mt-2 flex gap-1">
-                          <select value={assignEngineerId} onChange={(e) => setAssignEngineerId(e.target.value)} className="border rounded-lg px-2 py-1 text-xs">
+                          <select value={assignEngineerId} onChange={(e) => setAssignEngineerId(e.target.value)} className="rounded-lg border border-gray-300 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="">{t("serviceRequests.selectEngineer")}</option>
                             {engineers.map((eng) => (<option key={eng.id} value={eng.id}>{eng.name}</option>))}
                           </select>

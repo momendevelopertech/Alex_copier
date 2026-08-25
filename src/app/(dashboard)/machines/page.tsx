@@ -6,8 +6,9 @@ import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
-import { Plus, Trash2, Upload, X } from "lucide-react";
+import { Plus, Trash2, Upload } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
+import FormModal from "@/components/FormModal";
 import ImportDialog from "@/components/ImportDialog";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useConfirm, useToast } from "@/components/UIProvider";
@@ -177,162 +178,130 @@ const { success: toastSuccess } = useToast();
   const isOpen = (status: string) => !["RESOLVED", "CLOSED"].includes(status);
 
   return (
-    <div dir={dir}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("machines.title")}</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
-        >
-          {showForm ? (<><X size={16} />{t("common.cancel")}</>) : (<><Plus size={16} />{t("machines.addMachine")}</>)}
+    <div dir={dir} className="space-y-5">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>
+          <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">{t("machines.title")}</h1>
+        </div>
+        <button onClick={() => setShowForm(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700">
+          <Plus size={16} />{t("machines.addMachine")}
         </button>
       </div>
 
-      {showForm && (
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">{t("machines.addMachine")}</h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <input
-              type="text"
-              placeholder={t("machines.serialNumber")}
-              value={form.serialNumber}
-              onChange={(e) => setField("serialNumber", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-              required
-            />
-            <input
-              type="text"
-              placeholder={t("machines.manufacturer")}
-              value={form.manufacturer}
-              onChange={(e) => setField("manufacturer", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            />
-            <input
-              type="text"
-              placeholder={t("machines.model")}
-              value={form.model}
-              onChange={(e) => setField("model", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            />
-            <label className="flex items-center gap-2 border rounded-lg px-4 py-2 w-full">
-              <input
-                type="checkbox"
-                checked={form.isColor}
-                onChange={(e) => setField("isColor", e.target.checked)}
-              />
-              <span>ملون</span>
+      <FormModal open={showForm} onClose={() => setShowForm(false)} title={t("machines.addMachine")} wide>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("machines.serialNumber")}</label>
+            <input type="text" value={form.serialNumber} onChange={(e) => setField("serialNumber", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("machines.manufacturer")}</label>
+            <input type="text" value={form.manufacturer} onChange={(e) => setField("manufacturer", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("machines.model")}</label>
+            <input type="text" value={form.model} onChange={(e) => setField("model", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">ملون</label>
+            <label className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2.5">
+              <input type="checkbox" checked={form.isColor} onChange={(e) => setField("isColor", e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+              <span className="text-sm">نعم</span>
             </label>
-            <select
-              value={form.paperSize}
-              onChange={(e) => setField("paperSize", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            >
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">حجم الورق</label>
+            <select value={form.paperSize} onChange={(e) => setField("paperSize", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="A4">A4</option>
               <option value="A3">A3</option>
               <option value="A3_A4">A3/A4</option>
             </select>
-            <input
-              type="date"
-              placeholder="تاريخ الشراء"
-              value={form.purchaseDate}
-              onChange={(e) => setField("purchaseDate", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            />
-            <input
-              type="number"
-              placeholder="سعر الشراء"
-              value={form.purchasePrice}
-              onChange={(e) => setField("purchasePrice", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            />
-            <input
-              type="text"
-              placeholder="معرّف المالك الحالي"
-              value={form.currentOwnerId}
-              onChange={(e) => setField("currentOwnerId", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            />
-            <input
-              type="text"
-              placeholder={t("common.notes")}
-              value={form.notes}
-              onChange={(e) => setField("notes", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">تاريخ الشراء</label>
+            <input type="date" value={form.purchaseDate} onChange={(e) => setField("purchaseDate", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">سعر الشراء</label>
+            <input type="number" value={form.purchasePrice} onChange={(e) => setField("purchasePrice", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">المالك الحالي</label>
+            <input type="text" value={form.currentOwnerId} onChange={(e) => setField("currentOwnerId", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("common.notes")}</label>
+            <input type="text" value={form.notes} onChange={(e) => setField("notes", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end md:col-span-2 lg:col-span-3">
+            <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
+            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">{t("common.save")}</button>
+          </div>
+        </form>
+      </FormModal>
+
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-2 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
+          <SearchInput
+            value={search}
+            onChange={setSearchInput}
+            placeholder={t("machines.searchPlaceholder")}
+          />
+          <FilterSelect
+            value={statusFilter}
+            onChange={(v) => { setStatusFilter(v); setPage(1); }}
+            options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))}
+            allLabel={`${t("machines.status")} — ${t("common.all")}`}
+            className="md:w-44"
+          />
+          {hasActiveFilters && (
             <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
+              onClick={() => { setSearchInput(null); setStatusFilter(""); }}
+              className="text-sm text-gray-500 hover:text-gray-700 underline"
             >
-              {t("common.save")}
+              {t("common.resetFilters")}
             </button>
-          </form>
+          )}
+          <div className="flex gap-2 md:ms-auto">
+            <ExportButton filename="machines" getExport={exportMachines} disabled={filtered.length === 0} />
+            <button
+              onClick={() => setShowImport(true)}
+              className="border border-blue-600 text-blue-700 hover:bg-blue-50 px-3 py-2 rounded-lg text-sm font-medium"
+            >
+              <Upload size={14} className="inline-block me-1" />{t("common.import")}
+            </button>
+          </div>
         </div>
-      )}
-
-      <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
-        <SearchInput
-          value={search}
-          onChange={setSearchInput}
-          placeholder={t("machines.searchPlaceholder")}
-        />
-        <FilterSelect
-          value={statusFilter}
-          onChange={(v) => { setStatusFilter(v); setPage(1); }}
-          options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))}
-          allLabel={`${t("machines.status")} — ${t("common.all")}`}
-          className="md:w-44"
-        />
-        {hasActiveFilters && (
-          <button
-            onClick={() => { setSearchInput(null); setStatusFilter(""); }}
-            className="text-sm text-gray-500 hover:text-gray-700 underline"
-          >
-            {t("common.resetFilters")}
-          </button>
-        )}
-        <div className="flex gap-2 md:ms-auto">
-          <ExportButton filename="machines" getExport={exportMachines} disabled={filtered.length === 0} />
-          <button
-            onClick={() => setShowImport(true)}
-            className="border border-blue-600 text-blue-700 hover:bg-blue-50 px-3 py-2 rounded-lg text-sm font-medium"
-          >
-            <Upload size={14} className="inline-block me-1" />{t("common.import")}
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl overflow-hidden shadow-md">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("machines.serialNumber")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("machines.manufacturer")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("machines.model")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("machines.status")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">حجم الورق</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">المالك الحالي</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.date")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.actions")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {loading ? (
+        {loading ? (
+          <div className="flex min-h-[320px] w-full items-center justify-center px-4 py-8">
+            <PrinterLoader size="md" label={t("common.loading")} />
+          </div>
+        ) : machines.length === 0 ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <p className="text-sm text-gray-400">{t("common.noData")}</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <p className="text-sm text-gray-400">{t("common.noData")}</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
                 <tr>
-                  <td colSpan={8} className="py-10">
-                    <div className="flex items-center justify-center">
-                      <PrinterLoader size="sm" label={t("common.loading")} />
-                    </div>
-                  </td>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("machines.serialNumber")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("machines.manufacturer")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("machines.model")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("machines.status")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">حجم الورق</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">المالك الحالي</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.date")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.actions")}</th>
                 </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-8 text-gray-400">
-                    {t("common.noData")}
-                  </td>
-                </tr>
-              ) : (
-                paged.map((machine) => (
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {paged.map((machine) => (
                   <tr key={machine.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm">{machine.serialNumber}</td>
                     <td className="px-4 py-3 text-sm">{machine.manufacturer}</td>
@@ -366,11 +335,11 @@ const { success: toastSuccess } = useToast();
                       </button>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
         <Pagination
           currentPage={safePage}
           totalPages={totalPages}

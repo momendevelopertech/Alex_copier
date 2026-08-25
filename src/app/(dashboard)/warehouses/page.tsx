@@ -6,10 +6,11 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
-import { Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Save, Trash2, Box, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
+import FormModal from "@/components/FormModal";
 
 interface Company {
   id: string;
@@ -26,10 +27,52 @@ interface Warehouse {
   _count?: { inventory: number };
 }
 
+interface InventoryItem {
+  id: string;
+  productId: string;
+  warehouseId: string;
+  quantity: number;
+  product?: { id: string; name: string; sku?: string | null; productType: string };
+}
+
+interface StockMovement {
+  id: string;
+  warehouseId: string;
+  productId: string;
+  quantity: number;
+  movementType: string;
+  referenceId?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  product?: { id: string; name: string; sku?: string | null };
+}
+
+const MOVEMENT_LABELS: Record<string, { ar: string; en: string }> = {
+  PURCHASE_IN: { ar: "وارد شراء", en: "Purchase In" },
+  INTER_COMPANY_IN: { ar: "وارد بين الشركات", en: "Inter-Company In" },
+  INTER_COMPANY_OUT: { ar: "صادر بين الشركات", en: "Inter-Company Out" },
+  SALE_OUT: { ar: "صادر مبيعات", en: "Sale Out" },
+  ENGINEER_CUSTODY_OUT: { ar: "عهدة مهندس (صادر)", en: "Engineer Custody Out" },
+  ENGINEER_RETURN: { ar: "مرتجع مهندس", en: "Engineer Return" },
+  CONSUMED: { ar: "مستهلك", en: "Consumed" },
+  SCRAP: { ar: "مهمل", en: "Scrap" },
+  ADJUSTMENT: { ar: "تسوية", en: "Adjustment" },
+};
+
+function movementLabel(type: string, lang: string) {
+  const entry = MOVEMENT_LABELS[type];
+  return entry ? entry[lang === "ar" ? "ar" : "en"] : type;
+}
+
+function isIncoming(type: string) {
+  return ["PURCHASE_IN", "INTER_COMPANY_IN", "ENGINEER_RETURN"].includes(type);
+}
+
 const emptyForm = { name: "", companyId: "", isMain: false };
 
 export default function WarehousesPage() {
   const { t, dir } = useI18n();
+  const lang = dir === "rtl" ? "ar" : "en";
   const confirmAction = useConfirm();
   const { success: toastSuccess, error: toastError } = useToast();
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -45,6 +88,12 @@ export default function WarehousesPage() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
 
+  const [detailWarehouse, setDetailWarehouse] = useState<Warehouse | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailInventory, setDetailInventory] = useState<InventoryItem[]>([]);
+  const [detailMovements, setDetailMovements] = useState<StockMovement[]>([]);
+  const [detailTab, setDetailTab] = useState<"inventory" | "movements">("inventory");
+
   const fetchData = async () => {
     try {
       const [wRes, cRes] = await Promise.all([fetch("/api/warehouses"), fetch("/api/companies")]);
@@ -59,6 +108,23 @@ export default function WarehousesPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const openDetail = async (warehouse: Warehouse) => {
+    setDetailWarehouse(warehouse);
+    setDetailLoading(true);
+    setDetailTab("inventory");
+    try {
+      const res = await fetch(`/api/warehouses/${warehouse.id}/inventory`);
+      const data = await res.json();
+      setDetailInventory(Array.isArray(data.inventory) ? data.inventory : []);
+      setDetailMovements(Array.isArray(data.movements) ? data.movements : []);
+    } catch {
+      setDetailInventory([]);
+      setDetailMovements([]);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   const filtered = warehouses.filter(
     (w) =>
@@ -91,7 +157,7 @@ export default function WarehousesPage() {
   };
 
   const openEdit = (warehouse: Warehouse) => {
-    setForm({ name: warehouse.name, companyId: warehouse.companyId, isMain: warehouse.isMain });
+    setForm({ name: warehouse.company?.nameAr || warehouse.company?.name || warehouse.name, companyId: warehouse.companyId, isMain: warehouse.isMain });
     setEditingId(warehouse.id);
     setError("");
     setShowForm(true);
@@ -135,14 +201,17 @@ export default function WarehousesPage() {
   };
 
   return (
-    <div dir={dir}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("warehouses.title")}</h1>
+    <div dir={dir} className="space-y-5">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>
+          <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">{t("warehouses.title")}</h1>
+        </div>
         <button
           onClick={openCreate}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
         >
-          {showForm && !editingId ? (<><X size={16} />{t("common.cancel")}</>) : (<><Plus size={16} />{t("warehouses.addWarehouse")}</>)}
+          <Plus size={16} />{t("warehouses.addWarehouse")}
         </button>
       </div>
 
@@ -158,90 +227,198 @@ export default function WarehousesPage() {
         </div>
       )}
 
-      {showForm && (
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">
-            {editingId ? t("warehouses.editWarehouse") : t("warehouses.addWarehouse")}
-          </h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium">{t("warehouses.name")}</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full rounded-lg border px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
-                required
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">{t("warehouses.company")}</label>
-              <select
-                value={form.companyId}
-                onChange={(e) => setForm({ ...form, companyId: e.target.value })}
-                className="w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
-                required
-              >
-                <option value="">{t("common.selectOption")}</option>
-                {companies.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {company.nameAr || company.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-end gap-2 pb-1">
-              <input
-                id="warehouse-isMain"
-                type="checkbox"
-                checked={form.isMain}
-                onChange={(e) => setForm({ ...form, isMain: e.target.checked })}
-                className="h-4 w-4"
-              />
-              <label htmlFor="warehouse-isMain" className="text-sm font-medium">
-                {t("warehouses.isMain")}
-              </label>
-            </div>
-            <div className="md:col-span-3 flex justify-end">
+      <FormModal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? t("warehouses.editWarehouse") : t("warehouses.addWarehouse")}>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("warehouses.company")}</label>
+            <select
+              value={form.companyId}
+              onChange={(e) => {
+                const companyId = e.target.value;
+                const company = companies.find((c) => c.id === companyId);
+                setForm({ ...form, companyId, name: company ? (company.nameAr || company.name) : "" });
+              }}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            >
+              <option value="">{t("common.selectOption")}</option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.nameAr || company.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <input type="hidden" value={form.name} />
+          <div className="flex items-end gap-2 pb-1">
+            <input
+              id="warehouse-isMain"
+              type="checkbox"
+              checked={form.isMain}
+              onChange={(e) => setForm({ ...form, isMain: e.target.checked })}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <label htmlFor="warehouse-isMain" className="text-sm font-medium">
+              {t("warehouses.isMain")}
+            </label>
+          </div>
+          <div className="md:col-span-3 flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Save size={16} />{saving ? t("common.saving") : t("common.save")}
+            </button>
+          </div>
+        </form>
+      </FormModal>
+
+      <FormModal open={!!detailWarehouse} onClose={() => setDetailWarehouse(null)} title={detailWarehouse ? `${t("warehouses.inventoryDetails")} — ${detailWarehouse.name}` : ""} wide>
+        {detailLoading ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <PrinterLoader size="sm" label={t("common.loading")} />
+          </div>
+        ) : (
+          <>
+            <div className="mb-4 flex gap-2">
               <button
-                type="submit"
-                disabled={saving}
-                className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={() => setDetailTab("inventory")}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition ${detailTab === "inventory" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
               >
-                {<Save size={16} />}{<Save size={16} />}{saving ? t("common.saving") : t("common.save")}
+                <Box size={14} className="inline-block me-1.5" />{t("warehouses.itemsCount")} ({detailInventory.length})
+              </button>
+              <button
+                onClick={() => setDetailTab("movements")}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition ${detailTab === "movements" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              >
+                {t("warehouses.movements")} ({detailMovements.length})
               </button>
             </div>
-          </form>
-        </div>
-      )}
 
-      <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder={`${t("common.search")} ${t("warehouses.title")}`}
-        />
-        <FilterSelect
-          value={companyFilter}
-          onChange={(v) => { setCompanyFilter(v); setPage(1); }}
-          options={companies.map((c) => ({ value: c.id, label: c.nameAr || c.name }))}
-          allLabel={`${t("warehouses.company")} — ${t("common.all")}`}
-          className="md:w-52"
-        />
-        {hasActiveFilters && (
-          <button
-            onClick={() => { setSearch(""); setCompanyFilter(""); }}
-            className="text-sm text-gray-500 hover:text-gray-700 underline"
-          >
-            {t("common.resetFilters")}
-          </button>
+            {detailTab === "inventory" && (
+              detailInventory.length === 0 ? (
+                <div className="flex min-h-[120px] items-center justify-center">
+                  <p className="text-sm text-gray-400">{t("warehouses.noInventory")}</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-gray-200">
+                  <table className="w-full min-w-[480px]">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">#</th>
+                        <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("warehouses.product")}</th>
+                        <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("warehouses.sku")}</th>
+                        <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("warehouses.quantity")}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {detailInventory.map((item, idx) => (
+                        <tr key={item.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm text-gray-500">{idx + 1}</td>
+                          <td className="px-4 py-3 text-sm font-medium">{item.product?.name || "—"}</td>
+                          <td className="px-4 py-3 text-sm text-gray-500">{item.product?.sku || "—"}</td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex whitespace-nowrap rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                              {item.quantity}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            )}
+
+            {detailTab === "movements" && (
+              detailMovements.length === 0 ? (
+                <div className="flex min-h-[120px] items-center justify-center">
+                  <p className="text-sm text-gray-400">{t("warehouses.noInventory")}</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-gray-200">
+                  <table className="w-full min-w-[640px]">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">#</th>
+                        <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("warehouses.date")}</th>
+                        <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("warehouses.product")}</th>
+                        <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("warehouses.movementType")}</th>
+                        <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("warehouses.quantity")}</th>
+                        <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("warehouses.notes")}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {detailMovements.map((m, idx) => (
+                        <tr key={m.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm text-gray-500">{idx + 1}</td>
+                          <td className="px-4 py-3 text-sm text-gray-500">{new Date(m.createdAt).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US")}</td>
+                          <td className="px-4 py-3 text-sm font-medium">{m.product?.name || "—"}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${isIncoming(m.movementType) ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+                              {isIncoming(m.movementType) ? <ArrowDownToLine size={12} /> : <ArrowUpFromLine size={12} />}
+                              {movementLabel(m.movementType, lang)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`text-sm font-semibold ${isIncoming(m.movementType) ? "text-green-600" : "text-red-600"}`}>
+                              {isIncoming(m.movementType) ? "+" : "-"}{m.quantity}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-500">{m.notes || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            )}
+          </>
         )}
-        <ExportButton filename="warehouses" getExport={exportWarehouses} disabled={filtered.length === 0} />
-      </div>
+      </FormModal>
 
-      <div className="bg-white rounded-xl overflow-hidden shadow-md">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px]">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-2 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder={`${t("common.search")} ${t("warehouses.title")}`}
+          />
+          <FilterSelect
+            value={companyFilter}
+            onChange={(v) => { setCompanyFilter(v); setPage(1); }}
+            options={companies.map((c) => ({ value: c.id, label: c.nameAr || c.name }))}
+            allLabel={`${t("warehouses.company")} — ${t("common.all")}`}
+            className="md:w-52"
+          />
+          {hasActiveFilters && (
+            <button
+              onClick={() => { setSearch(""); setCompanyFilter(""); }}
+              className="text-sm text-gray-500 hover:text-gray-700 underline"
+            >
+              {t("common.resetFilters")}
+            </button>
+          )}
+          <div className="md:ms-auto"><ExportButton filename="warehouses" getExport={exportWarehouses} disabled={filtered.length === 0} /></div>
+        </div>
+
+        {loading ? (
+          <div className="flex min-h-[320px] w-full items-center justify-center px-4 py-8">
+            <PrinterLoader size="md" label={t("common.loading")} />
+          </div>
+        ) : warehouses.length === 0 ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <p className="text-sm text-gray-400">{t("common.noData")}</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <p className="text-sm text-gray-400">{t("common.noData")}</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px]">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("warehouses.name")}</th>
@@ -252,22 +429,7 @@ export default function WarehousesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="py-10">
-                    <div className="flex items-center justify-center">
-                      <PrinterLoader size="sm" label={t("common.loading")} />
-                    </div>
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="text-center py-8 text-gray-400">
-                    {t("common.noData")}
-                  </td>
-                </tr>
-              ) : (
-                paged.map((warehouse) => (
+              {paged.map((warehouse) => (
                   <tr key={warehouse.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium">{warehouse.name}</td>
                     <td className="px-4 py-3 text-sm">{warehouse.company?.nameAr || warehouse.company?.name || "—"}</td>
@@ -276,7 +438,15 @@ export default function WarehousesPage() {
                         {warehouse.isMain ? t("common.yes") : t("common.no")}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm">{warehouse._count?.inventory ?? 0}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => openDetail(warehouse)}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 hover:text-blue-800 cursor-pointer"
+                      >
+                        <Box size={13} />
+                        {warehouse._count?.inventory ?? 0}
+                      </button>
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <button
@@ -294,11 +464,11 @@ export default function WarehousesPage() {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
+                ))}
             </tbody>
           </table>
         </div>
+        )}
         <Pagination
           currentPage={safePage}
           totalPages={totalPages}

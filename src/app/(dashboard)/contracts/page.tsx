@@ -6,9 +6,10 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
-import { Plus, Save, X } from "lucide-react";
+import { Plus, Save, Pencil, Eye } from "lucide-react";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
+import FormModal from "@/components/FormModal";
 
 const TYPE_LABELS: Record<string, string> = {
   MAINTENANCE_ONLY: "صيانة فقط",
@@ -26,8 +27,16 @@ const STATUS_LABELS: Record<string, string> = {
 
 const BILLING_LABELS: Record<string, string> = {
   MONTHLY: "شهري",
+  HALF_YEARLY: "نصف سنوي",
   QUARTERLY: "ربع سنوي",
   YEARLY: "سنوي",
+};
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  CASH: "كاش",
+  CREDIT: "آجل",
+  INSTALLMENT: "تقسيط",
+  MIXED: "مزيج",
 };
 
 const contractTypeColors: Record<string, string> = {
@@ -49,11 +58,18 @@ interface Machine { id: string; serialNumber: string; model: string | null; curr
 interface ContractMachine { id: string; machineId: string; machine: { id: string; serialNumber: string; model: string | null }; }
 interface Contract {
   id: string; contractNumber: string; customerId: string; contractType: string; status: string;
-  startDate: string; endDate: string; value: number; billingCycle: string;
-  visitLimit: number | null; costPerCopy: number | null; earlyTerminationFee: number | null;
+  startDate: string; endDate: string; value: number; amountPaid: number; paymentMethod: string; billingCycle: string;
   notes: string | null; createdAt: string; customer: Customer; machines: ContractMachine[];
   _count: { visits: number };
 }
+
+const addMonths = (date: Date, months: number) => {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + months);
+  return next;
+};
+
+const toInputDate = (date: Date) => date.toISOString().slice(0, 10);
 
 export default function ContractsPage() {
   const { t, dir } = useI18n();
@@ -62,6 +78,8 @@ export default function ContractsPage() {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [viewingContract, setViewingContract] = useState<Contract | null>(null);
   const urlParams = useUrlParams(["focus"]);
   const focusedContract = urlParams.focus ? contracts.find((c) => c.id === urlParams.focus) : undefined;
   const [search, setSearchInput] = useSearchWithDefault(focusedContract?.contractNumber ?? "");
@@ -69,11 +87,24 @@ export default function ContractsPage() {
   const [typeFilter, setTypeFilter] = useState("");
   const [form, setForm] = useState({
     customerId: "", contractType: "MAINTENANCE_ONLY", startDate: "", endDate: "",
-    value: "", billingCycle: "MONTHLY", visitLimit: "", costPerCopy: "",
-    earlyTerminationFee: "", notes: "", machineIds: [] as string[],
+    value: "", amountPaid: "", paymentMethod: "CASH", billingCycle: "MONTHLY", notes: "", machineIds: [] as string[],
   });
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
+
+  const remainingAmount = Number(form.value || 0) - Number(form.amountPaid || 0);
+  const billingCycleMonths: Record<string, number> = {
+    MONTHLY: 1,
+    HALF_YEARLY: 6,
+    QUARTERLY: 3,
+    YEARLY: 12,
+  };
+
+  const updateEndDateFromCycle = (nextStartDate: string, nextCycle: string) => {
+    if (!nextStartDate || !billingCycleMonths[nextCycle]) return;
+    const nextDate = addMonths(new Date(nextStartDate), billingCycleMonths[nextCycle]);
+    setForm((prev) => ({ ...prev, endDate: toInputDate(nextDate) }));
+  };
 
   const fetchData = async () => {
     try {
@@ -96,15 +127,50 @@ export default function ContractsPage() {
       body: JSON.stringify({
         ...form,
         value: parseFloat(form.value) || 0,
-        visitLimit: form.visitLimit ? parseInt(form.visitLimit) : undefined,
-        costPerCopy: form.costPerCopy ? parseFloat(form.costPerCopy) : undefined,
-        earlyTerminationFee: form.earlyTerminationFee ? parseFloat(form.earlyTerminationFee) : undefined,
+        amountPaid: parseFloat(form.amountPaid) || 0,
       }),
     });
-    setForm({ customerId: "", contractType: "MAINTENANCE_ONLY", startDate: "", endDate: "", value: "", billingCycle: "MONTHLY", visitLimit: "", costPerCopy: "", earlyTerminationFee: "", notes: "", machineIds: [] });
+    setForm({ customerId: "", contractType: "MAINTENANCE_ONLY", startDate: "", endDate: "", value: "", amountPaid: "", paymentMethod: "CASH", billingCycle: "MONTHLY", notes: "", machineIds: [] });
     setShowForm(false);
     fetchData();
   };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId) return;
+    await fetch(`/api/contracts/${editingId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...form,
+        value: parseFloat(form.value) || 0,
+        amountPaid: parseFloat(form.amountPaid) || 0,
+      }),
+    });
+    setEditingId(null);
+    setForm({ customerId: "", contractType: "MAINTENANCE_ONLY", startDate: "", endDate: "", value: "", amountPaid: "", paymentMethod: "CASH", billingCycle: "MONTHLY", notes: "", machineIds: [] });
+    setShowForm(false);
+    fetchData();
+  };
+
+  const openEdit = (c: Contract) => {
+    setEditingId(c.id);
+    setForm({
+      customerId: c.customerId,
+      contractType: c.contractType,
+      startDate: c.startDate.slice(0, 10),
+      endDate: c.endDate.slice(0, 10),
+      value: String(c.value),
+      amountPaid: String(c.amountPaid),
+      paymentMethod: c.paymentMethod,
+      billingCycle: c.billingCycle,
+      notes: c.notes || "",
+      machineIds: c.machines.map((m) => m.machineId),
+    });
+    setShowForm(true);
+  };
+
+  const openView = (c: Contract) => setViewingContract(c);
 
   const handleStatusToggle = async (id: string, currentStatus: string) => {
     const nextStatus = currentStatus === "ACTIVE" ? "TERMINATED" : "ACTIVE";
@@ -148,60 +214,115 @@ export default function ContractsPage() {
   });
 
   return (
-    <div dir={dir}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("contracts.title")}</h1>
-        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"><Plus size={16} />{t("contracts.addContract")}</button>
+    <div dir={dir} className="space-y-5">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>
+          <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">{t("contracts.title")}</h1>
+        </div>
+        <button onClick={() => setShowForm(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700">
+          <Plus size={16} />{t("contracts.addContract")}
+        </button>
       </div>
 
-      {showForm && (
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="border rounded-lg px-4 py-2" required>
-              <option value="">{t("contracts.selectCustomer")}</option>
-              {customers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-            </select>
-            <select value={form.contractType} onChange={(e) => setForm({ ...form, contractType: e.target.value })} className="border rounded-lg px-4 py-2">
-              <option value="MAINTENANCE_ONLY">{TYPE_LABELS.MAINTENANCE_ONLY}</option>
-              <option value="MAINTENANCE_AND_PARTS">{TYPE_LABELS.MAINTENANCE_AND_PARTS}</option>
-              <option value="MAINTENANCE_AND_PRINTING">{TYPE_LABELS.MAINTENANCE_AND_PRINTING}</option>
-              <option value="RENTAL">{TYPE_LABELS.RENTAL}</option>
-            </select>
-            <select value={form.billingCycle} onChange={(e) => setForm({ ...form, billingCycle: e.target.value })} className="border rounded-lg px-4 py-2">
-              <option value="MONTHLY">{BILLING_LABELS.MONTHLY}</option>
-              <option value="QUARTERLY">{BILLING_LABELS.QUARTERLY}</option>
-              <option value="YEARLY">{BILLING_LABELS.YEARLY}</option>
-            </select>
-            <div>
-              <label className="text-sm text-gray-500 mb-1 block">{t("contracts.startDate")}</label>
-              <input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="border rounded-lg px-4 py-2 w-full" required />
+      <FormModal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); setForm({ customerId: "", contractType: "MAINTENANCE_ONLY", startDate: "", endDate: "", value: "", amountPaid: "", paymentMethod: "CASH", billingCycle: "MONTHLY", notes: "", machineIds: [] }); }} title={editingId ? t("common.edit") : t("contracts.addContract")} wide>
+        <form onSubmit={editingId ? handleUpdate : handleCreate} className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">{t("contracts.selectCustomer")}</label>
+                <select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                  <option value="">{t("contracts.selectCustomer")}</option>
+                  {customers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">{t("contracts.type")}</label>
+                <select value={form.contractType} onChange={(e) => setForm({ ...form, contractType: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="MAINTENANCE_ONLY">{TYPE_LABELS.MAINTENANCE_ONLY}</option>
+                  <option value="MAINTENANCE_AND_PARTS">{TYPE_LABELS.MAINTENANCE_AND_PARTS}</option>
+                  <option value="MAINTENANCE_AND_PRINTING">{TYPE_LABELS.MAINTENANCE_AND_PRINTING}</option>
+                  <option value="RENTAL">{TYPE_LABELS.RENTAL}</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">الفترة</label>
+                <select value={form.billingCycle} onChange={(e) => {
+                  const nextCycle = e.target.value;
+                  const nextStart = form.startDate || toInputDate(new Date());
+                  updateEndDateFromCycle(nextStart, nextCycle);
+                  setForm((prev) => ({ ...prev, billingCycle: nextCycle, startDate: prev.startDate || nextStart }));
+                }} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="MONTHLY">{BILLING_LABELS.MONTHLY}</option>
+                  <option value="HALF_YEARLY">{BILLING_LABELS.HALF_YEARLY}</option>
+                  <option value="QUARTERLY">{BILLING_LABELS.QUARTERLY}</option>
+                  <option value="YEARLY">{BILLING_LABELS.YEARLY}</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">{t("contracts.startDate")}</label>
+                <input type="date" value={form.startDate} onChange={(e) => {
+                  const nextStart = e.target.value;
+                  setForm((prev) => ({ ...prev, startDate: nextStart }));
+                  if (nextStart) updateEndDateFromCycle(nextStart, form.billingCycle);
+                }} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">{t("contracts.endDate")}</label>
+                <input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">{t("contracts.value")}</label>
+                <input type="number" min="0" step="0.01" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">تم دفع</label>
+                <input type="number" min="0" step="0.01" value={form.amountPaid} onChange={(e) => setForm({ ...form, amountPaid: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">نوع الدفع</label>
+                <select value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  {Object.entries(PAYMENT_METHOD_LABELS).map(([key, label]) => (<option key={key} value={key}>{label}</option>))}
+                </select>
+              </div>
             </div>
-            <div>
-              <label className="text-sm text-gray-500 mb-1 block">{t("contracts.endDate")}</label>
-              <input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} className="border rounded-lg px-4 py-2 w-full" required />
+
+            <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-3">
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <div className="text-xs text-slate-500">الإجمالي</div>
+                <div className="mt-1 text-lg font-bold text-slate-900">{Number(form.value || 0).toLocaleString()} </div>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <div className="text-xs text-slate-500">تم الدفع</div>
+                <div className="mt-1 text-lg font-bold text-emerald-600">{Number(form.amountPaid || 0).toLocaleString()} </div>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <div className="text-xs text-slate-500">المتبقي</div>
+                <div className={`mt-1 text-lg font-bold ${remainingAmount < 0 ? "text-red-600" : "text-sky-700"}`}>{remainingAmount.toLocaleString()} </div>
+              </div>
             </div>
-            <input type="number" placeholder={t("contracts.value")} value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} className="border rounded-lg px-4 py-2" required />
-            <input type="number" placeholder={t("contracts.visitLimit")} value={form.visitLimit} onChange={(e) => setForm({ ...form, visitLimit: e.target.value })} className="border rounded-lg px-4 py-2" />
-            <input type="number" placeholder={t("contracts.costPerCopy")} value={form.costPerCopy} onChange={(e) => setForm({ ...form, costPerCopy: e.target.value })} className="border rounded-lg px-4 py-2" />
-            <input type="number" placeholder={t("contracts.earlyTerminationFee")} value={form.earlyTerminationFee} onChange={(e) => setForm({ ...form, earlyTerminationFee: e.target.value })} className="border rounded-lg px-4 py-2" />
-            {form.customerId && <div className="md:col-span-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <p className="mb-2 text-sm font-medium text-slate-700">{t("contracts.coveredMachines")}</p>
+
+            {form.customerId && <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="mb-3 text-sm font-semibold text-slate-700">{t("contracts.coveredMachines")}</p>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {machines.filter(machine => machine.currentOwnerId === form.customerId).map(machine => <label key={machine.id} className="flex cursor-pointer items-center gap-2 rounded-md bg-white px-3 py-2 text-sm"><input type="checkbox" checked={form.machineIds.includes(machine.id)} onChange={(e) => setForm({ ...form, machineIds: e.target.checked ? [...form.machineIds, machine.id] : form.machineIds.filter(id => id !== machine.id) })} /><span>{machine.serialNumber}{machine.model ? ` · ${machine.model}` : ""}</span></label>)}
+                {machines.filter(machine => machine.currentOwnerId === form.customerId).map(machine => <label key={machine.id} className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"><input type="checkbox" checked={form.machineIds.includes(machine.id)} onChange={(e) => setForm({ ...form, machineIds: e.target.checked ? [...form.machineIds, machine.id] : form.machineIds.filter(id => id !== machine.id) })} /><span>{machine.serialNumber}{machine.model ? ` · ${machine.model}` : ""}</span></label>)}
                 {machines.filter(machine => machine.currentOwnerId === form.customerId).length === 0 && <p className="text-sm text-slate-500">{t("common.noData")}</p>}
               </div>
             </div>}
-            <textarea placeholder={t("common.notes")} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="border rounded-lg px-4 py-2 md:col-span-3" rows={2} />
-            <div className="md:col-span-3 flex gap-2">
-              <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"><Save size={16} />{t("common.save")}</button>
-              <button type="button" onClick={() => setShowForm(false)} className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 inline-flex items-center gap-2"><X size={16} />{t("common.cancel")}</button>
+
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">{t("common.notes")}</label>
+              <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" rows={3} />
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => { setShowForm(false); setEditingId(null); setForm({ customerId: "", contractType: "MAINTENANCE_ONLY", startDate: "", endDate: "", value: "", amountPaid: "", paymentMethod: "CASH", billingCycle: "MONTHLY", notes: "", machineIds: [] }); }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
+              <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"><Save size={16} /> {t("common.save")}</button>
             </div>
           </form>
-        </div>
-      )}
+      </FormModal>
 
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-2 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
           <SearchInput value={search} onChange={setSearchInput} placeholder={t("contracts.searchPlaceholder")} />
           <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("common.status")} — ${t("common.all")}`} className="md:w-40" />
           <FilterSelect value={typeFilter} onChange={(v) => { setTypeFilter(v); setPage(1); }} options={Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("contracts.typeFilter")} — ${t("common.all")}`} className="md:w-44" />
@@ -218,22 +339,28 @@ export default function ContractsPage() {
           <div className="flex min-h-[320px] w-full items-center justify-center px-4 py-8">
             <PrinterLoader size="md" label={t("common.loading")} />
           </div>
-        )
-        : contracts.length === 0 ? <p className="text-gray-500">{t("common.noData")}</p>
-        : (
+        ) : contracts.length === 0 ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <p className="text-sm text-gray-400">{t("common.noData")}</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <p className="text-sm text-gray-400">{t("common.noData")}</p>
+          </div>
+        ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("contracts.contractNumber")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("serviceRequests.customer")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("contracts.type")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.status")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("contracts.value")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("contracts.startDate")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("contracts.endDate")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("contracts.machines")}</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.actions")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("contracts.contractNumber")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("serviceRequests.customer")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("contracts.type")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.status")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("contracts.value")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("contracts.startDate")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("contracts.endDate")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("contracts.machines")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -248,9 +375,17 @@ export default function ContractsPage() {
                     <td className="px-4 py-3 text-sm">{new Date(c.endDate).toLocaleDateString("ar-EG")}</td>
                     <td className="px-4 py-3 text-sm text-center">{c.machines.length}</td>
                     <td className="px-4 py-3 text-sm">
-                      <button onClick={() => handleStatusToggle(c.id, c.status)} className={`text-xs hover:underline ${c.status === "ACTIVE" ? "text-red-600" : "text-green-600"}`}>
-                        {c.status === "ACTIVE" ? t("contracts.terminate") : t("contracts.activate")}
-                      </button>
+                      <div className="flex gap-2">
+                        <button onClick={() => openView(c)} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2 text-xs font-medium text-gray-600 transition hover:bg-gray-100" title={t("common.view")}>
+                          <Eye size={14} />{t("common.view")}
+                        </button>
+                        <button onClick={() => openEdit(c)} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2 text-xs font-medium text-blue-600 transition hover:bg-blue-100" title={t("common.edit")}>
+                          <Pencil size={14} />{t("common.edit")}
+                        </button>
+                        <button onClick={() => handleStatusToggle(c.id, c.status)} className={`text-xs hover:underline ${c.status === "ACTIVE" ? "text-red-600" : "text-green-600"}`}>
+                          {c.status === "ACTIVE" ? t("contracts.terminate") : t("contracts.activate")}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -260,6 +395,60 @@ export default function ContractsPage() {
         )}
         <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
       </div>
+
+      <FormModal open={!!viewingContract} onClose={() => setViewingContract(null)} title={t("common.view")} wide>
+        {viewingContract && (
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-500">{t("contracts.contractNumber")}</label>
+                <p className="text-sm text-slate-900">{viewingContract.contractNumber}</p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-500">{t("serviceRequests.customer")}</label>
+                <p className="text-sm text-slate-900">{viewingContract.customer.name}</p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-500">{t("contracts.type")}</label>
+                <p className="text-sm text-slate-900">{TYPE_LABELS[viewingContract.contractType]}</p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-500">{t("common.status")}</label>
+                <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[viewingContract.status]}`}>{STATUS_LABELS[viewingContract.status]}</span>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-500">{t("contracts.startDate")}</label>
+                <p className="text-sm text-slate-900">{new Date(viewingContract.startDate).toLocaleDateString("ar-EG")}</p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-500">{t("contracts.endDate")}</label>
+                <p className="text-sm text-slate-900">{new Date(viewingContract.endDate).toLocaleDateString("ar-EG")}</p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-500">{t("contracts.value")}</label>
+                <p className="text-sm text-slate-900">{viewingContract.value.toLocaleString()}</p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-500">تم الدفع</label>
+                <p className="text-sm text-slate-900">{viewingContract.amountPaid.toLocaleString()}</p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-500">نوع الدفع</label>
+                <p className="text-sm text-slate-900">{PAYMENT_METHOD_LABELS[viewingContract.paymentMethod]}</p>
+              </div>
+            </div>
+            {viewingContract.notes && (
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-500">{t("common.notes")}</label>
+                <p className="text-sm text-slate-900">{viewingContract.notes}</p>
+              </div>
+            )}
+            <div className="flex justify-end">
+              <button type="button" onClick={() => setViewingContract(null)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
+            </div>
+          </div>
+        )}
+      </FormModal>
     </div>
   );
 }

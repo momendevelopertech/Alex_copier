@@ -26,7 +26,7 @@ export async function GET(
     }
 
     return NextResponse.json(contract);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Failed to fetch contract" }, { status: 500 });
   }
 }
@@ -43,35 +43,83 @@ export async function PUT(
     }
     const { id } = await params;
     const body = await request.json();
-    const { machineIds, ...data } = body;
+    const {
+      machineIds,
+      contractType,
+      status,
+      billingCycle,
+      startDate,
+      endDate,
+      value,
+      amountPaid,
+      paymentMethod,
+      visitLimit,
+      costPerCopy,
+      earlyTerminationFee,
+      notes,
+    } = body;
 
-    if (machineIds) {
-      await prisma.contractMachine.deleteMany({ where: { contractId: id } });
+    const VALID_CONTRACT_TYPES = ["MAINTENANCE_ONLY", "MAINTENANCE_AND_PARTS", "MAINTENANCE_AND_PRINTING", "RENTAL"];
+    const VALID_CONTRACT_STATUSES = ["ACTIVE", "EXPIRED", "TERMINATED", "SUSPENDED"];
+    const VALID_BILLING_CYCLES = ["MONTHLY", "HALF_YEARLY", "QUARTERLY", "YEARLY"];
+    const VALID_PAYMENT_METHODS = ["CASH", "CREDIT", "INSTALLMENT", "MIXED"];
+
+    if (contractType !== undefined && !VALID_CONTRACT_TYPES.includes(contractType)) {
+      return NextResponse.json({ error: "نوع العقد غير صالح", code: "INVALID_CONTRACT_TYPE" }, { status: 400 });
+    }
+    if (status !== undefined && !VALID_CONTRACT_STATUSES.includes(status)) {
+      return NextResponse.json({ error: "حالة العقد غير صالحة", code: "INVALID_CONTRACT_STATUS" }, { status: 400 });
+    }
+    if (billingCycle !== undefined && !VALID_BILLING_CYCLES.includes(billingCycle)) {
+      return NextResponse.json({ error: "دورة الفوترة غير صالحة", code: "INVALID_BILLING_CYCLE" }, { status: 400 });
     }
 
-    const contract = await prisma.contract.update({
-      where: { id },
-      data: {
-        ...data,
-        ...(machineIds && {
-          machines: {
-            create: machineIds.map((machineId: string) => ({
-              machineId,
-            })),
-          },
-        }),
-      },
-      include: {
-        customer: true,
-        machines: {
-          include: { machine: true },
+    const updateData: Record<string, unknown> = {};
+    if (contractType !== undefined) updateData.contractType = contractType;
+    if (status !== undefined) updateData.status = status;
+    if (billingCycle !== undefined) updateData.billingCycle = billingCycle;
+    if (startDate !== undefined) updateData.startDate = new Date(startDate);
+    if (endDate !== undefined) updateData.endDate = new Date(endDate);
+    if (value !== undefined) updateData.value = Number(value);
+    if (amountPaid !== undefined) updateData.amountPaid = Number(amountPaid);
+    if (paymentMethod !== undefined) updateData.paymentMethod = VALID_PAYMENT_METHODS.includes(paymentMethod) ? paymentMethod : undefined;
+    if (visitLimit !== undefined) updateData.visitLimit = visitLimit != null ? Number(visitLimit) : null;
+    if (costPerCopy !== undefined) updateData.costPerCopy = costPerCopy != null ? Number(costPerCopy) : null;
+    if (earlyTerminationFee !== undefined) updateData.earlyTerminationFee = earlyTerminationFee != null ? Number(earlyTerminationFee) : null;
+    if (notes !== undefined) updateData.notes = notes;
+
+    const contract = await prisma.$transaction(async (tx) => {
+      if (machineIds) {
+        await tx.contractMachine.deleteMany({ where: { contractId: id } });
+      }
+
+      return tx.contract.update({
+        where: { id },
+        data: {
+          ...updateData,
+          ...(machineIds && {
+            machines: {
+              create: machineIds.map((machineId: string) => ({
+                machineId,
+              })),
+            },
+          }),
         },
-        visits: true,
-      },
+        include: {
+          customer: true,
+          machines: {
+            include: { machine: true },
+          },
+          visits: true,
+        },
+      });
     });
 
     return NextResponse.json(contract);
-  } catch (error) {
+  } catch (error: unknown) {
+    if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
+      return NextResponse.json({ error: "Contract not found", code: "NOT_FOUND" }, { status: 404 });
+    }
     return NextResponse.json({ error: "Failed to update contract" }, { status: 500 });
   }
 }
@@ -89,7 +137,10 @@ export async function DELETE(
     const { id } = await params;
     await prisma.contract.delete({ where: { id } });
     return NextResponse.json({ message: "Contract deleted" });
-  } catch (error) {
+  } catch (error: unknown) {
+    if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
+      return NextResponse.json({ error: "Contract not found", code: "NOT_FOUND" }, { status: 404 });
+    }
     return NextResponse.json({ error: "Failed to delete contract" }, { status: 500 });
   }
 }

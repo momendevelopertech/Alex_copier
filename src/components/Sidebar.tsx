@@ -24,6 +24,7 @@ import {
   BarChart3,
   Building2,
   Truck,
+  RotateCcw,
   PieChart,
   Bell,
   LogOut,
@@ -52,6 +53,7 @@ const navGroups: { key: string; items: NavItem[] }[] = [
       { key: "navigation.sales", href: "/sales", icon: DollarSign, page: "sales" },
       { key: "navigation.customers", href: "/customers", icon: Users, page: "customers" },
       { key: "navigation.contracts", href: "/contracts", icon: FileText, page: "contracts" },
+      { key: "navigation.returns", href: "/returns", icon: RotateCcw, page: "returns" },
       { key: "navigation.machines", href: "/machines", icon: Printer, page: "machines" },
     ],
   },
@@ -165,13 +167,13 @@ export default function Sidebar() {
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
                     title={isCollapsed ? t(item.key) : undefined}
-                    className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg transition-colors ${
+                    className={`flex items-center gap-3 rounded-lg transition-colors min-h-11 ${
                       active
                         ? "bg-blue-600 text-white"
                         : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                    } ${isCollapsed ? "justify-center px-0" : ""}`}
+                    } ${isCollapsed ? "justify-center mx-0 px-0" : "px-4 py-2.5 mx-2"}`}
                   >
-                    <Icon size={20} className="shrink-0" />
+                    <Icon size={isCollapsed ? 22 : 20} className="shrink-0" />
                     {!isCollapsed && <span className="text-sm whitespace-nowrap">{t(item.key)}</span>}
                   </Link>
                 );
@@ -185,11 +187,11 @@ export default function Sidebar() {
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
           title={isCollapsed ? t("navigation.logout") : undefined}
-          className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-colors text-gray-300 hover:bg-red-600/20 hover:text-red-400 ${
-            isCollapsed ? "justify-center px-0" : "w-[calc(100%-16px)]"
+          className={`flex items-center gap-3 rounded-lg transition-colors text-gray-300 hover:bg-red-600/20 hover:text-red-400 min-h-11 ${
+            isCollapsed ? "justify-center mx-0 px-0" : "px-4 py-2.5 mx-2 w-[calc(100%-16px)]"
           }`}
         >
-          <LogOut size={20} className="shrink-0" />
+          <LogOut size={isCollapsed ? 22 : 20} className="shrink-0" />
           {!isCollapsed && <span className="text-sm whitespace-nowrap">{t("navigation.logout")}</span>}
         </button>
       </div>

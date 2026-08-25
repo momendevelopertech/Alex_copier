@@ -6,10 +6,11 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
-import { Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { Eye, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
+import FormModal from "@/components/FormModal";
 
 interface Company {
   id: string;
@@ -27,10 +28,27 @@ interface Product {
   sku?: string | null;
   egsCode?: string | null;
   purchasePrice?: number | null;
-  wholesalePrice?: number | null;
-  retailPrice?: number | null;
+  pricingTiers?: Record<string, number | null> | null;
   isActive: boolean;
 }
+
+const PRICE_TIER_OPTIONS = [
+  { key: "legacyCustomer", label: "عميل قديم" },
+  { key: "newCustomer", label: "عميل جديد" },
+  { key: "jumlaMachines", label: "شركة جملة آلات" },
+  { key: "jumlaParts", label: "شركة جملة قطع غيار" },
+  { key: "sectori", label: "شركة قطاعي" },
+  { key: "engineer", label: "مهندس" },
+] as const;
+
+const emptyPricingTiers = {
+  legacyCustomer: "",
+  newCustomer: "",
+  jumlaMachines: "",
+  jumlaParts: "",
+  sectori: "",
+  engineer: "",
+};
 
 const emptyForm = {
   name: "",
@@ -39,8 +57,8 @@ const emptyForm = {
   sku: "",
   egsCode: "",
   purchasePrice: "",
-  wholesalePrice: "",
-  retailPrice: "",
+  quantity: "",
+  pricingTiers: { ...emptyPricingTiers },
   description: "",
 };
 
@@ -65,6 +83,7 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
 
@@ -109,8 +128,6 @@ export default function ProductsPage() {
       t("warehouses.company"),
       t("products.sku"),
       t("products.purchasePrice"),
-      t("products.wholesalePrice"),
-      t("products.retailPrice"),
       t("common.status"),
     ],
     rows: filtered.map((p) => [
@@ -119,14 +136,12 @@ export default function ProductsPage() {
       p.company?.nameAr || p.company?.name || "",
       p.sku || "",
       p.purchasePrice != null ? String(p.purchasePrice) : "",
-      p.wholesalePrice != null ? String(p.wholesalePrice) : "",
-      p.retailPrice != null ? String(p.retailPrice) : "",
       p.isActive ? t("common.active") : t("common.inactive"),
     ]),
   });
 
   const openCreate = () => {
-    setForm(emptyForm);
+    setForm({ ...emptyForm, pricingTiers: { ...emptyPricingTiers } });
     setEditingId(null);
     setError("");
     setShowForm(!showForm);
@@ -140,8 +155,15 @@ export default function ProductsPage() {
       sku: product.sku || "",
       egsCode: product.egsCode || "",
       purchasePrice: product.purchasePrice != null ? String(product.purchasePrice) : "",
-      wholesalePrice: product.wholesalePrice != null ? String(product.wholesalePrice) : "",
-      retailPrice: product.retailPrice != null ? String(product.retailPrice) : "",
+      quantity: "",
+      pricingTiers: {
+        legacyCustomer: product.pricingTiers?.legacyCustomer != null ? String(product.pricingTiers.legacyCustomer) : "",
+        newCustomer: product.pricingTiers?.newCustomer != null ? String(product.pricingTiers.newCustomer) : "",
+        jumlaMachines: product.pricingTiers?.jumlaMachines != null ? String(product.pricingTiers.jumlaMachines) : "",
+        jumlaParts: product.pricingTiers?.jumlaParts != null ? String(product.pricingTiers.jumlaParts) : "",
+        sectori: product.pricingTiers?.sectori != null ? String(product.pricingTiers.sectori) : "",
+        engineer: product.pricingTiers?.engineer != null ? String(product.pricingTiers.engineer) : "",
+      },
       description: product.description || "",
     });
     setEditingId(product.id);
@@ -155,10 +177,17 @@ export default function ProductsPage() {
     setSaving(true);
     setError("");
     try {
+      const payload = {
+        ...form,
+        quantity: form.quantity === "" ? undefined : Number(form.quantity),
+        pricingTiers: Object.fromEntries(
+          PRICE_TIER_OPTIONS.map(({ key }) => [key, form.pricingTiers[key]])
+        ),
+      };
       const res = await fetch(editingId ? `/api/products/${editingId}` : "/api/products", {
         method: editingId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
@@ -166,7 +195,7 @@ export default function ProductsPage() {
         return;
       }
       setShowForm(false);
-      setForm(emptyForm);
+      setForm({ ...emptyForm, pricingTiers: { ...emptyPricingTiers } });
       setEditingId(null);
       await fetchData();
       toastSuccess(t("common.savedSuccessfully"));
@@ -203,32 +232,18 @@ export default function ProductsPage() {
     toastSuccess(t("common.savedSuccessfully"));
   };
 
-  const priceField = (
-    label: string,
-    field: "purchasePrice" | "wholesalePrice" | "retailPrice"
-  ) => (
-    <div>
-      <label className="mb-1 block text-sm font-medium">{label}</label>
-      <input
-        type="number"
-        min="0"
-        step="0.01"
-        value={form[field]}
-        onChange={(e) => setForm({ ...form, [field]: e.target.value })}
-        className="w-full rounded-lg border px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
-      />
-    </div>
-  );
-
   return (
-    <div dir={dir}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("products.title")}</h1>
+    <div dir={dir} className="space-y-5">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>
+          <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">{t("products.title")}</h1>
+        </div>
         <button
           onClick={openCreate}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
         >
-          {showForm && !editingId ? (<><X size={16} />{t("common.cancel")}</>) : (<><Plus size={16} />{t("products.addProduct")}</>)}
+          <Plus size={16} />{t("products.addProduct")}
         </button>
       </div>
 
@@ -244,221 +259,165 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {showForm && (
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">
-            {editingId ? t("products.editProduct") : t("products.addProduct")}
-          </h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium">{t("products.name")}</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full rounded-lg border px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
-                required
-              />
+      <FormModal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? t("products.editProduct") : t("products.addProduct")} wide>
+        <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="space-y-1.5">
+                <label className="mb-1 block text-sm font-medium text-slate-700">{t("products.name")}</label>
+                <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+              </div>
+              <div className="space-y-1.5">
+                <label className="mb-1 block text-sm font-medium text-slate-700">{t("products.type")}</label>
+                <select value={form.productType} onChange={(e) => setForm({ ...form, productType: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                  <option value="SPARE_PART">{t("products.sparePart")}</option>
+                  <option value="MACHINE">{t("products.machine")}</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="mb-1 block text-sm font-medium text-slate-700">{t("warehouses.company")}</label>
+                <select value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                  <option value="">{t("common.selectOption")}</option>
+                  {companies.map((company) => (
+                    <option key={company.id} value={company.id}>{company.nameAr || company.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="mb-1 block text-sm font-medium text-slate-700">SKU</label>
+                <input type="text" dir="ltr" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="mb-1 block text-sm font-medium text-slate-700">EGS</label>
+                <input type="text" dir="ltr" value={form.egsCode} onChange={(e) => setForm({ ...form, egsCode: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">{t("products.type")}</label>
-              <select
-                value={form.productType}
-                onChange={(e) => setForm({ ...form, productType: e.target.value })}
-                className="w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
-                required
-              >
-                <option value="SPARE_PART">{t("products.sparePart")}</option>
-                <option value="MACHINE">{t("products.machine")}</option>
-              </select>
+
+            <div className="rounded-lg border border-gray-200 bg-slate-50 p-4">
+              <h3 className="mb-3 text-sm font-semibold text-slate-700">أسعار المنتج</h3>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="mb-1 block text-sm font-medium text-slate-700">{t("products.purchasePrice")}</label>
+                  <input type="number" min="0" step="0.01" value={form.purchasePrice} onChange={(e) => setForm({ ...form, purchasePrice: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="mb-1 block text-sm font-medium text-slate-700">الكمية الحالية</label>
+                  <input type="number" min="0" step="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">{t("warehouses.company")}</label>
-              <select
-                value={form.companyId}
-                onChange={(e) => setForm({ ...form, companyId: e.target.value })}
-                className="w-full rounded-lg border bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
-                required
-              >
-                <option value="">{t("common.selectOption")}</option>
-                {companies.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {company.nameAr || company.name}
-                  </option>
+
+            <div className="rounded-lg border border-gray-200 bg-slate-50 p-4">
+              <h3 className="mb-3 text-sm font-semibold text-slate-700">أسعار البيع حسب شريحة العميل</h3>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {PRICE_TIER_OPTIONS.map(({ key, label }) => (
+                  <div key={key} className="space-y-1.5">
+                    <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
+                    <input type="number" min="0" step="0.01" value={form.pricingTiers[key] ?? ""} onChange={(e) => setForm({ ...form, pricingTiers: { ...form.pricingTiers, [key]: e.target.value } })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
                 ))}
-              </select>
+              </div>
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">SKU</label>
-              <input
-                type="text"
-                dir="ltr"
-                value={form.sku}
-                onChange={(e) => setForm({ ...form, sku: e.target.value })}
-                className="w-full rounded-lg border px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
-              />
+
+            <div className="space-y-1.5">
+              <label className="mb-1 block text-sm font-medium text-slate-700">{t("products.description")}</label>
+              <input type="text" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">EGS</label>
-              <input
-                type="text"
-                dir="ltr"
-                value={form.egsCode}
-                onChange={(e) => setForm({ ...form, egsCode: e.target.value })}
-                className="w-full rounded-lg border px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            <div></div>
-            {priceField(t("products.purchasePrice"), "purchasePrice")}
-            {priceField(t("products.wholesalePrice"), "wholesalePrice")}
-            {priceField(t("products.retailPrice"), "retailPrice")}
-            <div className="md:col-span-2">
-              <label className="mb-1 block text-sm font-medium">{t("products.description")}</label>
-              <input
-                type="text"
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="w-full rounded-lg border px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            <div className="md:col-span-3 flex justify-end">
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {<Save size={16} />}{<Save size={16} />}{saving ? t("common.saving") : t("common.save")}
+
+            <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
+              <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                <Save size={16} /> {saving ? t("common.saving") : t("common.save")}
               </button>
             </div>
           </form>
-        </div>
-      )}
+      </FormModal>
 
-      <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder={`${t("common.search")} ${t("products.title")}`}
-        />
-        <FilterSelect
-          value={typeFilter}
-          onChange={(v) => { setTypeFilter(v); setPage(1); }}
-          options={[
-            { value: "SPARE_PART", label: t("products.sparePart") },
-            { value: "MACHINE", label: t("products.machine") },
-          ]}
-          allLabel={`${t("products.type")} — ${t("common.all")}`}
-          className="md:w-44"
-        />
-        <FilterSelect
-          value={companyFilter}
-          onChange={(v) => { setCompanyFilter(v); setPage(1); }}
-          options={companies.map((c) => ({ value: c.id, label: c.nameAr || c.name }))}
-          allLabel={`${t("warehouses.company")} — ${t("common.all")}`}
-          className="md:w-52"
-        />
-        <FilterSelect
-          value={activeFilter}
-          onChange={(v) => { setActiveFilter(v); setPage(1); }}
-          options={[
-            { value: "true", label: t("common.active") },
-            { value: "false", label: t("common.inactive") },
-          ]}
-          allLabel={`${t("common.status")} — ${t("common.all")}`}
-          className="md:w-36"
-        />
-        {hasActiveFilters && (
-          <button
-            onClick={() => { setSearch(""); setTypeFilter(""); setCompanyFilter(""); setActiveFilter(""); }}
-            className="text-sm text-gray-500 hover:text-gray-700 underline"
-          >
-            {t("common.resetFilters")}
-          </button>
+      <FormModal open={!!viewProduct} onClose={() => setViewProduct(null)} title={t("common.view") + " — " + (viewProduct?.name ?? "")} wide>
+        {viewProduct && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <p className="text-xs font-medium text-slate-500">{t("products.name")}</p>
+                <p className="mt-1 text-sm text-slate-800">{viewProduct.name}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500">SKU</p>
+                <p className="mt-1 text-sm text-slate-800" dir="ltr">{viewProduct.sku || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500">{t("products.type")}</p>
+                <p className="mt-1 text-sm text-slate-800">{viewProduct.productType === "MACHINE" ? t("products.machine") : t("products.sparePart")}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500">{t("products.purchasePrice")}</p>
+                <p className="mt-1 text-sm text-slate-800">{viewProduct.purchasePrice != null ? viewProduct.purchasePrice.toLocaleString() : "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500">{t("products.wholesalePrice")}</p>
+                <p className="mt-1 text-sm text-slate-800">{viewProduct.pricingTiers?.jumlaMachines != null ? Number(viewProduct.pricingTiers.jumlaMachines).toLocaleString() : "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500">{t("products.retailPrice")}</p>
+                <p className="mt-1 text-sm text-slate-800">{viewProduct.pricingTiers?.newCustomer != null ? Number(viewProduct.pricingTiers.newCustomer).toLocaleString() : "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500">{t("common.status")}</p>
+                <p className="mt-1 text-sm text-slate-800">{viewProduct.isActive ? t("common.active") : t("common.inactive")}</p>
+              </div>
+            </div>
+          </div>
         )}
-        <ExportButton filename="products" getExport={exportProducts} disabled={filtered.length === 0} />
-      </div>
+      </FormModal>
 
-      <div className="bg-white rounded-xl overflow-hidden shadow-md">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-2 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
+          <div className="min-w-[220px] flex-1">
+            <SearchInput value={search} onChange={setSearch} placeholder={`${t("common.search")} ${t("products.title")}`} />
+          </div>
+          <FilterSelect value={typeFilter} onChange={(v) => { setTypeFilter(v); setPage(1); }} options={[{ value: "SPARE_PART", label: t("products.sparePart") }, { value: "MACHINE", label: t("products.machine") }]} allLabel={`${t("products.type")} — ${t("common.all")}`} className="md:w-44" />
+          <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.nameAr || c.name }))} allLabel={`${t("warehouses.company")} — ${t("common.all")}`} className="md:w-52" />
+          <FilterSelect value={activeFilter} onChange={(v) => { setActiveFilter(v); setPage(1); }} options={[{ value: "true", label: t("common.active") }, { value: "false", label: t("common.inactive") }]} allLabel={`${t("common.status")} — ${t("common.all")}`} className="md:w-36" />
+          {hasActiveFilters && (<button onClick={() => { setSearch(""); setTypeFilter(""); setCompanyFilter(""); setActiveFilter(""); }} className="text-sm text-slate-500 underline transition hover:text-slate-700">{t("common.resetFilters")}</button>)}
+          <div className="md:ms-auto"><ExportButton filename="products" getExport={exportProducts} disabled={filtered.length === 0} /></div>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px]">
-            <thead className="bg-gray-50">
+            <thead className="bg-slate-50">
               <tr>
-                <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("products.name")}</th>
-                <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("products.type")}</th>
-                <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("warehouses.company")}</th>
-                <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">SKU</th>
-                <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("products.purchasePrice")}</th>
-                <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("products.retailPrice")}</th>
-                <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.status")}</th>
-                <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.actions")}</th>
+                <th className="px-4 py-3 text-start text-sm font-semibold text-slate-600">{t("products.name")}</th>
+                <th className="px-4 py-3 text-start text-sm font-semibold text-slate-600">{t("products.type")}</th>
+                <th className="px-4 py-3 text-start text-sm font-semibold text-slate-600">{t("warehouses.company")}</th>
+                <th className="px-4 py-3 text-start text-sm font-semibold text-slate-600">SKU</th>
+                <th className="px-4 py-3 text-start text-sm font-semibold text-slate-600">{t("products.purchasePrice")}</th>
+                <th className="px-4 py-3 text-start text-sm font-semibold text-slate-600">{t("common.status")}</th>
+                <th className="px-4 py-3 text-start text-sm font-semibold text-slate-600">{t("common.actions")}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr>
-                  <td colSpan={8} className="py-10">
-                    <div className="flex items-center justify-center">
-                      <PrinterLoader size="sm" label={t("common.loading")} />
-                    </div>
-                  </td>
-                </tr>
+                <tr><td colSpan={7} className="py-10"><div className="flex items-center justify-center"><PrinterLoader size="sm" label={t("common.loading")} /></div></td></tr>
+              ) : products.length === 0 ? (
+                <tr><td colSpan={7} className="py-8 text-center text-sm text-slate-400">{t("common.noData")}</td></tr>
               ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-8 text-gray-400">
-                    {t("common.noData")}
-                  </td>
-                </tr>
+                <tr><td colSpan={7} className="py-8 text-center text-sm text-slate-400">{t("common.noData")}</td></tr>
               ) : (
                 paged.map((product) => (
-                  <tr key={product.id} className={`hover:bg-gray-50 ${product.isActive ? "" : "opacity-60"}`}>
-                    <td className="px-4 py-3 text-sm font-medium">{product.name}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex whitespace-nowrap px-2 py-1 rounded-full text-xs font-medium ${TYPE_BADGES[product.productType] || ""}`}>
-                        {product.productType === "MACHINE" ? t("products.machine") : t("products.sparePart")}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm">{product.company?.nameAr || product.company?.name || "—"}</td>
-                    <td className="px-4 py-3 text-sm"><span dir="ltr">{product.sku || "—"}</span></td>
-                    <td className="px-4 py-3 text-sm">{product.purchasePrice != null ? product.purchasePrice.toLocaleString() : "—"}</td>
-                    <td className="px-4 py-3 text-sm">{product.retailPrice != null ? product.retailPrice.toLocaleString() : "—"}</td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => toggleActive(product)}
-                        title={t("common.edit")}
-                        className={`inline-flex whitespace-nowrap px-2 py-1 rounded-full text-xs font-medium cursor-pointer ${product.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
-                      >
-                        {product.isActive ? t("common.active") : t("common.inactive")}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => openEdit(product)}
-                          className="text-blue-600 hover:text-blue-800 text-sm"
-                        >
-                          <Pencil size={14} className="inline-block me-1" />{t("common.edit")}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          className="text-red-600 hover:text-red-800 text-sm"
-                        >
-                          <Trash2 size={14} className="inline-block me-1" />{t("common.delete")}
-                        </button>
-                      </div>
-                    </td>
+                  <tr key={product.id} className={`transition hover:bg-slate-50 ${product.isActive ? "" : "opacity-60"}`}>
+                    <td className="px-4 py-3 text-sm font-medium text-slate-800">{product.name}</td>
+                    <td className="px-4 py-3"><span className={`inline-flex whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold ${TYPE_BADGES[product.productType] || ""}`}>{product.productType === "MACHINE" ? t("products.machine") : t("products.sparePart")}</span></td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{product.company?.nameAr || product.company?.name || "—"}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600"><span dir="ltr">{product.sku || "—"}</span></td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{product.purchasePrice != null ? product.purchasePrice.toLocaleString() : "—"}</td>
+                    <td className="px-4 py-3"><button onClick={() => toggleActive(product)} title={t("common.edit")} className={`inline-flex whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold ${product.isActive ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{product.isActive ? t("common.active") : t("common.inactive")}</button></td>
+                    <td className="px-4 py-3"><div className="flex gap-2"><button onClick={() => setViewProduct(product)} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2 text-xs font-medium text-gray-600 transition hover:bg-gray-100"><Eye size={14} />{t("common.view")}</button><button onClick={() => openEdit(product)} className="text-sm font-medium text-sky-600 hover:text-sky-800"><Pencil size={14} className="me-1 inline-block" />{t("common.edit")}</button><button onClick={() => handleDelete(product.id)} className="text-sm font-medium text-red-600 hover:text-red-800"><Trash2 size={14} className="me-1 inline-block" />{t("common.delete")}</button></div></td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
         </div>
-        <Pagination
-          currentPage={safePage}
-          totalPages={totalPages}
-          onPageChange={setPage}
-          totalItems={filtered.length}
-          pageSize={PAGE_SIZE}
-        />
+        <div className="border-t border-slate-200 bg-slate-50/60 p-3"><Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} /></div>
       </div>
     </div>
   );

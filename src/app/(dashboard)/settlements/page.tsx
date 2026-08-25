@@ -6,7 +6,8 @@ import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
-import { CheckCircle2, Plus, Save, X } from "lucide-react";
+import FormModal from "@/components/FormModal";
+import { CheckCircle2, Plus, Save } from "lucide-react";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
@@ -123,46 +124,67 @@ export default function SettlementsPage() {
     ]),
   });
 
+  const INPUT = "w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500";
+
   return (
-    <div dir={dir}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("settlements.title")}</h1>
-        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"><Plus size={16} />{t("settlements.newSettlement")}</button>
+    <div dir={dir} className="space-y-5">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>
+          <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">{t("settlements.title")}</h1>
+        </div>
+        <button onClick={() => setShowForm(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"><Plus size={16} />{t("settlements.newSettlement")}</button>
       </div>
 
-      {showForm && (
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <select value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })} className="border rounded-lg px-4 py-2" required>
+      <FormModal open={showForm} onClose={() => setShowForm(false)} title={t("settlements.newSettlement")}>
+        <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t("common.company")}</label>
+            <select value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })} className={INPUT} required>
               <option value="">{t("settlements.selectCompany")}</option>
               {companies.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
             </select>
-            <select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="border rounded-lg px-4 py-2">
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t("common.customer")}</label>
+            <select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className={INPUT}>
               <option value="">{t("settlements.selectCustomer")}</option>
               {customers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
             </select>
-            <select value={form.engineerId} onChange={(e) => setForm({ ...form, engineerId: e.target.value })} className="border rounded-lg px-4 py-2">
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t("common.engineer")}</label>
+            <select value={form.engineerId} onChange={(e) => setForm({ ...form, engineerId: e.target.value })} className={INPUT}>
               <option value="">{t("settlements.selectEngineer")}</option>
               {engineers.map((e) => (<option key={e.id} value={e.id}>{e.name}</option>))}
             </select>
-            <input type="number" placeholder={t("settlements.amount")} value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="border rounded-lg px-4 py-2" required min="0" step="0.01" />
-            <select value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })} className="border rounded-lg px-4 py-2">
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t("settlements.amount")}</label>
+            <input type="number" placeholder={t("settlements.amount")} value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className={INPUT} required min="0" step="0.01" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t("settlements.paymentMethod")}</label>
+            <select value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })} className={INPUT}>
               <option value="CASH">{PAYMENT_METHOD_LABELS.CASH}</option>
               <option value="CREDIT">{PAYMENT_METHOD_LABELS.CREDIT}</option>
               <option value="INSTALLMENT">{PAYMENT_METHOD_LABELS.INSTALLMENT}</option>
               <option value="MIXED">{PAYMENT_METHOD_LABELS.MIXED}</option>
             </select>
-            <input type="text" placeholder={t("settlements.reason")} value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className="border rounded-lg px-4 py-2" required />
-            <div className="md:col-span-2 flex gap-2">
-              <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"><Save size={16} />{t("common.save")}</button>
-              <button type="button" onClick={() => setShowForm(false)} className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 inline-flex items-center gap-2"><X size={16} />{t("common.cancel")}</button>
-            </div>
-          </form>
-        </div>
-      )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t("settlements.reason")}</label>
+            <input type="text" placeholder={t("settlements.reason")} value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className={INPUT} required />
+          </div>
+          <div className="md:col-span-2 flex gap-2">
+            <button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"><Save size={16} />{t("common.save")}</button>
+            <button type="button" onClick={() => setShowForm(false)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">{t("common.cancel")}</button>
+          </div>
+        </form>
+      </FormModal>
 
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-2 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
           <SearchInput value={search} onChange={setSearchInput} placeholder={t("settlements.searchPlaceholder")} />
           <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("settlements.status")} — ${t("common.all")}`} className="md:w-40" />
           <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} — ${t("common.all")}`} className="md:w-40" />
@@ -181,22 +203,31 @@ export default function SettlementsPage() {
             <PrinterLoader size="md" label={t("common.loading")} />
           </div>
         )
-        : settlements.length === 0 ? <p className="text-gray-500">{t("common.noData")}</p>
+        : settlements.length === 0 ? (
+          <div className="flex min-h-[200px] w-full items-center justify-center px-4 py-8">
+            <p className="text-gray-500">{t("common.noData")}</p>
+          </div>
+        )
+        : filtered.length === 0 ? (
+          <div className="flex min-h-[200px] w-full items-center justify-center px-4 py-8">
+            <p className="text-gray-500">{t("common.noData")}</p>
+          </div>
+        )
         : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("settlements.number")}</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.company")}</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("settlements.amount")}</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("settlements.paymentMethod")}</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("settlements.reason")}</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("settlements.status")}</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("settlements.collectedBy")}</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.date")}</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.actions")}</th>
+                    <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("settlements.number")}</th>
+                    <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.company")}</th>
+                    <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("settlements.amount")}</th>
+                    <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("settlements.paymentMethod")}</th>
+                    <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("settlements.reason")}</th>
+                    <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("settlements.status")}</th>
+                    <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("settlements.collectedBy")}</th>
+                    <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.date")}</th>
+                    <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">

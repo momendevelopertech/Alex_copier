@@ -7,6 +7,7 @@ import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
+import FormModal from "@/components/FormModal";
 
 interface Machine {
   id: string;
@@ -112,11 +113,16 @@ export default function WorkshopPage() {
   };
 
   return (
-    <div dir={dir}>
-      <h1 className="text-xl sm:text-2xl font-bold mb-6">{t("workshop.title")}</h1>
+    <div dir={dir} className="space-y-5">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>
+          <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">{t("workshop.title")}</h1>
+        </div>
+      </div>
 
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-2 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
           <SearchInput value={search} onChange={setSearch} placeholder={`${t("common.search")} ${t("machines.serialNumber")} / ${t("machines.model")}...`} />
           <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("machines.status")} — ${t("common.all")}`} className="md:w-44" />
           {hasActiveFilters && (
@@ -132,23 +138,31 @@ export default function WorkshopPage() {
           <div className="flex min-h-[320px] w-full items-center justify-center px-4 py-8">
             <PrinterLoader size="md" label={t("common.loading")} />
           </div>
+        ) : machines.length === 0 ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <p className="text-sm text-gray-400">{t("common.noData")}</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <p className="text-sm text-gray-400">{t("common.noData")}</p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("machines.serialNumber")}</th>
-                  <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("machines.manufacturer")}</th>
-                  <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("machines.model")}</th>
-                  <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("machines.status")}</th>
-                  <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("workshop.purchaseDate")}</th>
-                  <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("common.notes")}</th>
-                  <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">{t("common.actions")}</th>
+                  <th className="text-start px-4 py-3 text-sm font-medium text-gray-500">{t("machines.serialNumber")}</th>
+                  <th className="text-start px-4 py-3 text-sm font-medium text-gray-500">{t("machines.manufacturer")}</th>
+                  <th className="text-start px-4 py-3 text-sm font-medium text-gray-500">{t("machines.model")}</th>
+                  <th className="text-start px-4 py-3 text-sm font-medium text-gray-500">{t("machines.status")}</th>
+                  <th className="text-start px-4 py-3 text-sm font-medium text-gray-500">{t("workshop.purchaseDate")}</th>
+                  <th className="text-start px-4 py-3 text-sm font-medium text-gray-500">{t("common.notes")}</th>
+                  <th className="text-start px-4 py-3 text-sm font-medium text-gray-500">{t("common.actions")}</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-200">
                 {paged.map((machine) => (
-                  <tr key={machine.id} className="border-t border-gray-100 hover:bg-gray-50">
+                  <tr key={machine.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm">{machine.serialNumber}</td>
                     <td className="px-4 py-3 text-sm">{machine.manufacturer}</td>
                     <td className="px-4 py-3 text-sm">{machine.model}</td>
@@ -169,11 +183,6 @@ export default function WorkshopPage() {
                     </td>
                   </tr>
                 ))}
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-400">{t("common.noData")}</td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
@@ -181,53 +190,46 @@ export default function WorkshopPage() {
         <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
       </div>
 
-      {scrapTarget && (
-        <div className="bg-white rounded-xl shadow-md p-6 mt-6">
-          <h2 className="text-lg font-semibold mb-4">{t("workshop.scrapOrder")} - {machines.find((m) => m.id === scrapTarget)?.serialNumber}</h2>
-          <form onSubmit={(e) => handleScrap(e, scrapTarget)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("workshop.reason")}</label>
-              <textarea
-                value={scrapForm.reason}
-                onChange={(e) => setScrapForm({ ...scrapForm, reason: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={3}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("workshop.approvedBy")}</label>
-              <input
-                type="text"
-                value={scrapForm.approvedBy}
-                onChange={(e) => setScrapForm({ ...scrapForm, approvedBy: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t("workshop.scrapValue")}</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={scrapForm.scrapValue}
-                onChange={(e) => setScrapForm({ ...scrapForm, scrapValue: Number(e.target.value) })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-            <div className="md:col-span-2 flex gap-3">
-              <button type="submit" className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">
-                {t("common.submit")}
-              </button>
-              <button type="button" onClick={() => setScrapTarget(null)} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
-                {t("common.cancel")}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      <FormModal open={!!scrapTarget} onClose={() => setScrapTarget(null)} title={`${t("workshop.scrapOrder")} - ${machines.find((m) => m.id === scrapTarget)?.serialNumber || ""}`}>
+        <form onSubmit={(e) => handleScrap(e, scrapTarget!)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2 space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("workshop.reason")}</label>
+            <textarea
+              value={scrapForm.reason}
+              onChange={(e) => setScrapForm({ ...scrapForm, reason: e.target.value })}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={3}
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("workshop.approvedBy")}</label>
+            <input
+              type="text"
+              value={scrapForm.approvedBy}
+              onChange={(e) => setScrapForm({ ...scrapForm, approvedBy: e.target.value })}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("workshop.scrapValue")}</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={scrapForm.scrapValue}
+              onChange={(e) => setScrapForm({ ...scrapForm, scrapValue: Number(e.target.value) })}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+          <div className="md:col-span-2 flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => setScrapTarget(null)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
+            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700">{t("common.submit")}</button>
+          </div>
+        </form>
+      </FormModal>
     </div>
   );
 }

@@ -6,10 +6,11 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
-import { Plus, Trash2, Upload, X } from "lucide-react";
+import { Plus, Trash2, Upload } from "lucide-react";
 import ImportDialog from "@/components/ImportDialog";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useConfirm, useToast } from "@/components/UIProvider";
+import FormModal from "@/components/FormModal";
 
 interface Supplier {
   id: string;
@@ -126,81 +127,58 @@ const { success: toastSuccess } = useToast();
   };
 
   return (
-    <div dir={dir}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mb-6">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{t("suppliers.title")}</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
-        >
-          {showForm ? (<><X size={16} />{t("common.cancel")}</>) : (<><Plus size={16} />{t("suppliers.addSupplier")}</>)}
+    <div dir={dir} className="space-y-5">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>
+          <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">{t("suppliers.title")}</h1>
+        </div>
+        <button onClick={() => setShowForm(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700">
+          <Plus size={16} />{t("suppliers.addSupplier")}
         </button>
       </div>
 
-      {showForm && (
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">{t("suppliers.addSupplier")}</h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <input
-              type="text"
-              placeholder={t("suppliers.name")}
-              value={form.name}
-              onChange={(e) => setField("name", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-              required
-            />
-            <input
-              type="text"
-              placeholder="جهة الاتصال"
-              value={form.contactName}
-              onChange={(e) => setField("contactName", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            />
-            <input
-              type="text"
-              placeholder={t("suppliers.phone")}
-              value={form.phone}
-              onChange={(e) => setField("phone", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            />
-            <input
-              type="email"
-              placeholder={t("suppliers.email")}
-              value={form.email}
-              onChange={(e) => setField("email", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            />
-            <input
-              type="text"
-              placeholder={t("suppliers.address")}
-              value={form.address}
-              onChange={(e) => setField("address", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            />
-            <input
-              type="text"
-              placeholder="الرقم الضريبي"
-              value={form.taxNumber}
-              onChange={(e) => setField("taxNumber", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-            />
-            <select
-              value={form.companyId}
-              onChange={(e) => setField("companyId", e.target.value)}
-              className="border rounded-lg px-4 py-2 w-full"
-              required
-            ><option value="">{t("companies.selectCompany")}</option>{companies.map(company => <option key={company.id} value={company.id}>{company.name}</option>)}</select>
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
-            >
-              {t("common.save")}
-            </button>
-          </form>
-        </div>
-      )}
+      <FormModal open={showForm} onClose={() => setShowForm(false)} title={t("suppliers.addSupplier")} wide>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("suppliers.name")}</label>
+            <input type="text" value={form.name} onChange={(e) => setField("name", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">جهة الاتصال</label>
+            <input type="text" value={form.contactName} onChange={(e) => setField("contactName", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("suppliers.phone")}</label>
+            <input type="text" value={form.phone} onChange={(e) => setField("phone", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("suppliers.email")}</label>
+            <input type="email" value={form.email} onChange={(e) => setField("email", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("suppliers.address")}</label>
+            <input type="text" value={form.address} onChange={(e) => setField("address", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">الرقم الضريبي</label>
+            <input type="text" value={form.taxNumber} onChange={(e) => setField("taxNumber", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("common.company")}</label>
+            <select value={form.companyId} onChange={(e) => setField("companyId", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+              <option value="">{t("companies.selectCompany")}</option>{companies.map(company => <option key={company.id} value={company.id}>{company.name}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end md:col-span-2 lg:col-span-3">
+            <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
+            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">{t("common.save")}</button>
+          </div>
+        </form>
+      </FormModal>
 
-      <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:flex-wrap">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-2 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
         <SearchInput
           value={search}
           onChange={setSearch}
@@ -229,36 +207,33 @@ const { success: toastSuccess } = useToast();
         </div>
       </div>
 
-      <div className="bg-white rounded-xl overflow-hidden shadow-md">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("suppliers.name")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">جهة الاتصال</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("suppliers.phone")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("suppliers.email")}</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">الرقم الضريبي</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.actions")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {loading ? (
+        {loading ? (
+          <div className="flex min-h-[320px] w-full items-center justify-center px-4 py-8">
+            <PrinterLoader size="md" label={t("common.loading")} />
+          </div>
+        ) : suppliers.length === 0 ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <p className="text-sm text-gray-400">{t("common.noData")}</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex min-h-[200px] items-center justify-center">
+            <p className="text-sm text-gray-400">{t("common.noData")}</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
                 <tr>
-                  <td colSpan={6} className="py-10">
-                    <div className="flex items-center justify-center">
-                      <PrinterLoader size="sm" label={t("common.loading")} />
-                    </div>
-                  </td>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("suppliers.name")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">جهة الاتصال</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("suppliers.phone")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("suppliers.email")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">الرقم الضريبي</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.actions")}</th>
                 </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-8 text-gray-400">
-                    {t("common.noData")}
-                  </td>
-                </tr>
-              ) : (
-                paged.map((supplier) => (
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {paged.map((supplier) => (
                   <tr key={supplier.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium">{supplier.name}</td>
                     <td className="px-4 py-3 text-sm">{supplier.contactName || "—"}</td>
@@ -274,11 +249,11 @@ const { success: toastSuccess } = useToast();
                       </button>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
         <Pagination
           currentPage={safePage}
           totalPages={totalPages}

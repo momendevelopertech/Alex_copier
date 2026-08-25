@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
 
 const PRODUCT_TYPES = ["MACHINE", "SPARE_PART"];
-const PRICE_FIELDS = ["purchasePrice", "wholesalePrice", "retailPrice"] as const;
+const PRICE_FIELDS = ["purchasePrice"] as const;
+const PRICE_TIER_KEYS = ["legacyCustomer", "newCustomer", "jumlaMachines", "jumlaParts", "sectori", "engineer"] as const;
 
 function extractPrices(body: Record<string, unknown>): { values: Record<string, number | null> } | { error: NextResponse } {
   const values: Record<string, number | null> = {};
@@ -26,6 +27,28 @@ function extractPrices(body: Record<string, unknown>): { values: Record<string, 
     values[field] = value;
   }
   return { values };
+}
+
+function extractPricingTiers(body: Record<string, unknown>): Record<string, number | null> | null {
+  const raw = body.pricingTiers;
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("INVALID_PRICING_TIERS");
+  }
+  const tiers: Record<string, number | null> = {};
+  for (const key of PRICE_TIER_KEYS) {
+    const value = (raw as Record<string, unknown>)[key];
+    if (value === undefined || value === null || value === "") {
+      tiers[key] = null;
+      continue;
+    }
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric < 0) {
+      throw new Error("INVALID_PRICING_TIERS");
+    }
+    tiers[key] = numeric;
+  }
+  return tiers;
 }
 
 export async function PUT(
@@ -86,7 +109,27 @@ export async function PUT(
     if ("error" in prices) return prices.error;
     Object.assign(data, prices.values);
 
-    if (Object.keys(data).length === 0) {
+    if ("pricingTiers" in body) {
+      try {
+        const tiers = extractPricingTiers(body);
+        data.pricingTiers = tiers && Object.values(tiers).some((value) => value !== null && value !== undefined) ? tiers : undefined;
+      } catch {
+        return NextResponse.json({ error: "قيم أسعار الشرائح غير صالحة", code: "INVALID_PRICING_TIERS" }, { status: 400 });
+      }
+    }
+
+    const quantityValue = (() => {
+      if (!("quantity" in body) && !("initialQuantity" in body) && !("stockQuantity" in body)) return null;
+      const value = body.quantity ?? body.initialQuantity ?? body.stockQuantity;
+      if (value === undefined || value === null || value === "") return null;
+      const numeric = Number(value);
+      if (!Number.isInteger(numeric) || numeric < 0) {
+        throw new Error("INVALID_QUANTITY");
+      }
+      return numeric;
+    })();
+
+    if (Object.keys(data).length === 0 && quantityValue === null) {
       return NextResponse.json({ error: "لا توجد بيانات للتحديث", code: "NO_CHANGES" }, { status: 400 });
     }
 
@@ -95,8 +138,44 @@ export async function PUT(
       data,
       include: { company: true },
     });
+
+    if (quantityValue !== null) {
+      const warehouse = await prisma.warehouse.findFirst({
+        where: { companyId: product.companyId, isMain: true },
+        orderBy: { createdAt: "asc" },
+      });
+      const targetWarehouse =
+        warehouse ??
+        (await prisma.warehouse.create({
+          data: {
+            companyId: product.companyId,
+            name: "المستودع الرئيسي",
+            isMain: true,
+          },
+        }));
+
+      await prisma.warehouseInventory.upsert({
+        where: { warehouseId_productId: { warehouseId: targetWarehouse.id, productId: product.id } },
+        update: { quantity: quantityValue },
+        create: { warehouseId: targetWarehouse.id, productId: product.id, quantity: quantityValue },
+      });
+
+      await prisma.stockMovement.create({
+        data: {
+          warehouseId: targetWarehouse.id,
+          productId: product.id,
+          quantity: quantityValue,
+          movementType: "ADJUSTMENT",
+          notes: "تحديث الكمية من صفحة المنتجات",
+        },
+      });
+    }
+
     return NextResponse.json(product);
   } catch (error) {
+    if (error instanceof Error && error.message === "INVALID_QUANTITY") {
+      return NextResponse.json({ error: "الكمية يجب أن تكون عددًا صحيحًا غير سالب", code: "INVALID_QUANTITY" }, { status: 400 });
+    }
     console.error("[products] PUT failed:", error);
     return NextResponse.json({ error: "Failed to update product", code: "UPDATE_FAILED" }, { status: 500 });
   }

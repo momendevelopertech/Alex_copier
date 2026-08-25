@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "بيانات حركة المخزون غير صالحة", code: "INVALID_MOVEMENT_DATA" }, { status: 400 });
     }
 
-    const incoming = ["PURCHASE_IN", "INTER_COMPANY_IN", "ENGINEER_RETURN"].includes(movementType);
+    const incoming = ["PURCHASE_IN", "INTER_COMPANY_IN", "ENGINEER_RETURN", "SALE_RETURN_IN"].includes(movementType);
     const movement = await prisma.$transaction(async (tx) => {
       const existing = await tx.warehouseInventory.findUnique({
         where: { warehouseId_productId: { warehouseId, productId } },
