@@ -5,7 +5,7 @@ const { PrismaPg } = require("@prisma/adapter-pg");
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
-// [name, lastPaymentAmount, lastPaymentDate, remainingDebt]
+// Exact data from the markdown table: [name, lastPaymentAmount, lastPaymentDate, remainingDebt]
 const DEBT_DATA = [
   ["تارجت كوبى", 0, null, 39205],
   ["احمد بورده", 23000, "2026-06-03", 32275],
@@ -108,37 +108,61 @@ const DEBT_DATA = [
 ];
 
 async function main() {
-  console.log(`Updating ${DEBT_DATA.length} customers with debt data...`);
+  // Step 1: Reset ALL customer debt data
+  console.log("Resetting all customer debt data...");
+  await prisma.customerPayment.deleteMany();
+  await prisma.customer.updateMany({
+    data: { totalDebt: 0, remainingDebt: 0, lastPaymentDate: null },
+  });
+  console.log("All debt data reset.");
+
+  // Step 2: Group by customer name (handle duplicates like وليد الطحان)
+  const customerMap = new Map();
+  for (const [name, payAmount, payDate, remaining] of DEBT_DATA) {
+    if (!customerMap.has(name)) {
+      customerMap.set(name, { name, payments: [], remaining });
+    }
+    const entry = customerMap.get(name);
+    entry.remaining = remaining; // last occurrence wins for remaining
+    if (payAmount > 0 && payDate) {
+      entry.payments.push({ amount: payAmount, date: payDate });
+    }
+  }
+
+  console.log(`Processing ${customerMap.size} unique customers...`);
 
   let updated = 0;
   let notFound = 0;
   let paymentsCreated = 0;
 
-  for (const [name, lastPayAmount, lastPayDate, remainingDebt] of DEBT_DATA) {
-    const customer = await prisma.customer.findFirst({ where: { name: name } });
+  for (const [name, data] of customerMap) {
+    const customer = await prisma.customer.findFirst({ where: { name } });
     if (!customer) {
       console.log(`  NOT FOUND: ${name}`);
       notFound++;
       continue;
     }
 
-    const totalDebt = lastPayAmount + remainingDebt;
+    const totalPaid = data.payments.reduce((sum, p) => sum + p.amount, 0);
+    const totalDebt = totalPaid + data.remaining;
+    const lastPayment = data.payments.length > 0 ? data.payments[data.payments.length - 1] : null;
 
     await prisma.customer.update({
       where: { id: customer.id },
       data: {
         totalDebt,
-        remainingDebt: remainingDebt,
-        lastPaymentDate: lastPayDate ? new Date(lastPayDate) : null,
+        remainingDebt: data.remaining,
+        lastPaymentDate: lastPayment ? new Date(lastPayment.date) : null,
       },
     });
 
-    if (lastPayAmount > 0 && lastPayDate) {
+    // Create payment records
+    for (const pay of data.payments) {
       await prisma.customerPayment.create({
         data: {
           customerId: customer.id,
-          amount: lastPayAmount,
-          paymentDate: new Date(lastPayDate),
+          amount: pay.amount,
+          paymentDate: new Date(pay.date),
           notes: "دفعة مسجلة",
         },
       });
@@ -148,11 +172,30 @@ async function main() {
     updated++;
   }
 
-  console.log(`Done! Updated: ${updated}, Not found: ${notFound}, Payments created: ${paymentsCreated}`);
+  console.log(`\nDone!`);
+  console.log(`  Updated: ${updated}`);
+  console.log(`  Not found: ${notFound}`);
+  console.log(`  Payments created: ${paymentsCreated}`);
 
-  const totalDebtSum = await prisma.customer.aggregate({ _sum: { totalDebt: true, remainingDebt: true } });
-  console.log(`Total debt in system: ${totalDebtSum._sum.totalDebt?.toLocaleString()} ج.م`);
-  console.log(`Total remaining: ${totalDebtSum._sum.remainingDebt?.toLocaleString()} ج.م`);
+  const totals = await prisma.customer.aggregate({ _sum: { totalDebt: true, remainingDebt: true } });
+  console.log(`\n  Total debt: ${totals._sum.totalDebt?.toLocaleString()} ج.م`);
+  console.log(`  Total remaining: ${totals._sum.remainingDebt?.toLocaleString()} ج.م`);
+
+  // Verify a few customers
+  console.log("\nVerification:");
+  const verify = ["تارجت كوبى", "وليد الطحان", "البان ابو سعده", "محمد صابر بشبشه"];
+  for (const vName of verify) {
+    const c = await prisma.customer.findFirst({
+      where: { name: vName },
+      include: { payments: { orderBy: { paymentDate: "desc" } } },
+    });
+    if (c) {
+      console.log(`  ${c.name}: total=${c.totalDebt}, remaining=${c.remainingDebt}, payments=${c.payments.length}`);
+      for (const p of c.payments) {
+        console.log(`    - ${p.amount} on ${p.paymentDate.toISOString().slice(0, 10)}`);
+      }
+    }
+  }
 }
 
 main()
