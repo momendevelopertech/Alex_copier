@@ -7,7 +7,7 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
-import { Plus, Printer, Save, X } from "lucide-react";
+import { FileText, Plus, Printer, Save, X } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 import FormModal from "@/components/FormModal";
@@ -265,6 +265,9 @@ export default function PurchasesPage() {
                     <td className="px-4 py-3">
                       <button onClick={() => window.open(`/api/invoices?type=purchase&id=${order.id}`, "_blank")} className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-2 text-xs font-medium text-green-600 transition hover:bg-green-100" title="طباعة الفاتورة">
                         <Printer size={14} />
+                      </button>
+                      <button onClick={() => window.open(`/api/invoices?type=purchase&id=${order.id}&format=receipt`, "_blank")} className="ms-1 inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-xs font-medium text-emerald-600 transition hover:bg-emerald-100" title="طباعة الريسيت">
+                        <FileText size={14} />
                       </button>
                     </td>
                   </tr>

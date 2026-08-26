@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-helpers";
-import { generateInvoiceHtml, type InvoiceData } from "@/lib/invoice-template";
+import { generateInvoiceHtml, generateReceiptHtml, type InvoiceData } from "@/lib/invoice-template";
 
 export async function GET(request: Request) {
   try {
@@ -13,6 +13,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
     const id = searchParams.get("id");
+    const format = searchParams.get("format") || "invoice";
 
     if (!type || !id) {
       return NextResponse.json({ error: "type and id are required" }, { status: 400 });
@@ -217,7 +218,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Invalid type" }, { status: 400 });
     }
 
-    const html = generateInvoiceHtml(invoiceData);
+    const html = format === "receipt" ? generateReceiptHtml(invoiceData) : generateInvoiceHtml(invoiceData);
 
     return new NextResponse(html, {
       headers: {

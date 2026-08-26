@@ -210,3 +210,117 @@ export function generateInvoiceHtml(data: InvoiceData): string {
 </body>
 </html>`;
 }
+
+export function generateReceiptHtml(data: InvoiceData): string {
+  const typeLabel = TYPE_LABELS[data.type] || data.type;
+
+  const itemsRows = data.items
+    .map(
+      (item) => `
+      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;">
+        <span>${item.name} ×${item.quantity}</span>
+        <span style="font-weight:600;">${(item.quantity * item.unitPrice - item.discount).toLocaleString("ar-EG")}</span>
+      </div>
+      ${item.discount > 0 ? `<div style="text-align:left;font-size:11px;color:#6b7280;">خصم: ${item.discount.toLocaleString("ar-EG")}</div>` : ""}`
+    )
+    .join("");
+
+  return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ريسيت — ${data.id.slice(0, 8)}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Cairo', sans-serif; background: #f3f4f6; display: flex; justify-content: center; padding: 24px; }
+  .receipt { width: 320px; background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); overflow: hidden; }
+  .receipt-header { text-align: center; padding: 18px 16px 12px; border-bottom: 2px dashed #e5e7eb; }
+  .receipt-header h1 { font-size: 16px; font-weight: 700; color: #111827; }
+  .receipt-header p { font-size: 11px; color: #6b7280; margin-top: 2px; }
+  .receipt-header .type { font-size: 12px; font-weight: 600; color: #0284c7; margin-top: 6px; }
+  .receipt-body { padding: 14px 16px; }
+  .receipt-meta { padding-bottom: 10px; border-bottom: 1px dashed #e5e7eb; margin-bottom: 10px; }
+  .receipt-meta-row { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; }
+  .receipt-meta-row .label { color: #6b7280; }
+  .receipt-meta-row .value { font-weight: 500; }
+  .receipt-items { padding-bottom: 10px; border-bottom: 1px dashed #e5e7eb; margin-bottom: 10px; }
+  .receipt-divider { border: none; border-top: 1px dashed #d1d5db; margin: 8px 0; }
+  .receipt-totals .row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 13px; }
+  .receipt-totals .row.total { border-top: 2px solid #111827; margin-top: 6px; padding-top: 8px; font-size: 16px; font-weight: 700; }
+  .receipt-footer { text-align: center; padding: 12px 16px; border-top: 2px dashed #e5e7eb; font-size: 11px; color: #9ca3af; }
+  .print-btn { position: fixed; bottom: 24px; left: 24px; background: #0284c7; color: #fff; border: none; padding: 12px 24px; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(2,132,199,0.3); z-index: 100; }
+  .print-btn:hover { background: #0369a1; }
+  @media print {
+    .print-btn { display: none; }
+    body { padding: 0; background: #fff; }
+    .receipt { box-shadow: none; border-radius: 0; width: 100%; max-width: 320px; }
+  }
+</style>
+</head>
+<body>
+  <div class="receipt">
+    <div class="receipt-header">
+      <h1>${data.companyName}</h1>
+      ${data.companyPhone ? `<p>${data.companyPhone}</p>` : ""}
+      <div class="type">${typeLabel}</div>
+    </div>
+
+    <div class="receipt-body">
+      <div class="receipt-meta">
+        <div class="receipt-meta-row">
+          <span class="label">رقم</span>
+          <span class="value">#${data.id.slice(0, 8)}</span>
+        </div>
+        <div class="receipt-meta-row">
+          <span class="label">التاريخ</span>
+          <span class="value">${new Date(data.date).toLocaleDateString("ar-EG")}</span>
+        </div>
+        <div class="receipt-meta-row">
+          <span class="label">${data.type === "purchase" ? "المورد" : "العميل"}</span>
+          <span class="value">${data.counterpartyName}</span>
+        </div>
+        ${data.paymentMethod ? `
+        <div class="receipt-meta-row">
+          <span class="label">الدفع</span>
+          <span class="value">${PAYMENT_METHOD_AR[data.paymentMethod] || data.paymentMethod}</span>
+        </div>` : ""}
+      </div>
+
+      <div class="receipt-items">
+        ${itemsRows}
+      </div>
+
+      <div class="receipt-totals">
+        <div class="row">
+          <span>المجموع</span>
+          <span>${data.subtotal.toLocaleString("ar-EG")} ج.م</span>
+        </div>
+        ${data.discount > 0 ? `
+        <div class="row" style="color:#dc2626;">
+          <span>الخصم</span>
+          <span>-${data.discount.toLocaleString("ar-EG")} ج.م</span>
+        </div>` : ""}
+        ${data.taxRate > 0 ? `
+        <div class="row">
+          <span>الضريبة (${data.taxRate}%)</span>
+          <span>${data.taxAmount.toLocaleString("ar-EG")} ج.م</span>
+        </div>` : ""}
+        <div class="row total">
+          <span>الإجمالي</span>
+          <span>${data.total.toLocaleString("ar-EG")} ج.م</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="receipt-footer">
+      <p>شكراً لتعاملكم</p>
+      <p style="margin-top:2px;">${new Date().toLocaleString("ar-EG")}</p>
+    </div>
+  </div>
+
+  <button class="print-btn" onclick="window.print()">🖨️ طباعة الريسيت</button>
+</body>
+</html>`;
+}

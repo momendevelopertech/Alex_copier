@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
-import { Plus, RotateCcw, ArrowDownLeft, ArrowUpRight, Trash2, Pencil, Eye, Printer } from "lucide-react";
+import { Plus, RotateCcw, ArrowDownLeft, ArrowUpRight, Trash2, Pencil, Eye, Printer, FileText } from "lucide-react";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import FormModal from "@/components/FormModal";
@@ -436,6 +436,9 @@ export default function ReturnsPage() {
                         </button>
                         <button onClick={() => window.open(`/api/invoices?type=return&id=${item.id}`, "_blank")} className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-2 text-xs font-medium text-green-600 transition hover:bg-green-100" title="طباعة المرتجع">
                           <Printer size={14} />
+                        </button>
+                        <button onClick={() => window.open(`/api/invoices?type=return&id=${item.id}&format=receipt`, "_blank")} className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-xs font-medium text-emerald-600 transition hover:bg-emerald-100" title="طباعة الريسيت">
+                          <FileText size={14} />
                         </button>
                         {item.status === "PENDING" && (
                           <>
