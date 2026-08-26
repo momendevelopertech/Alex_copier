@@ -375,7 +375,10 @@ export default function CustomersPage() {
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>
-          <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">{t("customers.title")}</h1>
+          <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">
+            {t("customers.title")}
+            <span className="ms-2 text-sm font-medium text-gray-400">({filtered.length})</span>
+          </h1>
         </div>
         <button
           onClick={openCreate}
