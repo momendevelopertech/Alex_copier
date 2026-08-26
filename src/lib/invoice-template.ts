@@ -213,17 +213,34 @@ export function generateInvoiceHtml(data: InvoiceData): string {
 
 export function generateReceiptHtml(data: InvoiceData): string {
   const typeLabel = TYPE_LABELS[data.type] || data.type;
+  const paymentMethod = data.paymentMethod ? PAYMENT_METHOD_AR[data.paymentMethod] || data.paymentMethod : "";
+  const paymentStatus = data.paymentStatus ? PAYMENT_STATUS_AR[data.paymentStatus] || data.paymentStatus : "";
 
   const itemsRows = data.items
     .map(
-      (item) => `
-      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;">
-        <span>${item.name} ×${item.quantity}</span>
-        <span style="font-weight:600;">${(item.quantity * item.unitPrice - item.discount).toLocaleString("ar-EG")}</span>
-      </div>
-      ${item.discount > 0 ? `<div style="text-align:left;font-size:11px;color:#6b7280;">خصم: ${item.discount.toLocaleString("ar-EG")}</div>` : ""}`
+      (item, i) => `
+      <tr>
+        <td style="padding:6px 4px;border-bottom:1px solid #f3f4f6;text-align:center;color:#6b7280;font-size:11px;">${i + 1}</td>
+        <td style="padding:6px 4px;border-bottom:1px solid #f3f4f6;font-size:12px;">${item.name}</td>
+        <td style="padding:6px 4px;border-bottom:1px solid #f3f4f6;text-align:center;font-size:11px;">${item.quantity}</td>
+        <td style="padding:6px 4px;border-bottom:1px solid #f3f4f6;text-align:center;font-size:11px;">${item.unitPrice.toLocaleString("ar-EG")}</td>
+        <td style="padding:6px 4px;border-bottom:1px solid #f3f4f6;text-align:center;font-size:11px;">${item.discount > 0 ? item.discount.toLocaleString("ar-EG") : "-"}</td>
+        <td style="padding:6px 4px;border-bottom:1px solid #f3f4f6;text-align:center;font-size:11px;font-weight:600;">${(item.quantity * item.unitPrice - item.discount).toLocaleString("ar-EG")}</td>
+      </tr>`
     )
     .join("");
+
+  const extraRows = data.extraFields
+    ? data.extraFields
+        .map(
+          (f) => `
+        <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;">
+          <span style="color:#6b7280;">${f.label}</span>
+          <span style="font-weight:500;">${f.value}</span>
+        </div>`
+        )
+        .join("")
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -235,27 +252,32 @@ export function generateReceiptHtml(data: InvoiceData): string {
   @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Cairo', sans-serif; background: #f3f4f6; display: flex; justify-content: center; padding: 24px; }
-  .receipt { width: 320px; background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); overflow: hidden; }
+  .receipt { width: 380px; background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); overflow: hidden; }
   .receipt-header { text-align: center; padding: 18px 16px 12px; border-bottom: 2px dashed #e5e7eb; }
   .receipt-header h1 { font-size: 16px; font-weight: 700; color: #111827; }
   .receipt-header p { font-size: 11px; color: #6b7280; margin-top: 2px; }
   .receipt-header .type { font-size: 12px; font-weight: 600; color: #0284c7; margin-top: 6px; }
   .receipt-body { padding: 14px 16px; }
-  .receipt-meta { padding-bottom: 10px; border-bottom: 1px dashed #e5e7eb; margin-bottom: 10px; }
+  .receipt-section { padding-bottom: 10px; border-bottom: 1px dashed #e5e7eb; margin-bottom: 10px; }
+  .receipt-section h4 { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
   .receipt-meta-row { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; }
   .receipt-meta-row .label { color: #6b7280; }
   .receipt-meta-row .value { font-weight: 500; }
-  .receipt-items { padding-bottom: 10px; border-bottom: 1px dashed #e5e7eb; margin-bottom: 10px; }
-  .receipt-divider { border: none; border-top: 1px dashed #d1d5db; margin: 8px 0; }
-  .receipt-totals .row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 13px; }
-  .receipt-totals .row.total { border-top: 2px solid #111827; margin-top: 6px; padding-top: 8px; font-size: 16px; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { background: #f8fafc; padding: 5px 4px; text-align: center; font-size: 10px; font-weight: 600; color: #6b7280; text-transform: uppercase; border-bottom: 1px solid #e5e7eb; }
+  thead th:nth-child(2) { text-align: right; }
+  .receipt-totals .row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px; }
+  .receipt-totals .row.total { border-top: 2px solid #111827; margin-top: 6px; padding-top: 8px; font-size: 15px; font-weight: 700; }
+  .receipt-notes { background: #f8fafc; border-radius: 6px; padding: 10px 12px; margin-top: 8px; }
+  .receipt-notes .label { font-size: 10px; color: #6b7280; font-weight: 600; }
+  .receipt-notes p { font-size: 11px; color: #374151; margin-top: 2px; }
   .receipt-footer { text-align: center; padding: 12px 16px; border-top: 2px dashed #e5e7eb; font-size: 11px; color: #9ca3af; }
   .print-btn { position: fixed; bottom: 24px; left: 24px; background: #0284c7; color: #fff; border: none; padding: 12px 24px; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(2,132,199,0.3); z-index: 100; }
   .print-btn:hover { background: #0369a1; }
   @media print {
     .print-btn { display: none; }
     body { padding: 0; background: #fff; }
-    .receipt { box-shadow: none; border-radius: 0; width: 100%; max-width: 320px; }
+    .receipt { box-shadow: none; border-radius: 0; width: 100%; max-width: 380px; }
   }
 </style>
 </head>
@@ -263,38 +285,61 @@ export function generateReceiptHtml(data: InvoiceData): string {
   <div class="receipt">
     <div class="receipt-header">
       <h1>${data.companyName}</h1>
+      ${data.companyAddress ? `<p>${data.companyAddress}</p>` : ""}
       ${data.companyPhone ? `<p>${data.companyPhone}</p>` : ""}
+      ${data.companyTaxNumber ? `<p style="font-size:10px;">الرقم الضريبي: ${data.companyTaxNumber}</p>` : ""}
       <div class="type">${typeLabel}</div>
     </div>
 
     <div class="receipt-body">
-      <div class="receipt-meta">
+      <div class="receipt-section">
+        <h4>${data.type === "purchase" ? "المورد" : "العميل"}</h4>
+        <div class="receipt-meta-row">
+          <span class="label">الاسم</span>
+          <span class="value">${data.counterpartyName}</span>
+        </div>
+        ${data.counterpartyAddress ? `<div class="receipt-meta-row"><span class="label">العنوان</span><span class="value">${data.counterpartyAddress}</span></div>` : ""}
+        ${data.counterpartyPhone ? `<div class="receipt-meta-row"><span class="label">الهاتف</span><span class="value">${data.counterpartyPhone}</span></div>` : ""}
+        ${data.counterpartyTaxNumber ? `<div class="receipt-meta-row"><span class="label">رقم ضريبي</span><span class="value">${data.counterpartyTaxNumber}</span></div>` : ""}
+      </div>
+
+      <div class="receipt-section">
+        <h4>التفاصيل</h4>
         <div class="receipt-meta-row">
           <span class="label">رقم</span>
           <span class="value">#${data.id.slice(0, 8)}</span>
         </div>
         <div class="receipt-meta-row">
           <span class="label">التاريخ</span>
-          <span class="value">${new Date(data.date).toLocaleDateString("ar-EG")}</span>
+          <span class="value">${new Date(data.date).toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" })}</span>
         </div>
-        <div class="receipt-meta-row">
-          <span class="label">${data.type === "purchase" ? "المورد" : "العميل"}</span>
-          <span class="value">${data.counterpartyName}</span>
-        </div>
-        ${data.paymentMethod ? `
-        <div class="receipt-meta-row">
-          <span class="label">الدفع</span>
-          <span class="value">${PAYMENT_METHOD_AR[data.paymentMethod] || data.paymentMethod}</span>
-        </div>` : ""}
+        ${paymentMethod ? `<div class="receipt-meta-row"><span class="label">طريقة الدفع</span><span class="value">${paymentMethod}</span></div>` : ""}
+        ${paymentStatus ? `<div class="receipt-meta-row"><span class="label">حالة الدفع</span><span class="value">${paymentStatus}</span></div>` : ""}
+        ${extraRows}
       </div>
 
-      <div class="receipt-items">
-        ${itemsRows}
+      <div class="receipt-section">
+        <h4>المنتجات</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>المنتج</th>
+              <th>الكمية</th>
+              <th>السعر</th>
+              <th>الخصم</th>
+              <th>الإجمالي</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsRows}
+          </tbody>
+        </table>
       </div>
 
       <div class="receipt-totals">
         <div class="row">
-          <span>المجموع</span>
+          <span>المجموع الفرعي</span>
           <span>${data.subtotal.toLocaleString("ar-EG")} ج.م</span>
         </div>
         ${data.discount > 0 ? `
@@ -312,11 +357,17 @@ export function generateReceiptHtml(data: InvoiceData): string {
           <span>${data.total.toLocaleString("ar-EG")} ج.م</span>
         </div>
       </div>
+
+      ${data.notes ? `
+      <div class="receipt-notes">
+        <span class="label">ملاحظات:</span>
+        <p>${data.notes}</p>
+      </div>` : ""}
     </div>
 
     <div class="receipt-footer">
       <p>شكراً لتعاملكم</p>
-      <p style="margin-top:2px;">${new Date().toLocaleString("ar-EG")}</p>
+      <p style="margin-top:2px;">تاريخ الطباعة: ${new Date().toLocaleDateString("ar-EG")}</p>
     </div>
   </div>
 
