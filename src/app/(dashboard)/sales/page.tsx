@@ -90,7 +90,7 @@ export default function SalesPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingOrder, setViewingOrder] = useState<SalesOrder | null>(null);
-  const [form, setForm] = useState({ companyId: "", customerId: "", engineerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", isTaxInvoice: false, discount: "", discountType: "FIXED", taxRate: "14", notes: "" });
+  const [form, setForm] = useState({ companyId: "", customerId: "", engineerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", isTaxInvoice: false, discount: "", discountType: "FIXED", taxRate: "0", notes: "" });
   const [itemRows, setItemRows] = useState<ItemRow[]>([{ productId: "", quantity: "", unitPrice: "", discount: "", priceTier: "newCustomer" }]);
   const [tradeInProduct, setTradeInProduct] = useState<{ name: string; brand: string; condition: string; value: string; serialNumber: string }>({ name: "", brand: "", condition: "", value: "", serialNumber: "" });
   const [search, setSearch] = useState("");
@@ -281,7 +281,7 @@ export default function SalesPage() {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) { toastError(apiErrorMessage(data, t)); return; }
-    setForm({ companyId: "", customerId: "", engineerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", isTaxInvoice: false, discount: "", discountType: "FIXED", taxRate: "14", notes: "" });
+    setForm({ companyId: "", customerId: "", engineerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", isTaxInvoice: false, discount: "", discountType: "FIXED", taxRate: "0", notes: "" });
     setItemRows([{ productId: "", quantity: "", unitPrice: "", discount: "", priceTier: "newCustomer" }]);
     setTradeInProduct({ name: "", brand: "", condition: "", value: "", serialNumber: "" });
     setEditingId(null);
