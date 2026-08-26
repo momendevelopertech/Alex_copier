@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
@@ -75,8 +75,6 @@ const toInputDate = (date: Date) => date.toISOString().slice(0, 10);
 
 export default function ContractsPage() {
   const { t, dir } = useI18n();
-  const searchParams = useSearchParams();
-  const router = useRouter();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -123,12 +121,10 @@ export default function ContractsPage() {
 
   useEffect(() => { fetchData(); }, []);
 
+  const autoAddOpen = useAutoAddForm();
   useEffect(() => {
-    if (searchParams.get("add") === "1") {
-      setShowForm(true);
-      router.replace("/contracts", { scroll: false });
-    }
-  }, [searchParams, router]);
+    if (autoAddOpen) setShowForm(true);
+  }, [autoAddOpen]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,6 +222,7 @@ export default function ContractsPage() {
 
   return (
     <div dir={dir} className="space-y-5">
+      <AddFormBoundary />
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>

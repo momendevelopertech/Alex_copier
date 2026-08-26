@@ -9,7 +9,7 @@ import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
 import { Plus, Save, X } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
-import { useSearchParams, useRouter } from "next/navigation";
+import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import FormModal from "@/components/FormModal";
 
 interface Company { id: string; name: string; }
@@ -20,8 +20,6 @@ interface Expense {
 
 export default function FinancePage() {
   const { t, dir } = useI18n();
-  const searchParams = useSearchParams();
-  const router = useRouter();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,12 +44,10 @@ export default function FinancePage() {
 
   useEffect(() => { fetchData(); }, []);
 
+  const autoAddOpen = useAutoAddForm();
   useEffect(() => {
-    if (searchParams.get("add") === "1") {
-      setShowForm(true);
-      router.replace("/finance", { scroll: false });
-    }
-  }, [searchParams, router]);
+    if (autoAddOpen) setShowForm(true);
+  }, [autoAddOpen]);
 
   const filtered = expenses.filter(expense =>
     (!companyFilter || expense.companyId === companyFilter) &&
@@ -98,6 +94,7 @@ export default function FinancePage() {
 
   return (
     <div dir={dir} className="space-y-5">
+      <AddFormBoundary />
       <div className="space-y-5">
         <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div>

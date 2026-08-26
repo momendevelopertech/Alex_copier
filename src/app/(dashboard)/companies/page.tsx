@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
 import PrinterLoader from "@/components/PrinterLoader";
 import { apiErrorMessage } from "@/lib/api-client";
-import { useSearchParams, useRouter } from "next/navigation";
+import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import { useToast, useConfirm } from "@/components/UIProvider";
 import { Pencil, Plus, Save, Trash2 } from "lucide-react";
 import FormModal from "@/components/FormModal";
@@ -46,8 +46,7 @@ const emptyForm = {
 
 export default function CompaniesPage() {
   const { t, dir } = useI18n();
-  const searchParams = useSearchParams();
-  const router = useRouter();
+
   const [companies, setCompanies] = useState<CompanyData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -74,12 +73,10 @@ export default function CompaniesPage() {
     fetchCompanies();
   }, []);
 
+  const autoAddOpen = useAutoAddForm();
   useEffect(() => {
-    if (searchParams.get("add") === "1") {
-      setShowForm(true);
-      router.replace("/companies", { scroll: false });
-    }
-  }, [searchParams, router]);
+    if (autoAddOpen) setShowForm(true);
+  }, [autoAddOpen]);
 
   const totalSales = companies.reduce((s, c) => s + c.totalSales, 0);
   const totalPurchases = companies.reduce((s, c) => s + c.totalPurchases, 0);
@@ -158,6 +155,7 @@ export default function CompaniesPage() {
 
   return (
     <div dir={dir} className="space-y-5">
+      <AddFormBoundary />
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>

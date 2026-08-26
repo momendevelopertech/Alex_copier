@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import { useSession } from "next-auth/react";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
@@ -35,8 +35,6 @@ const CAN_VERIFY_ROLES = ["GENERAL_MANAGER", "ACCOUNTANT", "COMPANY_MANAGER"];
 
 export default function SettlementsPage() {
   const { t, dir } = useI18n();
-  const searchParams = useSearchParams();
-  const router = useRouter();
   
   const { success: toastSuccess, error: toastError } = useToast();
   const { data: session } = useSession();
@@ -69,12 +67,10 @@ export default function SettlementsPage() {
 
   useEffect(() => { fetchData(); }, []);
 
+  const autoAddOpen = useAutoAddForm();
   useEffect(() => {
-    if (searchParams.get("add") === "1") {
-      setShowForm(true);
-      router.replace("/settlements", { scroll: false });
-    }
-  }, [searchParams, router]);
+    if (autoAddOpen) setShowForm(true);
+  }, [autoAddOpen]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,6 +135,7 @@ export default function SettlementsPage() {
 
   return (
     <div dir={dir} className="space-y-5">
+      <AddFormBoundary />
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>

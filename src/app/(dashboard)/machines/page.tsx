@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
+import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
@@ -73,8 +73,6 @@ const emptyForm = {
 
 export default function MachinesPage() {
   const { t, dir, locale } = useI18n();
-  const searchParams = useSearchParams();
-  const router = useRouter();
   const confirmAction = useConfirm();
 const { success: toastSuccess } = useToast();
   
@@ -105,12 +103,10 @@ const { success: toastSuccess } = useToast();
     fetchMachines();
   }, []);
 
+  const autoAddOpen = useAutoAddForm();
   useEffect(() => {
-    if (searchParams.get("add") === "1") {
-      setShowForm(true);
-      router.replace("/machines", { scroll: false });
-    }
-  }, [searchParams, router]);
+    if (autoAddOpen) setShowForm(true);
+  }, [autoAddOpen]);
 
   const filtered = machines.filter(
     (m) =>
@@ -189,6 +185,7 @@ const { success: toastSuccess } = useToast();
 
   return (
     <div dir={dir} className="space-y-5">
+      <AddFormBoundary />
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>

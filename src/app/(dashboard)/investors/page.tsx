@@ -8,7 +8,7 @@ import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 import FormModal from "@/components/FormModal";
 import { Plus, Save, Trash2, X } from "lucide-react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import { useConfirm, useToast } from "@/components/UIProvider";
 
 interface Investor {
@@ -30,8 +30,6 @@ const emptyForm = {
 
 export default function InvestorsPage() {
   const { t, dir } = useI18n();
-  const searchParams = useSearchParams();
-  const router = useRouter();
   const confirmAction = useConfirm();
   const { success: toastSuccess } = useToast();
   const [investors, setInvestors] = useState<Investor[]>([]);
@@ -56,12 +54,10 @@ export default function InvestorsPage() {
     fetchInvestors();
   }, []);
 
+  const autoAddOpen = useAutoAddForm();
   useEffect(() => {
-    if (searchParams.get("add") === "1") {
-      setShowForm(true);
-      router.replace("/investors", { scroll: false });
-    }
-  }, [searchParams, router]);
+    if (autoAddOpen) setShowForm(true);
+  }, [autoAddOpen]);
 
   const filtered = investors.filter(
     (i) =>
@@ -119,6 +115,7 @@ export default function InvestorsPage() {
 
   return (
     <div dir={dir} className="space-y-5">
+      <AddFormBoundary />
       <div className="space-y-5">
         <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div>

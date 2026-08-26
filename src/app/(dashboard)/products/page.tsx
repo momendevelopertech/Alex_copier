@@ -8,7 +8,7 @@ import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
 import { Eye, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import PrinterLoader from "@/components/PrinterLoader";
-import { useSearchParams, useRouter } from "next/navigation";
+import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
 import FormModal from "@/components/FormModal";
@@ -70,8 +70,6 @@ const TYPE_BADGES: Record<string, string> = {
 
 export default function ProductsPage() {
   const { t, dir } = useI18n();
-  const searchParams = useSearchParams();
-  const router = useRouter();
   const confirmAction = useConfirm();
   const { success: toastSuccess, error: toastError } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
@@ -109,12 +107,10 @@ export default function ProductsPage() {
     fetchData();
   }, []);
 
+  const autoAddOpen = useAutoAddForm();
   useEffect(() => {
-    if (searchParams.get("add") === "1") {
-      setShowForm(true);
-      router.replace("/products", { scroll: false });
-    }
-  }, [searchParams, router]);
+    if (autoAddOpen) setShowForm(true);
+  }, [autoAddOpen]);
 
   const filtered = products.filter(
     (p) =>
@@ -244,6 +240,7 @@ export default function ProductsPage() {
 
   return (
     <div dir={dir} className="space-y-5">
+      <AddFormBoundary />
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>

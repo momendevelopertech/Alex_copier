@@ -7,7 +7,7 @@ import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 import { Pencil, Plus, Trash2, Package, Eye } from "lucide-react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
 import FormModal from "@/components/FormModal";
@@ -76,8 +76,6 @@ const emptyForm = {
 
 export default function EngineersPage() {
   const { t, dir, locale } = useI18n();
-  const searchParams = useSearchParams();
-  const router = useRouter();
   const confirmAction = useConfirm();
   const { success: toastSuccess, error: toastError } = useToast();
   const [engineers, setEngineers] = useState<Engineer[]>([]);
@@ -166,12 +164,10 @@ export default function EngineersPage() {
     };
   }, []);
 
+  const autoAddOpen = useAutoAddForm();
   useEffect(() => {
-    if (searchParams.get("add") === "1") {
-      setShowForm(true);
-      router.replace("/engineers", { scroll: false });
-    }
-  }, [searchParams, router]);
+    if (autoAddOpen) setShowForm(true);
+  }, [autoAddOpen]);
 
   const filtered = engineers.filter(
     (e) =>
@@ -279,6 +275,7 @@ export default function EngineersPage() {
 
   return (
     <div dir={dir} className="space-y-5">
+      <AddFormBoundary />
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>
