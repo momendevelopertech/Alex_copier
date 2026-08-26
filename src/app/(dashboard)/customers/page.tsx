@@ -43,7 +43,11 @@ interface Customer {
   paymentTerms: string;
   customerType: string;
   isActive: boolean;
+  totalDebt: number;
+  remainingDebt: number;
+  lastPaymentDate: string | null;
   locations: CustomerLocation[];
+  payments?: { id: string; amount: number; paymentDate: string; notes?: string | null }[];
   createdAt: string;
   machines?: { id: string; serialNumber: string; manufacturer?: string | null; model?: string | null; currentStatus: string }[];
   serviceRequests?: { id: string; requestNumber: string; status: string; priority: string; createdAt: string; machine?: { serialNumber: string } | null }[];
@@ -67,6 +71,8 @@ const emptyForm = {
   creditLimit: "",
   paymentTerms: "",
   customerType: "INDIVIDUAL",
+  totalDebt: "",
+  remainingDebt: "",
 };
 
 const TYPE_BADGES: Record<string, string> = {
@@ -103,6 +109,12 @@ export default function CustomersPage() {
   const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
   const [locForm, setLocForm] = useState({ name: "", address: "", city: "", governorate: "", phone: "" });
   const [locError, setLocError] = useState("");
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentCustomer, setPaymentCustomer] = useState<Customer | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
+  const [paymentNotes, setPaymentNotes] = useState("");
+  const [savingPayment, setSavingPayment] = useState(false);
   const PAGE_SIZE = 15;
 
   const fetchCustomers = async () => {
@@ -203,6 +215,8 @@ export default function CustomersPage() {
       creditLimit: String(customer.creditLimit || ""),
       paymentTerms: customer.paymentTerms || "",
       customerType: customer.customerType,
+      totalDebt: String(customer.totalDebt || ""),
+      remainingDebt: String(customer.remainingDebt || ""),
     });
     setEditingId(customer.id);
     setError("");
@@ -221,6 +235,8 @@ export default function CustomersPage() {
           ...form,
           companyId: form.companyId || undefined,
           creditLimit: form.creditLimit ? parseFloat(form.creditLimit) : 0,
+          totalDebt: form.totalDebt ? parseFloat(form.totalDebt) : 0,
+          remainingDebt: form.remainingDebt ? parseFloat(form.remainingDebt) : (form.totalDebt ? parseFloat(form.totalDebt) : 0),
         }),
       });
       const data = await res.json().catch(() => null);
@@ -319,6 +335,38 @@ export default function CustomersPage() {
     }
     await openDetails(selected.id);
   };
+
+  const openPaymentModal = (customer: Customer) => {
+    setPaymentCustomer(customer);
+    setPaymentAmount("");
+    setPaymentDate(new Date().toISOString().slice(0, 10));
+    setPaymentNotes("");
+    setShowPaymentModal(true);
+  };
+
+  const handleRecordPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentCustomer) return;
+    const amt = parseFloat(paymentAmount);
+    if (!amt || amt <= 0) { toastError("المبلغ يجب أن يكون أكبر من صفر"); return; }
+    setSavingPayment(true);
+    try {
+      const res = await fetch(`/api/customers/${paymentCustomer.id}/payments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: amt, paymentDate, notes: paymentNotes || undefined }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) { toastError(apiErrorMessage(data, t)); return; }
+      toastSuccess("تم تسجيل الدفعة بنجاح");
+      setShowPaymentModal(false);
+      setPaymentCustomer(null);
+      fetchCustomers();
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
   const date = (value: string) => new Date(value).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-GB");
   const isOpen = (status: string) => !["RESOLVED", "CLOSED"].includes(status);
 
@@ -410,6 +458,16 @@ export default function CustomersPage() {
               <option value="COMPANY">{TYPE_LABELS.COMPANY}</option>
             </select>
           </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">الدين الكلي (ج.م)</label>
+            <input type="number" min="0" step="0.01" value={form.totalDebt} onChange={(e) => setField("totalDebt", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0" />
+          </div>
+          {editingId && (
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">المتبقي من الدين (ج.م)</label>
+              <input type="number" min="0" step="0.01" value={form.remainingDebt} onChange={(e) => setField("remainingDebt", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0" />
+            </div>
+          )}
           <div className="md:col-span-3 flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
             <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
             <button type="submit" disabled={saving} className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">
@@ -442,6 +500,64 @@ export default function CustomersPage() {
               <Summary label={t("customers.contracts")} value={selected.contracts?.filter(c => c.status === "ACTIVE").length || 0} />
               <Summary label={t("customers.sales")} value={selected.orders?.length || 0} />
               <Summary label={t("customers.outstandingBalance")} value={(selected.ledgers || []).reduce((total, ledger) => total + ledger.balance, 0).toLocaleString()} />
+            </div>
+
+            {/* Debt & Payment Section */}
+            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-amber-800">حساب العميل</h3>
+                {selected.remainingDebt > 0 && (
+                  <button onClick={() => openPaymentModal(selected)} className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-green-700">
+                    تسجيل دفعة
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 mb-3">
+                <div className="rounded-lg bg-white p-3 border border-amber-200">
+                  <span className="block text-xs text-gray-500">الدين الكلي</span>
+                  <span className="mt-1 block text-lg font-bold text-slate-800">{selected.totalDebt.toLocaleString("ar-EG")} ج.م</span>
+                </div>
+                <div className="rounded-lg bg-white p-3 border border-amber-200">
+                  <span className="block text-xs text-gray-500">المتبقي</span>
+                  <span className={`mt-1 block text-lg font-bold ${selected.remainingDebt > 0 ? "text-red-600" : "text-green-600"}`}>
+                    {selected.remainingDebt.toLocaleString("ar-EG")} ج.م
+                  </span>
+                </div>
+                <div className="rounded-lg bg-white p-3 border border-amber-200">
+                  <span className="block text-xs text-gray-500">آخر دفعة</span>
+                  <span className="mt-1 block text-sm font-medium text-slate-800">{selected.lastPaymentDate ? date(selected.lastPaymentDate) : "—"}</span>
+                </div>
+              </div>
+              {selected.remainingDebt > 0 && selected.totalDebt > 0 && (
+                <div className="mb-3">
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>تم السداد</span>
+                    <span>{Math.round(((selected.totalDebt - selected.remainingDebt) / selected.totalDebt) * 100)}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-gray-200">
+                    <div className="h-2 rounded-full bg-green-500" style={{ width: `${Math.min(100, ((selected.totalDebt - selected.remainingDebt) / selected.totalDebt) * 100)}%` }} />
+                  </div>
+                </div>
+              )}
+              {selected.payments && selected.payments.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-semibold text-amber-700 mb-2">سجل الدفعات ({selected.payments.length})</h4>
+                  <div className="max-h-40 overflow-y-auto space-y-1">
+                    {selected.payments.map((p) => (
+                      <div key={p.id} className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-xs border border-amber-100">
+                        <span className="text-gray-600">{date(p.paymentDate)}</span>
+                        <span className="font-bold text-green-700">+{p.amount.toLocaleString("ar-EG")} ج.م</span>
+                        {p.notes && <span className="text-gray-400 truncate max-w-[120px]">{p.notes}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {selected.remainingDebt === 0 && selected.totalDebt > 0 && (
+                <div className="rounded-lg bg-green-100 p-2 text-center text-sm font-semibold text-green-700">
+                  تم السداد بالكامل
+                </div>
+              )}
             </div>
 
             <div>
@@ -617,17 +733,15 @@ export default function CustomersPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px]">
+            <table className="w-full min-w-[700px]">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("customers.name")}</th>
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("customers.companyName")}</th>
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("customers.phone")}</th>
-                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("customers.email")}</th>
-                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("customers.city")}</th>
-                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("customers.creditLimit")}</th>
-                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("customers.type")}</th>
-                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.status")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">الدين الكلي</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">المتبقي</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">آخر دفعة</th>
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.actions")}</th>
                 </tr>
               </thead>
@@ -637,26 +751,24 @@ export default function CustomersPage() {
                     <td className="px-4 py-3 text-sm font-medium">{customer.name}</td>
                     <td className="px-4 py-3 text-sm">{customer.companyName || "—"}</td>
                     <td className="px-4 py-3 text-sm">{customer.phone || "—"}</td>
-                    <td className="px-4 py-3 text-sm">{customer.email || "—"}</td>
-                    <td className="px-4 py-3 text-sm">{customer.city || "—"}</td>
-                    <td className="px-4 py-3 text-sm">{customer.creditLimit.toLocaleString()}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex whitespace-nowrap px-2 py-1 rounded-full text-xs font-medium ${TYPE_BADGES[customer.customerType] || ""}`}>
-                        {TYPE_LABELS[customer.customerType] || customer.customerType}
-                      </span>
+                    <td className="px-4 py-3 text-sm font-medium">{customer.totalDebt > 0 ? `${customer.totalDebt.toLocaleString("ar-EG")} ج.م` : "—"}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {customer.remainingDebt > 0 ? (
+                        <span className={`font-semibold ${customer.remainingDebt > 0 ? "text-red-600" : "text-green-600"}`}>
+                          {customer.remainingDebt.toLocaleString("ar-EG")} ج.م
+                        </span>
+                      ) : "—"}
                     </td>
+                    <td className="px-4 py-3 text-sm">{customer.lastPaymentDate ? date(customer.lastPaymentDate) : "—"}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex whitespace-nowrap px-2 py-1 rounded-full text-xs font-medium ${customer.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-                        {customer.isActive ? t("common.yes") : t("common.no")}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <button onClick={(e) => { e.stopPropagation(); openEdit(customer); }} className="text-blue-600 hover:text-blue-800 text-sm">
-                          <Pencil size={14} className="inline-block me-1" />{t("common.edit")}
-                        </button>
-                        <button onClick={(e) => { e.stopPropagation(); handleDelete(customer.id); }} className="text-red-600 hover:text-red-800 text-sm">
-                          <Trash2 size={14} className="inline-block me-1" />{t("common.delete")}
+                      <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                        {customer.remainingDebt > 0 && (
+                          <button onClick={() => openPaymentModal(customer)} className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-1.5 text-xs font-medium text-green-700 transition hover:bg-green-100" title="تسجيل دفعة">
+                            دفع
+                          </button>
+                        )}
+                        <button onClick={() => openDetails(customer.id)} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-100">
+                          {t("common.view")}
                         </button>
                       </div>
                     </td>
@@ -682,6 +794,38 @@ export default function CustomersPage() {
         title={`${t("common.import")} — ${t("customers.title")}`}
         onImported={fetchCustomers}
       />
+
+      <FormModal open={showPaymentModal} onClose={() => { setShowPaymentModal(false); setPaymentCustomer(null); }} title={`تسجيل دفعة — ${paymentCustomer?.name || ""}`}>
+        <form onSubmit={handleRecordPayment} className="space-y-4">
+          {paymentCustomer && paymentCustomer.totalDebt > 0 && (
+            <div className="rounded-lg bg-gray-50 p-3 text-sm">
+              <div className="flex justify-between"><span className="text-gray-500">الدين الكلي:</span><span className="font-medium">{paymentCustomer.totalDebt.toLocaleString("ar-EG")} ج.م</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">المتبقي:</span><span className="font-bold text-red-600">{paymentCustomer.remainingDebt.toLocaleString("ar-EG")} ج.م</span></div>
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">المبلغ *</label>
+            <input type="number" min="0.01" step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" required />
+            {paymentCustomer && paymentCustomer.remainingDebt > 0 && paymentAmount && (
+              <p className="text-xs text-gray-500">المتبقي بعد الدفع: {Math.max(0, paymentCustomer.remainingDebt - parseFloat(paymentAmount || "0")).toLocaleString("ar-EG")} ج.م</p>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">تاريخ الدفع</label>
+            <input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">ملاحظات</label>
+            <input type="text" value={paymentNotes} onChange={(e) => setPaymentNotes(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="اختياري" />
+          </div>
+          <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => { setShowPaymentModal(false); setPaymentCustomer(null); }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
+            <button type="submit" disabled={savingPayment} className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 disabled:opacity-40">
+              {savingPayment ? "جاري الحفظ..." : "تسجيل الدفعة"}
+            </button>
+          </div>
+        </form>
+      </FormModal>
     </div>
   );
 }

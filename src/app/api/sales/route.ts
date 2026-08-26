@@ -20,7 +20,8 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(sales);
-  } catch {
+  } catch (error) {
+    console.error("Sales GET error:", error);
     return NextResponse.json({ error: "Failed to fetch sales" }, { status: 500 });
   }
 }

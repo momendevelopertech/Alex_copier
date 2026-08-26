@@ -92,6 +92,7 @@ export default function SalesPage() {
   const [viewingOrder, setViewingOrder] = useState<SalesOrder | null>(null);
   const [form, setForm] = useState({ companyId: "", customerId: "", engineerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", isTaxInvoice: false, discount: "", discountType: "FIXED", taxRate: "14", notes: "" });
   const [itemRows, setItemRows] = useState<ItemRow[]>([{ productId: "", quantity: "", unitPrice: "", discount: "", priceTier: "newCustomer" }]);
+  const [tradeInProduct, setTradeInProduct] = useState<{ name: string; brand: string; condition: string; value: string; serialNumber: string }>({ name: "", brand: "", condition: "", value: "", serialNumber: "" });
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
@@ -193,6 +194,8 @@ export default function SalesPage() {
 
   const openEdit = (order: SalesOrder) => {
     setEditingId(order.id);
+    const hasTradeIn = order.items?.some((item: any) => item.tradeInProduct);
+    setFormMode(hasTradeIn ? "tradeIn" : "regular");
     setForm({
       companyId: order.companyId,
       customerId: order.customerId,
@@ -207,7 +210,7 @@ export default function SalesPage() {
     });
     setItemRows(
       order.items.length > 0
-        ? order.items.map((item) => ({
+        ? order.items.map((item: any) => ({
             productId: item.productId,
             quantity: String(item.quantity),
             unitPrice: String(item.unitPrice),
@@ -216,6 +219,21 @@ export default function SalesPage() {
           }))
         : [{ productId: "", quantity: "", unitPrice: "", discount: "", priceTier: "newCustomer" }]
     );
+    if (hasTradeIn) {
+      const tradeInItem = order.items.find((item: any) => item.tradeInProduct);
+      if (tradeInItem) {
+        const tip = (tradeInItem as any).tradeInProduct;
+        setTradeInProduct({
+          name: tip?.name || "",
+          brand: tip?.brand || "",
+          condition: tip?.condition || "",
+          value: String((tradeInItem as any).tradeInValue || ""),
+          serialNumber: tip?.description?.replace("S/N: ", "") || "",
+        });
+      }
+    } else {
+      setTradeInProduct({ name: "", brand: "", condition: "", value: "", serialNumber: "" });
+    }
     setShowForm(true);
   };
 
@@ -223,20 +241,30 @@ export default function SalesPage() {
     e.preventDefault();
     const items = itemRows
       .filter(row => row.productId && row.quantity && row.unitPrice)
-      .map(row => ({ 
-        productId: row.productId, 
-        quantity: Number(row.quantity), 
-        unitPrice: Number(row.unitPrice), 
-        discount: Number(row.discount) || 0, 
-        priceTier: row.priceTier,
-        tradeIn: row.tradeIn && row.tradeIn.name && row.tradeIn.value ? {
+      .map(row => { 
+        const useTopLevel = formMode === "tradeIn" && tradeInProduct.name && tradeInProduct.value;
+        const tradeIn = useTopLevel ? {
+          name: tradeInProduct.name,
+          brand: tradeInProduct.brand || undefined,
+          condition: tradeInProduct.condition || undefined,
+          value: Number(tradeInProduct.value) || 0,
+          serialNumber: tradeInProduct.serialNumber || undefined,
+        } : row.tradeIn && row.tradeIn.name && row.tradeIn.value ? {
           name: row.tradeIn.name,
           brand: row.tradeIn.brand || undefined,
           condition: row.tradeIn.condition || undefined,
           value: Number(row.tradeIn.value) || 0,
           serialNumber: row.tradeIn.serialNumber || undefined,
-        } : undefined,
-      }));
+        } : undefined;
+        return {
+          productId: row.productId, 
+          quantity: Number(row.quantity), 
+          unitPrice: Number(row.unitPrice), 
+          discount: Number(row.discount) || 0, 
+          priceTier: row.priceTier,
+          tradeIn,
+        };
+      });
     if (!items.length) { toastError(t("errors.INVALID_SALE_ITEMS")); return; }
     const safeTaxRate = form.isTaxInvoice ? 14 : (parseFloat(form.taxRate) || 0);
     const response = await fetch("/api/sales", {
@@ -255,6 +283,7 @@ export default function SalesPage() {
     if (!response.ok) { toastError(apiErrorMessage(data, t)); return; }
     setForm({ companyId: "", customerId: "", engineerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", isTaxInvoice: false, discount: "", discountType: "FIXED", taxRate: "14", notes: "" });
     setItemRows([{ productId: "", quantity: "", unitPrice: "", discount: "", priceTier: "newCustomer" }]);
+    setTradeInProduct({ name: "", brand: "", condition: "", value: "", serialNumber: "" });
     setEditingId(null);
     setFormMode("regular");
     setShowForm(false);
@@ -279,11 +308,23 @@ export default function SalesPage() {
       <FormModal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? "تعديل فاتورة بيع" : formMode === "tradeIn" ? "إضافة فاتورة استبدال" : t("sales.addOrder")} wide>
         <form onSubmit={handleCreate} className="space-y-5">
           {formMode === "tradeIn" && (
-            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 flex items-center gap-3">
-              <span className="text-lg">🔄</span>
-              <div>
-                <p className="text-sm font-semibold text-amber-800">فاتورة استبدال</p>
-                <p className="text-xs text-amber-600">أدخل بيانات المنتج القديم (المستبدل) وقيمة الاستبدال — سيتم خصمها من سعر المنتج الجديد</p>
+            <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🔄</span>
+                <p className="text-sm font-bold text-amber-800">بيانات المنتج المستبدل (القديم)</p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-5">
+                <input type="text" placeholder="اسم المنتج القديم *" value={tradeInProduct.name} onChange={(e) => setTradeInProduct({ ...tradeInProduct, name: e.target.value })} className="rounded-lg border border-amber-300 bg-white px-3 py-2.5 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500" required />
+                <input type="text" placeholder="الماركة" value={tradeInProduct.brand} onChange={(e) => setTradeInProduct({ ...tradeInProduct, brand: e.target.value })} className="rounded-lg border border-amber-300 bg-white px-3 py-2.5 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                <select value={tradeInProduct.condition} onChange={(e) => setTradeInProduct({ ...tradeInProduct, condition: e.target.value })} className="rounded-lg border border-amber-300 bg-white px-3 py-2.5 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                  <option value="">الحالة</option>
+                  <option value="excellent">ممتاز</option>
+                  <option value="good">جيد</option>
+                  <option value="fair">مقبول</option>
+                  <option value="poor">ضعيف</option>
+                </select>
+                <input type="number" min="0" placeholder="قيمة الاستبدال *" value={tradeInProduct.value} onChange={(e) => setTradeInProduct({ ...tradeInProduct, value: e.target.value })} className="rounded-lg border border-amber-300 bg-white px-3 py-2.5 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500" required />
+                <input type="text" placeholder="الرقم التسلسلي (اختياري)" value={tradeInProduct.serialNumber} onChange={(e) => setTradeInProduct({ ...tradeInProduct, serialNumber: e.target.value })} className="rounded-lg border border-amber-300 bg-white px-3 py-2.5 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500" />
               </div>
             </div>
           )}
@@ -324,17 +365,26 @@ export default function SalesPage() {
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("sales.discount")}</label><div className="flex gap-2"><input type="number" placeholder={t("sales.discount")} value={form.discount} onChange={(e) => setForm({ ...form, discount: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" /><select value={form.discountType} onChange={(e) => setForm({ ...form, discountType: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="FIXED">{t("sales.discountTypeFixed")}</option><option value="PERCENTAGE">{t("sales.discountTypePercent")}</option></select></div></div>
           </div>
 
-          {itemRows.some(row => row.tradeIn && row.tradeIn.value) && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-amber-800">🔄 إجمالي الاستبدال</span>
-                <span className="text-sm font-bold text-amber-900">
-                  -{itemRows.reduce((sum, row) => sum + (row.tradeIn?.value ? Number(row.tradeIn.value) : 0), 0).toLocaleString("ar-EG")} ج.م
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-amber-600">
-                العميل يدفع: {Math.max(0, itemRows.reduce((sum, row) => sum + (row.quantity ? Number(row.quantity) * Number(row.unitPrice) - (Number(row.discount) || 0) : 0), 0) - itemRows.reduce((sum, row) => sum + (row.tradeIn?.value ? Number(row.tradeIn.value) : 0), 0)).toLocaleString("ar-EG")} ج.م
-              </p>
+          {(formMode === "tradeIn" || itemRows.some(row => row.tradeIn && row.tradeIn.value)) && (
+            <div className="rounded-xl border border-amber-200 bg-gradient-to-l from-amber-50 to-white p-4">
+              <h4 className="mb-3 text-sm font-bold text-amber-800">📊 ملخص الحسابات</h4>
+              {(() => {
+                const subtotal = itemRows.reduce((sum, row) => sum + (row.quantity ? Number(row.quantity) * Number(row.unitPrice) - (Number(row.discount) || 0) : 0), 0);
+                const tradeInVal = formMode === "tradeIn" ? (Number(tradeInProduct.value) || 0) : itemRows.reduce((sum, row) => sum + (row.tradeIn?.value ? Number(row.tradeIn.value) : 0), 0);
+                const afterTradeIn = Math.max(0, subtotal - tradeInVal);
+                return (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between text-slate-600"><span>اجمالي المنتجات</span><span className="font-medium">{subtotal.toLocaleString("ar-EG")} ج.م</span></div>
+                    {tradeInVal > 0 && (
+                      <>
+                        <div className="flex justify-between text-amber-700"><span>قيمة الاستبدال (الخصم)</span><span className="font-bold">- {tradeInVal.toLocaleString("ar-EG")} ج.م</span></div>
+                        <div className="border-t border-amber-200 pt-2 flex justify-between text-slate-800 font-semibold"><span>المبلغ بعد خصم الاستبدال</span><span>{afterTradeIn.toLocaleString("ar-EG")} ج.م</span></div>
+                      </>
+                    )}
+                    {tradeInVal === 0 && <div className="text-xs text-slate-400">لم يتم إدخال قيمة استبدال</div>}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -363,78 +413,26 @@ export default function SalesPage() {
                     {itemRows.length > 1 && <button type="button" onClick={() => setItemRows(itemRows.filter((_, i) => i !== index))} className="rounded-lg border border-red-200 bg-red-50 px-2 text-red-600 transition hover:bg-red-100">×</button>}
                   </div>
                   
-                  {/* Trade-in section */}
-                  <div className="mt-2 rounded-lg border border-dashed border-amber-300 bg-amber-50 p-3">
-                    {formMode === "tradeIn" ? (
+                  {formMode === "tradeIn" && row.tradeIn && (
+                    <div className="mt-2 rounded-lg border border-dashed border-amber-300 bg-amber-50 p-3">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm font-medium text-amber-800">🔄 منتج استبدال</span>
-                        {!row.tradeIn && (
-                          <button type="button" onClick={() => updateItemRow(index, { tradeIn: { name: "", brand: "", condition: "", value: "", serialNumber: "" } })} className="text-xs text-amber-600 underline hover:text-amber-800">إضافة بيانات الاستبدال</button>
-                        )}
+                        <span className="text-sm font-medium text-amber-800">🔄 بيانات الاستبدال لهذا المنتج</span>
                       </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id={`tradeIn-${index}`}
-                          checked={!!row.tradeIn}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              updateItemRow(index, { tradeIn: { name: "", brand: "", condition: "", value: "", serialNumber: "" } });
-                            } else {
-                              updateItemRow(index, { tradeIn: undefined });
-                            }
-                          }}
-                          className="h-4 w-4 rounded border-amber-400 text-amber-600 focus:ring-amber-500"
-                        />
-                        <label htmlFor={`tradeIn-${index}`} className="text-sm font-medium text-amber-800">🔄 منتج استبدال (اختياري)</label>
-                      </div>
-                    )}
-                    {row.tradeIn && (
-                      <div className="mt-3 grid gap-2 sm:grid-cols-5">
-                        <input
-                          type="text"
-                          placeholder="اسم المنتج القديم"
-                          value={row.tradeIn.name}
-                          onChange={(e) => updateItemRow(index, { tradeIn: { ...row.tradeIn!, name: e.target.value } })}
-                          className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        />
-                        <input
-                          type="text"
-                          placeholder="الماركة"
-                          value={row.tradeIn.brand}
-                          onChange={(e) => updateItemRow(index, { tradeIn: { ...row.tradeIn!, brand: e.target.value } })}
-                          className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        />
-                        <select
-                          value={row.tradeIn.condition}
-                          onChange={(e) => updateItemRow(index, { tradeIn: { ...row.tradeIn!, condition: e.target.value } })}
-                          className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        >
+                      <div className="grid gap-2 sm:grid-cols-5">
+                        <input type="text" placeholder="اسم المنتج القديم" value={row.tradeIn.name} onChange={(e) => updateItemRow(index, { tradeIn: { ...row.tradeIn!, name: e.target.value } })} className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                        <input type="text" placeholder="الماركة" value={row.tradeIn.brand} onChange={(e) => updateItemRow(index, { tradeIn: { ...row.tradeIn!, brand: e.target.value } })} className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                        <select value={row.tradeIn.condition} onChange={(e) => updateItemRow(index, { tradeIn: { ...row.tradeIn!, condition: e.target.value } })} className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500">
                           <option value="">الحالة</option>
                           <option value="excellent">ممتاز</option>
                           <option value="good">جيد</option>
                           <option value="fair">مقبول</option>
                           <option value="poor">ضعيف</option>
                         </select>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="قيمة الاستبدال"
-                          value={row.tradeIn.value}
-                          onChange={(e) => updateItemRow(index, { tradeIn: { ...row.tradeIn!, value: e.target.value } })}
-                          className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        />
-                        <input
-                          type="text"
-                          placeholder="الرقم التسلسلي (اختياري)"
-                          value={row.tradeIn.serialNumber}
-                          onChange={(e) => updateItemRow(index, { tradeIn: { ...row.tradeIn!, serialNumber: e.target.value } })}
-                          className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        />
+                        <input type="number" min="0" placeholder="قيمة الاستبدال" value={row.tradeIn.value} onChange={(e) => updateItemRow(index, { tradeIn: { ...row.tradeIn!, value: e.target.value } })} className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                        <input type="text" placeholder="الرقم التسلسلي (اختياري)" value={row.tradeIn.serialNumber} onChange={(e) => updateItemRow(index, { tradeIn: { ...row.tradeIn!, serialNumber: e.target.value } })} className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500" />
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               );
             })}</div>

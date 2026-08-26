@@ -32,6 +32,7 @@ export async function GET(
         contracts: true,
         serviceRequests: true,
         machines: true,
+        payments: { orderBy: { paymentDate: "desc" } },
       },
     });
 
@@ -62,6 +63,7 @@ export async function PUT(
     const {
       name, phone, email, address, customerType, taxNumber, creditLimit,
       companyName, contactPerson, whatsapp, city, governorate, gpsLat, gpsLng, tradeRegister, paymentTerms,
+      totalDebt, remainingDebt,
     } = body;
 
     const updateData: Record<string, unknown> = {};
@@ -81,6 +83,8 @@ export async function PUT(
     if (gpsLng !== undefined) updateData.gpsLng = gpsLng != null ? Number(gpsLng) : null;
     if (tradeRegister !== undefined) updateData.tradeRegister = tradeRegister;
     if (paymentTerms !== undefined) updateData.paymentTerms = paymentTerms;
+    if (totalDebt !== undefined) updateData.totalDebt = Number(totalDebt);
+    if (remainingDebt !== undefined) updateData.remainingDebt = Number(remainingDebt);
 
     const customer = await prisma.customer.update({
       where: { id },

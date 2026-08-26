@@ -13,7 +13,7 @@ export async function GET(
         customer: true,
         company: true,
         items: {
-          include: { product: true },
+          include: { product: true, tradeInProduct: true },
         },
         installments: true,
       },
@@ -43,7 +43,7 @@ export async function PUT(
       include: {
         customer: true,
         items: {
-          include: { product: true },
+          include: { product: true, tradeInProduct: true },
         },
         installments: true,
       },

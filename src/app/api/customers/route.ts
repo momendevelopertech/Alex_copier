@@ -10,6 +10,7 @@ export async function GET() {
       include: {
         locations: true,
         ledgers: true,
+        payments: { orderBy: { paymentDate: "desc" }, take: 1 },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
     }
     const body = await request.json();
-    const { companyId, name, phone, email, address, customerType, taxNumber, creditLimit, companyName, contactPerson, whatsapp, city, governorate, gpsLat, gpsLng, tradeRegister, paymentTerms } = body;
+    const { companyId, name, phone, email, address, customerType, taxNumber, creditLimit, companyName, contactPerson, whatsapp, city, governorate, gpsLat, gpsLng, tradeRegister, paymentTerms, totalDebt, remainingDebt } = body;
 
     if (!name || typeof name !== "string" || name.trim() === "") {
       return NextResponse.json({ error: "اسم العميل مطلوب", code: "NAME_REQUIRED" }, { status: 400 });
@@ -58,6 +59,8 @@ export async function POST(request: Request) {
         gpsLng: gpsLng != null ? Number(gpsLng) : undefined,
         tradeRegister: tradeRegister ?? undefined,
         paymentTerms: paymentTerms ?? undefined,
+        totalDebt: totalDebt != null ? Number(totalDebt) : 0,
+        remainingDebt: remainingDebt != null ? Number(remainingDebt) : (totalDebt != null ? Number(totalDebt) : 0),
       },
       include: {
         locations: true,
