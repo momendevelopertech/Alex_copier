@@ -67,6 +67,7 @@ const navGroups: { key: string; items: NavItem[] }[] = [
       { key: "navigation.inventory", href: "/inventory", icon: Package, page: "inventory" },
       { key: "navigation.warehouses", href: "/warehouses", icon: Warehouse, page: "warehouses", canAdd: true },
       { key: "navigation.products", href: "/products", icon: Boxes, page: "products", canAdd: true },
+      { key: "navigation.tradeIns", href: "/trade-ins", icon: RotateCcw, page: "tradeIns" },
     ],
   },
   {

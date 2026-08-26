@@ -56,8 +56,12 @@ export async function GET(request: Request) {
     const user = await requireAuth();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const includeInactive = new URL(request.url).searchParams.get("all") === "true";
+    const tradeInOnly = new URL(request.url).searchParams.get("tradeIn") === "true";
     const products = await prisma.product.findMany({
-      where: includeInactive ? {} : { isActive: true },
+      where: {
+        ...(includeInactive ? {} : { isActive: true }),
+        ...(tradeInOnly ? { isTradeIn: true } : {}),
+      },
       include: { company: true },
       orderBy: { name: "asc" },
     });

@@ -13,7 +13,7 @@ export async function GET() {
         company: true,
         engineer: true,
         items: {
-          include: { product: true },
+          include: { product: true, tradeInProduct: true },
         },
         installments: true,
       },
@@ -94,38 +94,89 @@ export async function POST(request: Request) {
           taxRate: resolvedTaxRate,
           isTaxInvoice: Boolean(raw.isTaxInvoice),
           total,
+          tradeInTotal: 0,
           orderDate: new Date(raw.orderDate),
-          items: {
-            create: items.map(
-              (item: { productId: string; quantity: number; unitPrice: number; discount?: number }) => ({
-                productId: item.productId,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                discount: Math.min(item.discount ?? 0, item.quantity * item.unitPrice),
-              })
-            ),
-          },
-          ...(installments && {
-            installments: {
-              create: installments.map(
-                (inst: { installmentNo: number; amount: number; dueDate: string }) => ({
-                  installmentNo: inst.installmentNo,
-                  amount: inst.amount,
-                  dueDate: new Date(inst.dueDate),
-                })
-              ),
-            },
-          }),
-        },
-        include: {
-          customer: true,
-          items: { include: { product: true } },
-          installments: true,
+          installments: installments
+            ? {
+                create: installments.map(
+                  (inst: { installmentNo: number; amount: number; dueDate: string }) => ({
+                    installmentNo: inst.installmentNo,
+                    amount: inst.amount,
+                    dueDate: new Date(inst.dueDate),
+                  })
+                ),
+              }
+            : undefined,
         },
       });
 
-      if (warehouse) {
-        for (const item of items as { productId: string; quantity: number }[]) {
+      let tradeInTotal = 0;
+
+      for (const item of items as {
+        productId: string;
+        quantity: number;
+        unitPrice: number;
+        discount?: number;
+        tradeIn?: {
+          name: string;
+          brand?: string;
+          condition?: string;
+          value: number;
+          serialNumber?: string;
+        };
+      }[]) {
+        let tradeInProductId: string | undefined;
+
+        if (item.tradeIn && item.tradeIn.value > 0) {
+          const tradeInProduct = await tx.product.create({
+            data: {
+              name: item.tradeIn.name,
+              productType: raw.orderType === "MACHINE_SALE" ? "MACHINE" : "SPARE_PART",
+              companyId: raw.companyId,
+              isTradeIn: true,
+              tradeInValue: item.tradeIn.value,
+              brand: item.tradeIn.brand || null,
+              condition: item.tradeIn.condition || null,
+              description: item.tradeIn.serialNumber ? `S/N: ${item.tradeIn.serialNumber}` : null,
+            },
+          });
+          tradeInProductId = tradeInProduct.id;
+          tradeInTotal += item.tradeIn.value;
+
+          if (warehouse) {
+            await tx.warehouseInventory.create({
+              data: {
+                warehouseId: warehouse.id,
+                productId: tradeInProduct.id,
+                quantity: 1,
+              },
+            });
+            await tx.stockMovement.create({
+              data: {
+                warehouseId: warehouse.id,
+                productId: tradeInProduct.id,
+                quantity: 1,
+                movementType: "PURCHASE_IN",
+                referenceId: order.id,
+                notes: `منتج استبدال — ${item.tradeIn.name}`,
+              },
+            });
+          }
+        }
+
+        await tx.salesOrderItem.create({
+          data: {
+            salesOrderId: order.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            discount: Math.min(item.discount ?? 0, item.quantity * item.unitPrice),
+            tradeInProductId: tradeInProductId || null,
+            tradeInValue: item.tradeIn?.value || 0,
+          },
+        });
+
+        if (warehouse) {
           await tx.stockMovement.create({
             data: {
               warehouseId: warehouse.id,
@@ -139,7 +190,23 @@ export async function POST(request: Request) {
         }
       }
 
-      return order;
+      if (tradeInTotal > 0) {
+        await tx.salesOrder.update({
+          where: { id: order.id },
+          data: { tradeInTotal },
+        });
+      }
+
+      const finalOrder = await tx.salesOrder.findUnique({
+        where: { id: order.id },
+        include: {
+          customer: true,
+          items: { include: { product: true, tradeInProduct: true } },
+          installments: true,
+        },
+      });
+
+      return finalOrder;
     });
 
     return NextResponse.json(salesOrder, { status: 201 });

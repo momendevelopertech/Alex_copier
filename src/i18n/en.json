@@ -23,6 +23,7 @@
     "notifications": "Notifications",
     "warehouses": "Warehouses",
     "products": "Products & Spare Parts",
+    "tradeIns": "Trade-In Products",
     "group": {
       "general": "General",
       "salesCustomers": "Sales & Customers",
