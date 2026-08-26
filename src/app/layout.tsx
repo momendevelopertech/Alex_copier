@@ -9,6 +9,9 @@ const cairo = Cairo({ subsets: ["arabic", "latin"] });
 export const metadata: Metadata = {
   title: "اليكس كوبير - نظام ERP",
   description: "نظام إدارة مبيعات الآلات وخدمات الصيانة - اليكس كوبير",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
