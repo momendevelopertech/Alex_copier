@@ -51,18 +51,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "بنود البيع غير صالحة", code: "INVALID_SALE_ITEMS" }, { status: 400 });
     }
 
+    const companyId = String(raw.companyId).trim();
+    const customerId = String(raw.customerId).trim();
+    const orderType = String(raw.orderType).trim() as "MACHINE_SALE" | "SPARE_PART_SALE";
+    const paymentMethod = String(raw.paymentMethod).trim() as "CASH" | "CREDIT" | "INSTALLMENT" | "MIXED";
+    const notes = raw.notes ? String(raw.notes) : null;
+    const discountVal = Math.max(0, Number(raw.discount) || 0);
+    const discountType = (raw.discountType === "PERCENTAGE" ? "PERCENTAGE" : "FIXED") as "FIXED" | "PERCENTAGE";
+    const isTaxInvoice = Boolean(raw.isTaxInvoice);
+
     const subtotal = items.reduce(
       (sum: number, item: { quantity: number; unitPrice: number; discount?: number }) =>
         sum + item.quantity * item.unitPrice - Math.min(item.discount ?? 0, item.quantity * item.unitPrice),
       0
     );
-    const discount = Math.max(0, Number(raw.discount) || 0);
-    const orderDiscount = raw.discountType === "PERCENTAGE" ? subtotal * Math.min(discount, 100) / 100 : Math.min(discount, subtotal);
+    const orderDiscount = discountType === "PERCENTAGE" ? subtotal * Math.min(discountVal, 100) / 100 : Math.min(discountVal, subtotal);
     const taxable = subtotal - orderDiscount;
     const total = Math.round((taxable + taxable * Math.max(0, resolvedTaxRate) / 100) * 100) / 100;
 
     const warehouse = await prisma.warehouse.findFirst({
-      where: { companyId: raw.companyId, isMain: true },
+      where: { companyId, isMain: true },
       select: { id: true },
     });
 
@@ -97,19 +105,19 @@ export async function POST(request: Request) {
 
       const order = await tx.salesOrder.create({
         data: {
-          companyId: raw.companyId,
-          customerId: raw.customerId,
+          companyId,
+          customerId,
           engineerId,
-          orderType: raw.orderType,
-          paymentMethod: raw.paymentMethod,
-          notes: raw.notes || null,
-          discount: Math.max(0, Number(raw.discount) || 0),
-          discountType: raw.discountType || "FIXED",
+          orderType,
+          paymentMethod,
+          notes,
+          discount: discountVal,
+          discountType,
           taxRate: resolvedTaxRate,
-          isTaxInvoice: Boolean(raw.isTaxInvoice),
+          isTaxInvoice,
           total,
-          paidAmount: raw.paymentMethod === "CASH" ? total : 0,
-          paymentStatus: raw.paymentMethod === "CASH" ? "PAID" : "PENDING",
+          paidAmount: paymentMethod === "CASH" ? total : 0,
+          paymentStatus: paymentMethod === "CASH" ? "PAID" : "PENDING",
           tradeInTotal: 0,
           orderDate: new Date(raw.orderDate),
           ...(installmentData && { installments: installmentData }),
@@ -137,8 +145,8 @@ export async function POST(request: Request) {
           const tradeInProduct = await tx.product.create({
             data: {
               name: item.tradeIn.name,
-              productType: raw.orderType === "MACHINE_SALE" ? "MACHINE" : "SPARE_PART",
-              companyId: raw.companyId,
+              productType: orderType === "MACHINE_SALE" ? "MACHINE" : "SPARE_PART",
+              companyId,
               isTradeIn: true,
               tradeInValue: item.tradeIn.value,
               brand: item.tradeIn.brand || null,
@@ -190,7 +198,7 @@ export async function POST(request: Request) {
               quantity: item.quantity,
               movementType: "SALE_OUT",
               referenceId: order.id,
-              notes: `بيع — ${raw.orderType} — ${order.id}`,
+              notes: `بيع — ${orderType} — ${order.id}`,
             },
           });
         }
@@ -210,6 +218,8 @@ export async function POST(request: Request) {
         where: { id: order.id },
         include: {
           customer: true,
+          company: true,
+          engineer: true,
           items: { include: { product: true, tradeInProduct: true } },
           installments: true,
         },
@@ -224,6 +234,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "الكمية المتاحة في المخزون لا تكفي لهذه الحركة", code: "INSUFFICIENT_STOCK" }, { status: 409 });
     }
     console.error("Failed to create sales order:", error);
-    return NextResponse.json({ error: "Failed to create sales order" }, { status: 500 });
+    const msg = error instanceof Error ? (error.message || error.name || String(error)) : "Failed to create sales order";
+    return NextResponse.json({ error: msg, detail: error instanceof Error ? error.stack : undefined }, { status: 500 });
   }
 }

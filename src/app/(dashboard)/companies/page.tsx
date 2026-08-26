@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/context";
 import PrinterLoader from "@/components/PrinterLoader";
 import { apiErrorMessage } from "@/lib/api-client";
 import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import { useToast, useConfirm } from "@/components/UIProvider";
-import { Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { Pencil, Plus, Printer, Save, Trash2 } from "lucide-react";
 import FormModal from "@/components/FormModal";
 
 interface CompanyData {
@@ -46,6 +47,7 @@ const emptyForm = {
 
 export default function CompaniesPage() {
   const { t, dir } = useI18n();
+  const router = useRouter();
 
   const [companies, setCompanies] = useState<CompanyData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -310,6 +312,9 @@ export default function CompaniesPage() {
             <div className="flex items-center gap-3">
               <button onClick={() => openEdit(selected)} className="text-blue-600 hover:text-blue-800 text-sm">
                 <Pencil size={14} className="inline-block me-1" />{t("common.edit")}
+              </button>
+              <button onClick={() => router.push(`/companies/${selected.id}/report`)} className="text-green-600 hover:text-green-800 text-sm">
+                <Printer size={14} className="inline-block me-1" />التقرير المالي
               </button>
               <button onClick={() => handleDelete(selected.id)} className="text-red-600 hover:text-red-800 text-sm">
                 <Trash2 size={14} className="inline-block me-1" />{t("common.delete")}
