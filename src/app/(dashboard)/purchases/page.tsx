@@ -7,11 +7,13 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
-import { FileText, Plus, Printer, Save, X } from "lucide-react";
+import { FileText, Plus, Printer, Save, Trash2, X } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 import FormModal from "@/components/FormModal";
 import SelectWithAdd from "@/components/SelectWithAdd";
+import { useConfirm, useToast } from "@/components/UIProvider";
+import { apiErrorMessage } from "@/lib/api-client";
 
 interface Supplier { id: string; name: string; }
 interface Company { id: string; name: string; }
@@ -39,6 +41,8 @@ const statusColors: Record<string, string> = {
 
 export default function PurchasesPage() {
   const { t, dir } = useI18n();
+  const confirmAction = useConfirm();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -127,6 +131,15 @@ export default function PurchasesPage() {
     setItemRows([{ productId: "", quantity: "", unitPrice: "" }]);
     setShowForm(false);
     fetchData();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!(await confirmAction({ message: t("common.deleteConfirm") }))) return;
+    const res = await fetch(`/api/purchases/${id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) { toastError(apiErrorMessage(data, t)); return; }
+    fetchData();
+    toastSuccess(t("common.deletedSuccessfully"));
   };
 
   const inputClass = "w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500";
@@ -268,6 +281,9 @@ export default function PurchasesPage() {
                       </button>
                       <button onClick={() => window.open(`/api/invoices?type=purchase&id=${order.id}&format=receipt`, "_blank")} className="ms-1 inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-xs font-medium text-emerald-600 transition hover:bg-emerald-100" title="طباعة الريسيت">
                         <FileText size={14} />
+                      </button>
+                      <button onClick={() => handleDelete(order.id)} className="ms-1 inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 text-xs font-medium text-red-600 transition hover:bg-red-100" title={t("common.delete")}>
+                        <Trash2 size={14} />
                       </button>
                     </td>
                   </tr>

@@ -7,11 +7,13 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
-import { Eye, FileText, Plus, Printer, Save, Pencil } from "lucide-react";
+import { Eye, FileText, Pencil, Plus, Printer, Save, Trash2 } from "lucide-react";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 import FormModal from "@/components/FormModal";
 import SelectWithAdd from "@/components/SelectWithAdd";
+import { useConfirm, useToast } from "@/components/UIProvider";
+import { apiErrorMessage } from "@/lib/api-client";
 
 const TYPE_LABELS: Record<string, string> = {
   MAINTENANCE_ONLY: "صيانة فقط",
@@ -75,6 +77,8 @@ const toInputDate = (date: Date) => date.toISOString().slice(0, 10);
 
 export default function ContractsPage() {
   const { t, dir } = useI18n();
+  const confirmAction = useConfirm();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -158,6 +162,16 @@ export default function ContractsPage() {
     setForm({ customerId: "", contractType: "MAINTENANCE_ONLY", startDate: "", endDate: "", value: "", amountPaid: "", paymentMethod: "CASH", billingCycle: "MONTHLY", notes: "", machineIds: [] });
     setShowForm(false);
     fetchData();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!(await confirmAction({ message: t("common.deleteConfirm") }))) return;
+    const res = await fetch(`/api/contracts/${id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) { toastError(apiErrorMessage(data, t)); return; }
+    setViewingContract(null);
+    fetchData();
+    toastSuccess(t("common.deletedSuccessfully"));
   };
 
   const openEdit = (c: Contract) => {
@@ -415,6 +429,9 @@ export default function ContractsPage() {
                         </button>
                         <button onClick={() => handleStatusToggle(c.id, c.status)} className={`text-xs hover:underline ${c.status === "ACTIVE" ? "text-red-600" : "text-green-600"}`}>
                           {c.status === "ACTIVE" ? t("contracts.terminate") : t("contracts.activate")}
+                        </button>
+                        <button onClick={() => handleDelete(c.id)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 text-xs font-medium text-red-600 transition hover:bg-red-100" title={t("common.delete")}>
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>

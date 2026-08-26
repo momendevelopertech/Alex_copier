@@ -9,11 +9,11 @@ import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import FormModal from "@/components/FormModal";
 import SelectWithAdd from "@/components/SelectWithAdd";
-import { CheckCircle2, Plus, Save } from "lucide-react";
+import { CheckCircle2, Plus, Save, Trash2 } from "lucide-react";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
-import { useToast } from "@/components/UIProvider";
+import { useConfirm, useToast } from "@/components/UIProvider";
 import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 import { apiErrorMessage } from "@/lib/api-client";
 
@@ -37,6 +37,7 @@ export default function SettlementsPage() {
   const { t, dir } = useI18n();
   
   const { success: toastSuccess, error: toastError } = useToast();
+  const confirmAction = useConfirm();
   const { data: session } = useSession();
   const canVerify = CAN_VERIFY_ROLES.includes(session?.user?.role ?? "");
   const [settlements, setSettlements] = useState<Settlement[]>([]);
@@ -91,6 +92,15 @@ export default function SettlementsPage() {
       toastSuccess(t("common.savedSuccessfully"));
     }
     fetchData();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!(await confirmAction({ message: t("common.deleteConfirm") }))) return;
+    const res = await fetch(`/api/settlements/${id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) { toastError(apiErrorMessage(data, t)); return; }
+    fetchData();
+    toastSuccess(t("common.deletedSuccessfully"));
   };
 
   const filtered = settlements.filter(settlement =>
@@ -271,6 +281,7 @@ export default function SettlementsPage() {
                       <td className="px-4 py-3 text-sm">{new Date(s.createdAt).toLocaleDateString("ar-EG")}</td>
                       <td className="px-4 py-3 text-sm">
                         {s.status === "INITIAL" && canVerify && (<button onClick={() => handleVerify(s.id)} className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700"><CheckCircle2 size={14} className="inline-block me-1" />{t("common.verify")}</button>)}
+                        {s.status === "INITIAL" && (<button onClick={() => handleDelete(s.id)} className="ms-1 inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-600 transition hover:bg-red-100" title={t("common.delete")}><Trash2 size={12} /></button>)}
                         {s.status === "VERIFIED" && s.verifier && (<span className="text-green-600 text-xs">{t("settlements.by")} {s.verifier.name}</span>)}
                       </td>
                     </tr>

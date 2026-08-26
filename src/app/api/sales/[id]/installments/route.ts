@@ -1,0 +1,113 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
+import { recalculatePaymentStatus } from "@/lib/payment-status";
+
+/**
+ * POST /api/sales/[id]/installments
+ * Record payment for one or more installments.
+ * Body: { installmentIds: string[], paidDate?: string }
+ */
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const actor = await requirePageAccess("sales");
+    if (!actor) {
+      const authed = await requireAuth();
+      return NextResponse.json(
+        { error: authed ? "Forbidden" : "Unauthorized", code: authed ? "FORBIDDEN" : "UNAUTHORIZED" },
+        { status: authed ? 403 : 401 }
+      );
+    }
+
+    const { id: orderId } = await params;
+    const body = await request.json();
+    const { installmentIds, paidDate } = body;
+
+    if (!Array.isArray(installmentIds) || installmentIds.length === 0) {
+      return NextResponse.json(
+        { error: "ي اختيار أقساط للدفع", code: "INSTALLMENT_IDS_REQUIRED" },
+        { status: 400 }
+      );
+    }
+
+    // Verify the order exists
+    const order = await prisma.salesOrder.findUnique({
+      where: { id: orderId },
+      select: { id: true, paymentMethod: true },
+    });
+
+    if (!order) {
+      return NextResponse.json(
+        { error: "فاتورة البيع غير موجودة", code: "ORDER_NOT_FOUND" },
+        { status: 404 }
+      );
+    }
+
+    const paymentDateTime = paidDate ? new Date(paidDate) : new Date();
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Mark installments as paid
+      await tx.installment.updateMany({
+        where: {
+          id: { in: installmentIds },
+          salesOrderId: orderId,
+        },
+        data: {
+          status: "PAID",
+          paidDate: paymentDateTime,
+        },
+      });
+
+      // Calculate total amount of paid installments
+      const paidInstallments = await tx.installment.findMany({
+        where: {
+          id: { in: installmentIds },
+          salesOrderId: orderId,
+        },
+        select: { amount: true },
+      });
+
+      const paidAmount = paidInstallments.reduce((sum, inst) => sum + inst.amount, 0);
+
+      // Increment paidAmount on the order
+      await tx.salesOrder.update({
+        where: { id: orderId },
+        data: {
+          paidAmount: { increment: paidAmount },
+        },
+      });
+
+      // Recalculate payment status
+      const newStatus = await recalculatePaymentStatus(tx, orderId);
+
+      return { paidAmount, newStatus };
+    });
+
+    // Fetch updated order
+    const updatedOrder = await prisma.salesOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        customer: true,
+        company: true,
+        items: { include: { product: true, tradeInProduct: true } },
+        installments: true,
+      },
+    });
+
+    return NextResponse.json({
+      message: "تم تسجيل الدفع بنجاح",
+      paidAmount: result.paidAmount,
+      paymentStatus: result.newStatus,
+      order: updatedOrder,
+    });
+  } catch (error) {
+    console.error("Installment payment error:", error);
+    return NextResponse.json(
+      { error: "Failed to record installment payment" },
+      { status: 500 }
+    );
+  }
+}

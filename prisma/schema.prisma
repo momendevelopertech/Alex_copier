@@ -748,6 +748,7 @@ model SalesOrder {
   isTaxInvoice  Boolean          @default(false)
   paymentMethod PaymentMethod
   paymentStatus PaymentStatus    @default(PENDING)
+  paidAmount    Float            @default(0)
   tradeInTotal  Float            @default(0)
   notes         String?
   orderDate     DateTime

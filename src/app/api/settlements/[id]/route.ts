@@ -106,3 +106,29 @@ export async function PUT(
     return NextResponse.json({ error: "Failed to update settlement" }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const actor = await requirePageAccess("settlements");
+    if (!actor) {
+      const authed = await requireAuth();
+      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
+    }
+    const { id } = await params;
+    const existing = await prisma.settlement.findUnique({ where: { id } });
+    if (!existing) return NextResponse.json({ error: "Settlement not found" }, { status: 404 });
+    if (existing.status === "VERIFIED") {
+      return NextResponse.json({ error: "Cannot delete verified settlement" }, { status: 400 });
+    }
+    await prisma.settlement.delete({ where: { id } });
+    return NextResponse.json({ message: "Deleted" });
+  } catch (error: unknown) {
+    if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
+  }
+}

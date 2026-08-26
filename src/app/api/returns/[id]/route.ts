@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePageAccess } from "@/lib/auth-helpers";
+import { recalculatePaymentStatus } from "@/lib/payment-status";
 
 export async function GET(
   _request: Request,
@@ -138,6 +139,11 @@ export async function PUT(
       },
     });
 
+    // Recalculate payment status for the parent order if status changed
+    if (status && existing.salesOrderId) {
+      await recalculatePaymentStatus(prisma, existing.salesOrderId);
+    }
+
     return NextResponse.json(updated);
   } catch (error: unknown) {
     if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
@@ -196,6 +202,12 @@ export async function DELETE(
     }
 
     await prisma.returnTransaction.delete({ where: { id } });
+
+    // Recalculate payment status for the parent order
+    if (existing.salesOrderId) {
+      await recalculatePaymentStatus(prisma, existing.salesOrderId);
+    }
+
     return NextResponse.json({ message: "Return deleted" });
   } catch (error: unknown) {
     if (error && typeof error === "object" && "code" in error && error.code === "P2025") {

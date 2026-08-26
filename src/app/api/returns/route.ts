@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
+import { recalculatePaymentStatus } from "@/lib/payment-status";
 
 export async function GET() {
   try {
@@ -173,6 +174,9 @@ export async function POST(request: Request) {
           update: { balance: { decrement: total } },
           create: { customerId: salesOrder.customerId, companyId: salesOrder.companyId, balance: -total },
         });
+
+        // Recalculate payment status for the parent order
+        await recalculatePaymentStatus(tx, salesOrderId);
 
         return created;
       });

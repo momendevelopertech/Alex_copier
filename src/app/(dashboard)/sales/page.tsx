@@ -7,10 +7,10 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
-import { Eye, FileText, Pencil, Plus, Printer, RotateCcw, Save, X } from "lucide-react";
+import { Eye, FileText, Pencil, Plus, Printer, RotateCcw, Save, Trash2, X } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
-import { useToast } from "@/components/UIProvider";
+import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
 import FormModal from "@/components/FormModal";
 import SelectWithAdd from "@/components/SelectWithAdd";
@@ -78,6 +78,7 @@ export default function SalesPage() {
   const { t, dir } = useI18n();
 
   const { success: toastSuccess, error: toastError } = useToast();
+  const confirmAction = useConfirm();
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -289,6 +290,16 @@ export default function SalesPage() {
     setShowForm(false);
     fetchData();
     toastSuccess(t("common.savedSuccessfully"));
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!(await confirmAction({ message: t("common.deleteConfirm") }))) return;
+    const res = await fetch(`/api/sales/${id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) { toastError(apiErrorMessage(data, t)); return; }
+    setViewingOrder(null);
+    fetchData();
+    toastSuccess(t("common.deletedSuccessfully"));
   };
 
   return (
@@ -588,6 +599,9 @@ export default function SalesPage() {
                               {expandedId === order.id ? t("sales.hide") : `${order.items.length} ${t("sales.items")}`}
                             </button>
                           )}
+                          <button onClick={() => handleDelete(order.id)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 text-xs font-medium text-red-600 transition hover:bg-red-100" title={t("common.delete")}>
+                            <Trash2 size={14} />
+                          </button>
                         </div>
                       </td>
                     </tr>

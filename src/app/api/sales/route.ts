@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
+import { recalculatePaymentStatus } from "@/lib/payment-status";
 
 export async function GET() {
   try {
@@ -107,6 +108,8 @@ export async function POST(request: Request) {
           taxRate: resolvedTaxRate,
           isTaxInvoice: Boolean(raw.isTaxInvoice),
           total,
+          paidAmount: raw.paymentMethod === "CASH" ? total : 0,
+          paymentStatus: raw.paymentMethod === "CASH" ? "PAID" : "PENDING",
           tradeInTotal: 0,
           orderDate: new Date(raw.orderDate),
           ...(installmentData && { installments: installmentData }),
@@ -199,6 +202,9 @@ export async function POST(request: Request) {
           data: { tradeInTotal },
         });
       }
+
+      // Recalculate payment status after all mutations
+      await recalculatePaymentStatus(tx, order.id);
 
       const finalOrder = await tx.salesOrder.findUnique({
         where: { id: order.id },

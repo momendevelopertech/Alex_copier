@@ -8,13 +8,15 @@ import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
-import { Save, X } from "lucide-react";
+import { Save, Trash2, X } from "lucide-react";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 import FormModal from "@/components/FormModal";
 import SelectWithAdd from "@/components/SelectWithAdd";
+import { useConfirm, useToast } from "@/components/UIProvider";
+import { apiErrorMessage } from "@/lib/api-client";
 
 const PRIORITY_LABELS: Record<string, string> = {
   NORMAL: "عادي",
@@ -82,6 +84,8 @@ export default function ServiceRequestsPage() {
   const userRole = (session?.user as { role?: string } | undefined)?.role;
   const isEngineer = userRole === "ENGINEER";
   const canManageRequests = ["GENERAL_MANAGER", "COMPANY_MANAGER", "MAINTENANCE_MANAGER", "WORKSHOP_MANAGER"].includes(userRole ?? "");
+  const confirmAction = useConfirm();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [engineers, setEngineers] = useState<Engineer[]>([]);
@@ -167,6 +171,15 @@ export default function ServiceRequestsPage() {
       body: JSON.stringify({ status }),
     });
     fetchData();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!(await confirmAction({ message: t("common.deleteConfirm") }))) return;
+    const res = await fetch(`/api/service-requests/${id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) { toastError(apiErrorMessage(data, t)); return; }
+    fetchData();
+    toastSuccess(t("common.deletedSuccessfully"));
   };
 
   const renderStars = (rating: number | null) => {
@@ -415,6 +428,11 @@ export default function ServiceRequestsPage() {
 
                         {(canManageRequests || (isEngineer && req.engineerId === myEngineerId)) && req.status === "RESOLVED" && (
                           <button onClick={() => handleStatus(req.id, "CLOSED")} className="text-gray-600 hover:underline text-xs">{t("serviceRequests.closed")}</button>
+                        )}
+                        {canManageRequests && (
+                          <button onClick={() => handleDelete(req.id)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-600 transition hover:bg-red-100" title={t("common.delete")}>
+                            <Trash2 size={12} />
+                          </button>
                         )}
                       </div>
                       {assigningId === req.id && canManageRequests && (

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth-helpers";
+import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
 
 export async function GET(
   request: Request,
@@ -75,12 +75,37 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const actor = await requirePageAccess("machines");
+    if (!actor) {
+      const authed = await requireAuth();
+      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
+    }
     const { id } = await params;
+
+    const existing = await prisma.machine.findUnique({
+      where: { id },
+      select: { id: true, serialNumber: true },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Machine not found" }, { status: 404 });
+    }
+
+    // Check for service requests referencing this machine
+    const serviceRequestCount = await prisma.serviceRequest.count({
+      where: { machineId: id },
+    });
+    if (serviceRequestCount > 0) {
+      return NextResponse.json(
+        { error: `لا يمكن حذف الجهاز لأنه مرتبط بـ ${serviceRequestCount} طلب صيانة`, code: "HAS_SERVICE_REQUESTS" },
+        { status: 400 }
+      );
+    }
+
     await prisma.machine.delete({ where: { id } });
     return NextResponse.json({ message: "Machine deleted" });
   } catch (error) {
+    console.error("Failed to delete machine:", error);
     return NextResponse.json({ error: "Failed to delete machine" }, { status: 500 });
   }
 }
