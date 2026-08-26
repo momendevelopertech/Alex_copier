@@ -7,7 +7,7 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
-import { Eye, FileText, Pencil, Plus, Printer, Save, X } from "lucide-react";
+import { Eye, FileText, Pencil, Plus, Printer, RotateCcw, Save, X } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useToast } from "@/components/UIProvider";
@@ -86,6 +86,7 @@ export default function SalesPage() {
   const [inventoryByProduct, setInventoryByProduct] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [formMode, setFormMode] = useState<"regular" | "tradeIn">("regular");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingOrder, setViewingOrder] = useState<SalesOrder | null>(null);
@@ -255,6 +256,7 @@ export default function SalesPage() {
     setForm({ companyId: "", customerId: "", engineerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", isTaxInvoice: false, discount: "", discountType: "FIXED", taxRate: "14", notes: "" });
     setItemRows([{ productId: "", quantity: "", unitPrice: "", discount: "", priceTier: "newCustomer" }]);
     setEditingId(null);
+    setFormMode("regular");
     setShowForm(false);
     fetchData();
     toastSuccess(t("common.savedSuccessfully"));
@@ -268,11 +270,23 @@ export default function SalesPage() {
           <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>
           <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">{t("sales.title")}</h1>
         </div>
-        <button onClick={() => setShowForm(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"><Plus size={16} />{t("sales.addOrder")}</button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setFormMode("regular"); setShowForm(true); }} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"><Plus size={16} />{t("sales.addOrder")}</button>
+          <button onClick={() => { setFormMode("tradeIn"); setShowForm(true); }} className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-600"><RotateCcw size={16} />إضافة فاتورة استبدال</button>
+        </div>
       </div>
 
-      <FormModal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? "تعديل فاتورة بيع" : t("sales.addOrder")} wide>
+      <FormModal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? "تعديل فاتورة بيع" : formMode === "tradeIn" ? "إضافة فاتورة استبدال" : t("sales.addOrder")} wide>
         <form onSubmit={handleCreate} className="space-y-5">
+          {formMode === "tradeIn" && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 flex items-center gap-3">
+              <span className="text-lg">🔄</span>
+              <div>
+                <p className="text-sm font-semibold text-amber-800">فاتورة استبدال</p>
+                <p className="text-xs text-amber-600">أدخل بيانات المنتج القديم (المستبدل) وقيمة الاستبدال — سيتم خصمها من سعر المنتج الجديد</p>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("companies.selectCompany")}</label><select value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required><option value="">{t("companies.selectCompany")}</option>{companies.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></div>
             <SelectWithAdd
@@ -351,22 +365,31 @@ export default function SalesPage() {
                   
                   {/* Trade-in section */}
                   <div className="mt-2 rounded-lg border border-dashed border-amber-300 bg-amber-50 p-3">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id={`tradeIn-${index}`}
-                        checked={!!row.tradeIn}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            updateItemRow(index, { tradeIn: { name: "", brand: "", condition: "", value: "", serialNumber: "" } });
-                          } else {
-                            updateItemRow(index, { tradeIn: undefined });
-                          }
-                        }}
-                        className="h-4 w-4 rounded border-amber-400 text-amber-600 focus:ring-amber-500"
-                      />
-                      <label htmlFor={`tradeIn-${index}`} className="text-sm font-medium text-amber-800">🔄 منتج استبدال (اختياري)</label>
-                    </div>
+                    {formMode === "tradeIn" ? (
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm font-medium text-amber-800">🔄 منتج استبدال</span>
+                        {!row.tradeIn && (
+                          <button type="button" onClick={() => updateItemRow(index, { tradeIn: { name: "", brand: "", condition: "", value: "", serialNumber: "" } })} className="text-xs text-amber-600 underline hover:text-amber-800">إضافة بيانات الاستبدال</button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`tradeIn-${index}`}
+                          checked={!!row.tradeIn}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              updateItemRow(index, { tradeIn: { name: "", brand: "", condition: "", value: "", serialNumber: "" } });
+                            } else {
+                              updateItemRow(index, { tradeIn: undefined });
+                            }
+                          }}
+                          className="h-4 w-4 rounded border-amber-400 text-amber-600 focus:ring-amber-500"
+                        />
+                        <label htmlFor={`tradeIn-${index}`} className="text-sm font-medium text-amber-800">🔄 منتج استبدال (اختياري)</label>
+                      </div>
+                    )}
                     {row.tradeIn && (
                       <div className="mt-3 grid gap-2 sm:grid-cols-5">
                         <input

@@ -81,6 +81,18 @@ export async function POST(request: Request) {
         }
       }
 
+      const installmentData = Array.isArray(installments) && installments.length > 0
+        ? {
+            create: installments.map(
+              (inst: { installmentNo: number; amount: number; dueDate: string }) => ({
+                installmentNo: inst.installmentNo,
+                amount: inst.amount,
+                dueDate: new Date(inst.dueDate),
+              })
+            ),
+          }
+        : undefined;
+
       const order = await tx.salesOrder.create({
         data: {
           companyId: raw.companyId,
@@ -96,17 +108,7 @@ export async function POST(request: Request) {
           total,
           tradeInTotal: 0,
           orderDate: new Date(raw.orderDate),
-          installments: installments
-            ? {
-                create: installments.map(
-                  (inst: { installmentNo: number; amount: number; dueDate: string }) => ({
-                    installmentNo: inst.installmentNo,
-                    amount: inst.amount,
-                    dueDate: new Date(inst.dueDate),
-                  })
-                ),
-              }
-            : undefined,
+          ...(installmentData && { installments: installmentData }),
         },
       });
 
