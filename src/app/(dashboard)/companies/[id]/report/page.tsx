@@ -234,11 +234,16 @@ export default function CompanyReportPage() {
     <>
       <style>{`
         @media print {
+          @page { size: A4; margin: 15mm; }
+          body { font-size: 11pt !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           .no-print { display: none !important; }
-          body { font-size: 12pt; }
-          table { page-break-inside: auto; }
+          * { overflow: visible !important; max-height: none !important; }
+          table { page-break-inside: auto; width: 100% !important; }
           tr { page-break-inside: avoid; }
-          .print-full { width: 100% !important; }
+          thead { display: table-header-group; }
+          tfoot { display: table-row-group; }
+          .print-break { page-break-before: always; }
+          div { break-inside: avoid; }
         }
       `}</style>
 
@@ -337,12 +342,11 @@ export default function CompanyReportPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-200 px-5 py-3">
                 <h2 className="text-lg font-bold text-slate-900">المبيعات</h2>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[700px]">
+              <table className="w-full min-w-[700px]">
                   <thead>
                     <tr className="bg-slate-50">
                       <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">التاريخ</th>
@@ -376,14 +380,12 @@ export default function CompanyReportPage() {
                     </tfoot>
                   )}
                 </table>
-              </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-200 px-5 py-3">
                 <h2 className="text-lg font-bold text-slate-900">المشتريات</h2>
               </div>
-              <div className="overflow-x-auto">
                 <table className="w-full min-w-[600px]">
                   <thead>
                     <tr className="bg-slate-50">
@@ -410,18 +412,16 @@ export default function CompanyReportPage() {
                   </tbody>
                   {purchaseOrders.length > 0 && (
                     <tfoot>
-                      <SubtotalRow label="اجمالي المشتريات" value={purchasesTotal} colSpan={2} color="text-blue-700" />
+                       <SubtotalRow label="اجمالي المشتريات" value={purchasesTotal} colSpan={2} color="text-blue-700" />
                     </tfoot>
                   )}
                 </table>
-              </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-200 px-5 py-3">
                 <h2 className="text-lg font-bold text-slate-900">المصروفات</h2>
               </div>
-              <div className="overflow-x-auto">
                 <table className="w-full min-w-[500px]">
                   <thead>
                     <tr className="bg-slate-50">
@@ -446,20 +446,18 @@ export default function CompanyReportPage() {
                       </tr>
                     )}
                   </tbody>
-                  {expenseItems.length > 0 && (
+                   {expenseItems.length > 0 && (
                     <tfoot>
                       <SubtotalRow label="اجمالي المصروفات" value={expensesTotal} colSpan={3} color="text-orange-700" />
                     </tfoot>
                   )}
                 </table>
-              </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-200 px-5 py-3">
                 <h2 className="text-lg font-bold text-slate-900">التسويات</h2>
               </div>
-              <div className="overflow-x-auto">
                 <table className="w-full min-w-[550px]">
                   <thead>
                     <tr className="bg-slate-50">
@@ -492,14 +490,12 @@ export default function CompanyReportPage() {
                     </tfoot>
                   )}
                 </table>
-              </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-200 px-5 py-3">
                 <h2 className="text-lg font-bold text-slate-900">المرتجعات</h2>
               </div>
-              <div className="overflow-x-auto">
                 <table className="w-full min-w-[550px]">
                   <thead>
                     <tr className="bg-slate-50">
@@ -530,7 +526,6 @@ export default function CompanyReportPage() {
                     </tfoot>
                   )}
                 </table>
-              </div>
             </div>
           </>
         ) : (
