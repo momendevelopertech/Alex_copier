@@ -235,7 +235,7 @@ export default function InventoryPage() {
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:flex-wrap md:items-center">
-          <div className="min-w-[220px] flex-1">
+          <div className="w-full md:w-80 md:flex-none">
             <SearchInput value={search} onChange={setSearchInput} placeholder={`${t("common.search")} ${t("inventory.product")} / SKU...`} />
           </div>
           <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={[
@@ -251,7 +251,7 @@ export default function InventoryPage() {
               {t("common.resetFilters")}
             </button>
           )}
-          <div className="md:ms-auto">
+          <div className="md:ms-auto mt-2 md:mt-0">
             <ExportButton filename="inventory" getExport={exportInventory} disabled={filtered.length === 0} />
           </div>
         </div>

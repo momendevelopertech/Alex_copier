@@ -555,12 +555,14 @@ export default function CustomersPage() {
       </FormModal>
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-2 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
-          <SearchInput
-            value={search}
-            onChange={setSearchInput}
-            placeholder={t("customers.searchPlaceholder")}
-          />
+        <div className="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
+          <div className="w-full md:w-80 md:flex-none">
+            <SearchInput
+              value={search}
+              onChange={setSearchInput}
+              placeholder={t("customers.searchPlaceholder")}
+            />
+          </div>
           <FilterSelect
             value={typeFilter}
             onChange={(v) => { setTypeFilter(v); setPage(1); }}
@@ -593,7 +595,7 @@ export default function CustomersPage() {
               {t("common.resetFilters")}
             </button>
           )}
-          <div className="flex gap-2 md:ms-auto">
+          <div className="flex gap-2 md:ms-auto mt-2 md:mt-0">
             <ExportButton filename="customers" getExport={exportCustomers} disabled={filtered.length === 0} />
             <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-1.5 border border-gray-300 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 transition hover:bg-gray-50">
               <Upload size={14} />{t("common.import")}

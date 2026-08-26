@@ -377,15 +377,15 @@ export default function ProductsPage() {
       </FormModal>
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-2 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
-          <div className="min-w-[220px] flex-1">
+        <div className="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
+          <div className="w-full md:w-80 md:flex-none">
             <SearchInput value={search} onChange={setSearch} placeholder={`${t("common.search")} ${t("products.title")}`} />
           </div>
           <FilterSelect value={typeFilter} onChange={(v) => { setTypeFilter(v); setPage(1); }} options={[{ value: "SPARE_PART", label: t("products.sparePart") }, { value: "MACHINE", label: t("products.machine") }]} allLabel={`${t("products.type")} — ${t("common.all")}`} className="md:w-44" />
           <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.nameAr || c.name }))} allLabel={`${t("warehouses.company")} — ${t("common.all")}`} className="md:w-52" />
           <FilterSelect value={activeFilter} onChange={(v) => { setActiveFilter(v); setPage(1); }} options={[{ value: "true", label: t("common.active") }, { value: "false", label: t("common.inactive") }]} allLabel={`${t("common.status")} — ${t("common.all")}`} className="md:w-36" />
           {hasActiveFilters && (<button onClick={() => { setSearch(""); setTypeFilter(""); setCompanyFilter(""); setActiveFilter(""); }} className="text-sm text-slate-500 underline transition hover:text-slate-700">{t("common.resetFilters")}</button>)}
-          <div className="md:ms-auto"><ExportButton filename="products" getExport={exportProducts} disabled={filtered.length === 0} /></div>
+          <div className="md:ms-auto mt-2 md:mt-0"><ExportButton filename="products" getExport={exportProducts} disabled={filtered.length === 0} /></div>
         </div>
 
         <div className="overflow-x-auto">

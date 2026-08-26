@@ -423,7 +423,7 @@
       "received": "تم الاستلام",
       "cancelled": "ملغي"
     },
-    "searchPlaceholder": "ابحث بالمورد أو الشركة أو رقم الأمر...",
+    "searchPlaceholder": "ابحث بالمورد أو الشركة أو رقم الطلب...",
     "companyFilter": "الشركة"
   },
   "sales": {
@@ -456,9 +456,9 @@
     "partial": "جزئي",
     "paid": "مدفوع",
     "overdue": "متأخر",
-    "searchPlaceholder": "ابحث برقم الأمر أو العميل أو المنتج أو النوع...",
+    "searchPlaceholder": "ابحث برقم الطلب أو العميل أو المنتج أو النوع...",
     "companyFilter": "الشركة",
-    "typeFilter": "نوع الأمر",
+    "typeFilter": "نوع الطلب",
     "dateFrom": ""
   },
   "inventory": {

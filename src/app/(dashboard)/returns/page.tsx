@@ -355,8 +355,8 @@ export default function ReturnsPage() {
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="mb-4 flex flex-col gap-2 border-b border-slate-200 pb-4 lg:flex-row lg:items-center">
-          <div className="lg:flex-1">
+        <div className="flex flex-col gap-3 border-b border-slate-200 p-4 lg:flex-row lg:items-center lg:flex-wrap">
+          <div className="w-full lg:flex-1 lg:max-w-80">
             <SearchInput value={search} onChange={setSearch} placeholder={t("returns.searchPlaceholder")} className="w-full" />
           </div>
           <div className="flex gap-2 md:ms-auto">

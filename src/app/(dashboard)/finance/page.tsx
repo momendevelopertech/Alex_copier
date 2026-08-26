@@ -120,8 +120,8 @@ export default function FinancePage() {
         </FormModal>
 
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-2 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
-            <SearchInput value={search} onChange={setSearch} placeholder={t("finance.searchPlaceholder")} />
+          <div className="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
+            <div className="w-full md:w-80 md:flex-none"><SearchInput value={search} onChange={setSearch} placeholder={t("finance.searchPlaceholder")} /></div>
             <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} — ${t("common.all")}`} className="md:w-40" />
             <FilterSelect value={categoryFilter} onChange={(v) => { setCategoryFilter(v); setPage(1); }} options={categories.map((cat) => ({ value: cat, label: cat }))} allLabel={`${t("finance.categoryFilter")} — ${t("common.all")}`} className="md:w-44" />
             <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={(v) => { setDateFrom(v); setPage(1); }} onToChange={(v) => { setDateTo(v); setPage(1); }} />
@@ -130,7 +130,7 @@ export default function FinancePage() {
                 {t("common.resetFilters")}
               </button>
             )}
-            <div className="md:ms-auto">
+            <div className="md:ms-auto mt-2 md:mt-0">
               <ExportButton filename="expenses" getExport={exportExpenses} disabled={filtered.length === 0} />
             </div>
           </div>

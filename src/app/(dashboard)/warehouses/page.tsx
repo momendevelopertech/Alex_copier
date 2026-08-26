@@ -387,12 +387,14 @@ export default function WarehousesPage() {
       </FormModal>
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-2 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder={`${t("common.search")} ${t("warehouses.title")}`}
-          />
+        <div className="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
+          <div className="w-full md:w-80 md:flex-none">
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder={`${t("common.search")} ${t("warehouses.title")}`}
+            />
+          </div>
           <FilterSelect
             value={companyFilter}
             onChange={(v) => { setCompanyFilter(v); setPage(1); }}
@@ -408,7 +410,7 @@ export default function WarehousesPage() {
               {t("common.resetFilters")}
             </button>
           )}
-          <div className="md:ms-auto"><ExportButton filename="warehouses" getExport={exportWarehouses} disabled={filtered.length === 0} /></div>
+          <div className="md:ms-auto mt-2 md:mt-0"><ExportButton filename="warehouses" getExport={exportWarehouses} disabled={filtered.length === 0} /></div>
         </div>
 
         {loading ? (

@@ -347,8 +347,8 @@ export default function ContractsPage() {
       </FormModal>
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-2 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
-          <SearchInput value={search} onChange={setSearchInput} placeholder={t("contracts.searchPlaceholder")} />
+        <div className="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
+          <div className="w-full md:w-80 md:flex-none"><SearchInput value={search} onChange={setSearchInput} placeholder={t("contracts.searchPlaceholder")} /></div>
           <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("common.status")} — ${t("common.all")}`} className="md:w-40" />
           <FilterSelect value={typeFilter} onChange={(v) => { setTypeFilter(v); setPage(1); }} options={Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("contracts.typeFilter")} — ${t("common.all")}`} className="md:w-44" />
           {hasActiveFilters && (
@@ -356,7 +356,7 @@ export default function ContractsPage() {
               {t("common.resetFilters")}
             </button>
           )}
-          <div className="md:ms-auto">
+          <div className="md:ms-auto mt-2 md:mt-0">
             <ExportButton filename="contracts" getExport={exportContracts} disabled={filtered.length === 0} />
           </div>
         </div>

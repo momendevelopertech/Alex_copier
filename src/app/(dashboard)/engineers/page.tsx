@@ -447,14 +447,14 @@ export default function EngineersPage() {
       </FormModal>
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-2 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
-          <div className="min-w-[220px] flex-1"><SearchInput value={search} onChange={setSearch} placeholder={t("engineers.searchPlaceholder")} /></div>
+        <div className="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
+          <div className="w-full md:w-80 md:flex-none"><SearchInput value={search} onChange={setSearch} placeholder={t("engineers.searchPlaceholder")} /></div>
           {hasActiveFilters && (
             <button onClick={() => setSearch("")} className="text-sm text-gray-500 hover:text-gray-700 underline">
               {t("common.resetFilters")}
             </button>
           )}
-          <div className="md:ms-auto">
+          <div className="md:ms-auto mt-2 md:mt-0">
             <ExportButton filename="engineers" getExport={exportEngineers} disabled={filtered.length === 0} />
           </div>
         </div>
