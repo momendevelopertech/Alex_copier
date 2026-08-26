@@ -175,6 +175,12 @@ export async function POST(request: Request) {
           create: { customerId: salesOrder.customerId, companyId: salesOrder.companyId, balance: -total },
         });
 
+        // Decrement customer remaining debt (return reduces what customer owes)
+        await tx.customer.update({
+          where: { id: salesOrder.customerId },
+          data: { remainingDebt: { decrement: total } },
+        });
+
         // Recalculate payment status for the parent order
         await recalculatePaymentStatus(tx, salesOrderId);
 

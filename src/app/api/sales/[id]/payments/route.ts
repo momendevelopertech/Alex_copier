@@ -54,6 +54,14 @@ export async function POST(
       );
     }
 
+    const remainingBalance = order.total - order.paidAmount;
+    if (paymentAmount > remainingBalance + 0.01) {
+      return NextResponse.json(
+        { error: `المبلغ المدفوع (${paymentAmount}) يتجاوز المتبقي (${remainingBalance.toFixed(2)})`, code: "OVERPAYMENT" },
+        { status: 400 }
+      );
+    }
+
     const paymentDateTime = paymentDate ? new Date(paymentDate) : new Date();
     const targetCompanyId = companyId || order.companyId;
 

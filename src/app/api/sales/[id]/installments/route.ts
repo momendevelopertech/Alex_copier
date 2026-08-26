@@ -72,6 +72,27 @@ export async function POST(
 
       const paidAmount = paidInstallments.reduce((sum, inst) => sum + inst.amount, 0);
 
+      // Fetch order for customer/company info
+      const orderInfo = await tx.salesOrder.findUnique({
+        where: { id: orderId },
+        select: { customerId: true, companyId: true },
+      });
+
+      if (orderInfo) {
+        // Decrement customer remaining debt
+        await tx.customer.update({
+          where: { id: orderInfo.customerId },
+          data: { remainingDebt: { decrement: paidAmount } },
+        });
+
+        // Update customer ledger
+        await tx.customerLedger.upsert({
+          where: { customerId_companyId: { customerId: orderInfo.customerId, companyId: orderInfo.companyId } },
+          update: { balance: { decrement: paidAmount } },
+          create: { customerId: orderInfo.customerId, companyId: orderInfo.companyId, balance: -paidAmount },
+        });
+      }
+
       // Increment paidAmount on the order
       await tx.salesOrder.update({
         where: { id: orderId },

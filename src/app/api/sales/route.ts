@@ -124,6 +124,23 @@ export async function POST(request: Request) {
         },
       });
 
+      // For CREDIT/INSTALLMENT/MIXED orders, increment customer debt
+      if (paymentMethod !== "CASH") {
+        await tx.customer.update({
+          where: { id: customerId },
+          data: {
+            totalDebt: { increment: total },
+            remainingDebt: { increment: total },
+          },
+        });
+
+        await tx.customerLedger.upsert({
+          where: { customerId_companyId: { customerId, companyId } },
+          update: { balance: { increment: total } },
+          create: { customerId, companyId, balance: total },
+        });
+      }
+
       let tradeInTotal = 0;
 
       for (const item of items as {
