@@ -13,50 +13,75 @@ interface ReportData {
     name: string;
     nameAr: string | null;
   };
-  summary: {
-    totalSales: number;
-    totalPurchases: number;
-    totalExpenses: number;
-    netProfit: number;
+  sales: {
+    total: number;
+    count: number;
+    byPaymentMethod: Record<string, number>;
+    orders: Array<{
+      id: string;
+      total: number;
+      discount: number;
+      paymentMethod: string;
+      paymentStatus: string;
+      orderDate: string;
+      createdAt: string;
+      customer?: { name: string };
+      items?: Array<{ product?: { name: string }; quantity: number; unitPrice: number }>;
+    }>;
   };
-  sales: Array<{
-    id: string;
-    orderNumber: string;
-    date: string;
-    customer: string;
-    paymentMethod: string;
+  purchases: {
     total: number;
-    paymentStatus: string;
-  }>;
-  purchases: Array<{
-    id: string;
-    orderNumber: string;
-    date: string;
-    supplier: string;
+    count: number;
+    orders: Array<{
+      id: string;
+      total: number;
+      orderDate: string;
+      createdAt: string;
+      supplier?: { name: string };
+      items?: Array<{ product?: { name: string }; quantity: number; unitPrice: number }>;
+    }>;
+  };
+  expenses: {
     total: number;
-    status: string;
-  }>;
-  expenses: Array<{
-    id: string;
-    date: string;
-    category: string;
-    description: string;
-    amount: number;
-  }>;
-  settlements: Array<{
-    id: string;
-    number: string;
-    date: string;
-    amount: number;
-    collectedBy: string;
-    status: string;
-  }>;
-  returns: Array<{
-    id: string;
-    date: string;
-    customer: string;
+    byCategory: Record<string, number>;
+    items: Array<{
+      id: string;
+      date: string;
+      category: string;
+      description: string;
+      amount: number;
+    }>;
+  };
+  settlements: {
     total: number;
-    reason: string;
+    pending: number;
+    count: number;
+    items: Array<{
+      id: string;
+      createdAt: string;
+      amount: number;
+      status: string;
+      collector?: { name: string };
+    }>;
+  };
+  returns: {
+    total: number;
+    count: number;
+    items: Array<{
+      id: string;
+      createdAt: string;
+      total: number;
+      reason: string;
+      customer?: { name: string };
+    }>;
+  };
+  netProfit: number;
+  monthlyData: Array<{
+    month: string;
+    sales: number;
+    purchases: number;
+    expenses: number;
+    settlements: number;
   }>;
 }
 
@@ -180,25 +205,30 @@ export default function CompanyReportPage() {
   }, [id]);
 
   const salesTotal = useMemo(
-    () => report?.sales.reduce((s, r) => s + r.total, 0) ?? 0,
+    () => report?.sales?.total ?? 0,
     [report],
   );
   const purchasesTotal = useMemo(
-    () => report?.purchases.reduce((s, r) => s + r.total, 0) ?? 0,
+    () => report?.purchases?.total ?? 0,
     [report],
   );
   const expensesTotal = useMemo(
-    () => report?.expenses.reduce((s, r) => s + r.amount, 0) ?? 0,
+    () => report?.expenses?.total ?? 0,
     [report],
   );
   const settlementsTotal = useMemo(
-    () => report?.settlements.reduce((s, r) => s + r.amount, 0) ?? 0,
+    () => report?.settlements?.total ?? 0,
     [report],
   );
   const returnsTotal = useMemo(
-    () => report?.returns.reduce((s, r) => s + r.total, 0) ?? 0,
+    () => report?.returns?.total ?? 0,
     [report],
   );
+  const salesOrders = useMemo(() => report?.sales?.orders ?? [], [report]);
+  const purchaseOrders = useMemo(() => report?.purchases?.orders ?? [], [report]);
+  const expenseItems = useMemo(() => report?.expenses?.items ?? [], [report]);
+  const settlementItems = useMemo(() => report?.settlements?.items ?? [], [report]);
+  const returnItems = useMemo(() => report?.returns?.items ?? [], [report]);
 
   return (
     <>
@@ -294,15 +324,15 @@ export default function CompanyReportPage() {
                 </div>
                 <p className="mt-2 text-2xl font-bold text-orange-600">{moneyFormatter.format(expensesTotal)}</p>
               </div>
-              <div className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm border-r-4 ${report.summary.netProfit >= 0 ? "border-green-500" : "border-red-500"}`}>
+              <div className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm border-r-4 ${report.netProfit >= 0 ? "border-green-500" : "border-red-500"}`}>
                 <div className="flex items-center gap-2">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${report.summary.netProfit >= 0 ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"}`}>
-                    {report.summary.netProfit >= 0 ? "📈" : "📉"}
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${report.netProfit >= 0 ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"}`}>
+                    {report.netProfit >= 0 ? "📈" : "📉"}
                   </div>
                   <p className="text-sm text-gray-500">صافي الربح / الخسارة</p>
                 </div>
-                <p className={`mt-2 text-2xl font-bold ${report.summary.netProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
-                  {moneyFormatter.format(report.summary.netProfit)}
+                <p className={`mt-2 text-2xl font-bold ${report.netProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  {moneyFormatter.format(report.netProfit)}
                 </p>
               </div>
             </div>
@@ -324,23 +354,23 @@ export default function CompanyReportPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {report.sales.map((row) => (
+                    {salesOrders.map((row) => (
                       <tr key={row.id} className="border-t border-gray-100 hover:bg-slate-50/50">
-                        <td className="px-4 py-3 text-sm">{formatDate(row.date)}</td>
-                        <td className="px-4 py-3 text-sm font-medium">{row.orderNumber}</td>
-                        <td className="px-4 py-3 text-sm">{row.customer}</td>
+                        <td className="px-4 py-3 text-sm">{formatDate(row.orderDate || row.createdAt)}</td>
+                        <td className="px-4 py-3 text-sm font-medium">{row.id.slice(0, 8)}</td>
+                        <td className="px-4 py-3 text-sm">{row.customer?.name || "—"}</td>
                         <td className="px-4 py-3 text-sm">{statusBadge(row.paymentMethod)}</td>
                         <td className="px-4 py-3 text-sm font-bold text-green-700">{moneyFormatter.format(row.total)}</td>
                         <td className="px-4 py-3 text-sm">{statusBadge(row.paymentStatus)}</td>
                       </tr>
                     ))}
-                    {report.sales.length === 0 && (
+                    {salesOrders.length === 0 && (
                       <tr>
                         <td colSpan={6} className="px-4 py-8 text-center text-gray-400">لا توجد بيانات</td>
                       </tr>
                     )}
                   </tbody>
-                  {report.sales.length > 0 && (
+                  {salesOrders.length > 0 && (
                     <tfoot>
                       <SubtotalRow label="اجمالي المبيعات" value={salesTotal} colSpan={4} color="text-green-700" />
                     </tfoot>
@@ -361,28 +391,26 @@ export default function CompanyReportPage() {
                       <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">رقم الطلب</th>
                       <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">المورد</th>
                       <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">الاجمالي</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">الحالة</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {report.purchases.map((row) => (
+                    {purchaseOrders.map((row) => (
                       <tr key={row.id} className="border-t border-gray-100 hover:bg-slate-50/50">
-                        <td className="px-4 py-3 text-sm">{formatDate(row.date)}</td>
-                        <td className="px-4 py-3 text-sm font-medium">{row.orderNumber}</td>
-                        <td className="px-4 py-3 text-sm">{row.supplier}</td>
+                        <td className="px-4 py-3 text-sm">{formatDate(row.orderDate || row.createdAt)}</td>
+                        <td className="px-4 py-3 text-sm font-medium">{row.id.slice(0, 8)}</td>
+                        <td className="px-4 py-3 text-sm">{row.supplier?.name || "—"}</td>
                         <td className="px-4 py-3 text-sm font-bold text-blue-700">{moneyFormatter.format(row.total)}</td>
-                        <td className="px-4 py-3 text-sm">{statusBadge(row.status)}</td>
                       </tr>
                     ))}
-                    {report.purchases.length === 0 && (
+                    {purchaseOrders.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="px-4 py-8 text-center text-gray-400">لا توجد بيانات</td>
+                        <td colSpan={4} className="px-4 py-8 text-center text-gray-400">لا توجد بيانات</td>
                       </tr>
                     )}
                   </tbody>
-                  {report.purchases.length > 0 && (
+                  {purchaseOrders.length > 0 && (
                     <tfoot>
-                      <SubtotalRow label="اجمالي المشتريات" value={purchasesTotal} colSpan={3} color="text-blue-700" />
+                      <SubtotalRow label="اجمالي المشتريات" value={purchasesTotal} colSpan={2} color="text-blue-700" />
                     </tfoot>
                   )}
                 </table>
@@ -404,7 +432,7 @@ export default function CompanyReportPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {report.expenses.map((row) => (
+                    {expenseItems.map((row) => (
                       <tr key={row.id} className="border-t border-gray-100 hover:bg-slate-50/50">
                         <td className="px-4 py-3 text-sm">{formatDate(row.date)}</td>
                         <td className="px-4 py-3 text-sm font-medium">{row.category}</td>
@@ -412,13 +440,13 @@ export default function CompanyReportPage() {
                         <td className="px-4 py-3 text-sm font-bold text-orange-700">{moneyFormatter.format(row.amount)}</td>
                       </tr>
                     ))}
-                    {report.expenses.length === 0 && (
+                    {expenseItems.length === 0 && (
                       <tr>
                         <td colSpan={4} className="px-4 py-8 text-center text-gray-400">لا توجد بيانات</td>
                       </tr>
                     )}
                   </tbody>
-                  {report.expenses.length > 0 && (
+                  {expenseItems.length > 0 && (
                     <tfoot>
                       <SubtotalRow label="اجمالي المصروفات" value={expensesTotal} colSpan={3} color="text-orange-700" />
                     </tfoot>
@@ -443,22 +471,22 @@ export default function CompanyReportPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {report.settlements.map((row) => (
+                    {settlementItems.map((row) => (
                       <tr key={row.id} className="border-t border-gray-100 hover:bg-slate-50/50">
-                        <td className="px-4 py-3 text-sm">{formatDate(row.date)}</td>
-                        <td className="px-4 py-3 text-sm font-medium">{row.number}</td>
+                        <td className="px-4 py-3 text-sm">{formatDate(row.createdAt)}</td>
+                        <td className="px-4 py-3 text-sm font-medium">{row.id.slice(0, 8)}</td>
                         <td className="px-4 py-3 text-sm font-bold text-purple-700">{moneyFormatter.format(row.amount)}</td>
-                        <td className="px-4 py-3 text-sm">{row.collectedBy}</td>
+                        <td className="px-4 py-3 text-sm">{row.collector?.name || "—"}</td>
                         <td className="px-4 py-3 text-sm">{statusBadge(row.status)}</td>
                       </tr>
                     ))}
-                    {report.settlements.length === 0 && (
+                    {settlementItems.length === 0 && (
                       <tr>
                         <td colSpan={5} className="px-4 py-8 text-center text-gray-400">لا توجد بيانات</td>
                       </tr>
                     )}
                   </tbody>
-                  {report.settlements.length > 0 && (
+                  {settlementItems.length > 0 && (
                     <tfoot>
                       <SubtotalRow label="اجمالي التسويات" value={settlementsTotal} colSpan={3} color="text-purple-700" />
                     </tfoot>
@@ -482,21 +510,21 @@ export default function CompanyReportPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {report.returns.map((row) => (
+                    {returnItems.map((row) => (
                       <tr key={row.id} className="border-t border-gray-100 hover:bg-slate-50/50">
-                        <td className="px-4 py-3 text-sm">{formatDate(row.date)}</td>
-                        <td className="px-4 py-3 text-sm">{row.customer}</td>
+                        <td className="px-4 py-3 text-sm">{formatDate(row.createdAt)}</td>
+                        <td className="px-4 py-3 text-sm">{row.customer?.name || "—"}</td>
                         <td className="px-4 py-3 text-sm font-bold text-red-700">{moneyFormatter.format(row.total)}</td>
                         <td className="px-4 py-3 text-sm">{row.reason}</td>
                       </tr>
                     ))}
-                    {report.returns.length === 0 && (
+                    {returnItems.length === 0 && (
                       <tr>
                         <td colSpan={4} className="px-4 py-8 text-center text-gray-400">لا توجد بيانات</td>
                       </tr>
                     )}
                   </tbody>
-                  {report.returns.length > 0 && (
+                  {returnItems.length > 0 && (
                     <tfoot>
                       <SubtotalRow label="اجمالي المرتجعات" value={returnsTotal} colSpan={2} color="text-red-700" />
                     </tfoot>

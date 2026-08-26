@@ -74,6 +74,7 @@ export default function ProductsPage() {
   const { success: toastSuccess, error: toastError } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [inventoryByProduct, setInventoryByProduct] = useState<Record<string, number>>({});
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [companyFilter, setCompanyFilter] = useState("");
@@ -91,13 +92,19 @@ export default function ProductsPage() {
   const fetchData = async () => {
     try {
       // ?all=true — admins manage inactive products here too.
-      const [pRes, cRes] = await Promise.all([
+      const [pRes, cRes, inventoryRes] = await Promise.all([
         fetch("/api/products?all=true"),
         fetch("/api/companies"),
+        fetch("/api/inventory?catalog=true"),
       ]);
-      const [pData, cData] = await Promise.all([pRes.json(), cRes.json()]);
+      const [pData, cData, inventoryData] = await Promise.all([pRes.json(), cRes.json(), inventoryRes.json()]);
       setProducts(Array.isArray(pData) ? pData : []);
       setCompanies(Array.isArray(cData) ? cData : []);
+      const stockMap: Record<string, number> = {};
+      for (const entry of Array.isArray(inventoryData.inventory) ? inventoryData.inventory : []) {
+        stockMap[entry.productId] = (stockMap[entry.productId] ?? 0) + Number(entry.quantity || 0);
+      }
+      setInventoryByProduct(stockMap);
     } finally {
       setLoading(false);
     }
@@ -134,6 +141,7 @@ export default function ProductsPage() {
       t("warehouses.company"),
       t("products.sku"),
       t("products.purchasePrice"),
+      "الكمية المتاحة",
       t("common.status"),
     ],
     rows: filtered.map((p) => [
@@ -142,6 +150,7 @@ export default function ProductsPage() {
       p.company?.nameAr || p.company?.name || "",
       p.sku || "",
       p.purchasePrice != null ? String(p.purchasePrice) : "",
+      String(inventoryByProduct[p.id] ?? 0),
       p.isActive ? t("common.active") : t("common.inactive"),
     ]),
   });
@@ -368,6 +377,10 @@ export default function ProductsPage() {
                 <p className="mt-1 text-sm text-slate-800">{viewProduct.pricingTiers?.newCustomer != null ? Number(viewProduct.pricingTiers.newCustomer).toLocaleString() : "—"}</p>
               </div>
               <div>
+                <p className="text-xs font-medium text-slate-500">الكمية المتاحة</p>
+                <p className="mt-1 text-sm text-slate-800">{inventoryByProduct[viewProduct.id] ?? 0}</p>
+              </div>
+              <div>
                 <p className="text-xs font-medium text-slate-500">{t("common.status")}</p>
                 <p className="mt-1 text-sm text-slate-800">{viewProduct.isActive ? t("common.active") : t("common.inactive")}</p>
               </div>
@@ -397,17 +410,18 @@ export default function ProductsPage() {
                 <th className="px-4 py-3 text-start text-sm font-semibold text-slate-600">{t("warehouses.company")}</th>
                 <th className="px-4 py-3 text-start text-sm font-semibold text-slate-600">SKU</th>
                 <th className="px-4 py-3 text-start text-sm font-semibold text-slate-600">{t("products.purchasePrice")}</th>
+                <th className="px-4 py-3 text-start text-sm font-semibold text-slate-600">الكمية المتاحة</th>
                 <th className="px-4 py-3 text-start text-sm font-semibold text-slate-600">{t("common.status")}</th>
                 <th className="px-4 py-3 text-start text-sm font-semibold text-slate-600">{t("common.actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={7} className="py-10"><div className="flex items-center justify-center"><PrinterLoader size="sm" label={t("common.loading")} /></div></td></tr>
+                <tr><td colSpan={8} className="py-10"><div className="flex items-center justify-center"><PrinterLoader size="sm" label={t("common.loading")} /></div></td></tr>
               ) : products.length === 0 ? (
-                <tr><td colSpan={7} className="py-8 text-center text-sm text-slate-400">{t("common.noData")}</td></tr>
+                <tr><td colSpan={8} className="py-8 text-center text-sm text-slate-400">{t("common.noData")}</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} className="py-8 text-center text-sm text-slate-400">{t("common.noData")}</td></tr>
+                <tr><td colSpan={8} className="py-8 text-center text-sm text-slate-400">{t("common.noData")}</td></tr>
               ) : (
                 paged.map((product) => (
                   <tr key={product.id} className={`transition hover:bg-slate-50 ${product.isActive ? "" : "opacity-60"}`}>
@@ -416,6 +430,16 @@ export default function ProductsPage() {
                     <td className="px-4 py-3 text-sm text-slate-600">{product.company?.nameAr || product.company?.name || "—"}</td>
                     <td className="px-4 py-3 text-sm text-slate-600"><span dir="ltr">{product.sku || "—"}</span></td>
                     <td className="px-4 py-3 text-sm text-slate-600">{product.purchasePrice != null ? product.purchasePrice.toLocaleString() : "—"}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {(() => {
+                        const qty = inventoryByProduct[product.id] ?? 0;
+                        return (
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${qty > 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                            {qty}
+                          </span>
+                        );
+                      })()}
+                    </td>
                     <td className="px-4 py-3"><button onClick={() => toggleActive(product)} title={t("common.edit")} className={`inline-flex whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold ${product.isActive ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{product.isActive ? t("common.active") : t("common.inactive")}</button></td>
                     <td className="px-4 py-3"><div className="flex gap-2"><button onClick={() => setViewProduct(product)} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2 text-xs font-medium text-gray-600 transition hover:bg-gray-100"><Eye size={14} />{t("common.view")}</button><button onClick={() => openEdit(product)} className="text-sm font-medium text-sky-600 hover:text-sky-800"><Pencil size={14} className="me-1 inline-block" />{t("common.edit")}</button><button onClick={() => handleDelete(product.id)} className="text-sm font-medium text-red-600 hover:text-red-800"><Trash2 size={14} className="me-1 inline-block" />{t("common.delete")}</button></div></td>
                   </tr>
