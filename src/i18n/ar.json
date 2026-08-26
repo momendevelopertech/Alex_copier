@@ -291,7 +291,9 @@
     "typeFilter": "نوع العميل",
     "addLocation": "إضافة فرع",
     "noLocations": "لا توجد فروع مسجلة لهذا العميل",
-    "deleteLocationConfirm": "هل أنت متأكد من حذف هذا الفرع؟"
+    "deleteLocationConfirm": "هل أنت متأكد من حذف هذا الفرع؟",
+    "statsTotalRemaining": "اجمالي المتبقي",
+    "statsDebtors": "عليهم فلوس متبقيه"
   },
   "suppliers": {
     "title": "الموردون",

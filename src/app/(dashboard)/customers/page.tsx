@@ -102,8 +102,6 @@ export default function CustomersPage() {
   const [selected, setSelected] = useState<Customer | null>(null);
   const [page, setPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState("");
-  const [cityFilter, setCityFilter] = useState("");
-  const [activeFilter, setActiveFilter] = useState("");
   const [showImport, setShowImport] = useState(false);
   const [showLocForm, setShowLocForm] = useState(false);
   const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
@@ -145,22 +143,20 @@ export default function CustomersPage() {
         matchesQuery(c.companyName, search) ||
         matchesQuery(c.email, search) ||
         (Boolean(c.phone) && c.phone.includes(search))) &&
-      (!typeFilter || c.customerType === typeFilter) &&
-      (!cityFilter || c.city === cityFilter) &&
-      (!activeFilter || String(c.isActive) === activeFilter)
+      (!typeFilter || c.customerType === typeFilter)
   );
 
-  const cities = useMemo(
-    () => Array.from(new Set(customers.map((c) => c.city).filter(Boolean))) as string[],
-    [customers]
-  );
-  const hasActiveFilters = typeFilter !== "" || cityFilter !== "" || activeFilter !== "" || search !== "";
+  const hasActiveFilters = typeFilter !== "" || search !== "";
+
+  const stats = useMemo(() => {
+    const totalRemaining = filtered.reduce((sum, c) => sum + (c.remainingDebt || 0), 0);
+    const debtorsCount = filtered.filter((c) => (c.remainingDebt || 0) > 0).length;
+    return { totalRemaining, debtorsCount };
+  }, [filtered]);
 
   const resetFilters = () => {
     setSearchInput(null);
     setTypeFilter("");
-    setCityFilter("");
-    setActiveFilter("");
   };
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -388,6 +384,17 @@ export default function CustomersPage() {
         >
           <Plus size={16} />{t("customers.addCustomer")}
         </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <p className="text-xs font-medium text-amber-600">{t("customers.statsTotalRemaining")}</p>
+          <p className="mt-1 text-lg font-bold text-amber-700">{stats.totalRemaining.toLocaleString("ar-EG")} ج.م</p>
+        </div>
+        <div className="rounded-xl border border-red-200 bg-red-50 p-3">
+          <p className="text-xs font-medium text-red-500">{t("customers.statsDebtors")}</p>
+          <p className="mt-1 text-lg font-bold text-red-600">{stats.debtorsCount}</p>
+        </div>
       </div>
 
       {error && (
@@ -694,23 +701,6 @@ export default function CustomersPage() {
             ]}
             allLabel={`${t("customers.typeFilter")} — ${t("common.all")}`}
             className="md:w-44"
-          />
-          <FilterSelect
-            value={cityFilter}
-            onChange={(v) => { setCityFilter(v); setPage(1); }}
-            options={cities.map((c) => ({ value: c, label: c }))}
-            allLabel={`${t("customers.city")} — ${t("common.all")}`}
-            className="md:w-40"
-          />
-          <FilterSelect
-            value={activeFilter}
-            onChange={(v) => { setActiveFilter(v); setPage(1); }}
-            options={[
-              { value: "true", label: t("common.yes") },
-              { value: "false", label: t("common.no") },
-            ]}
-            allLabel={`${t("common.status")} — ${t("common.all")}`}
-            className="md:w-36"
           />
           {hasActiveFilters && (
             <button onClick={resetFilters} className="text-sm text-gray-500 hover:text-gray-700 underline">

@@ -276,7 +276,9 @@
     "typeFilter": "Customer type",
     "addLocation": "Add Branch",
     "noLocations": "No branches registered for this customer",
-    "deleteLocationConfirm": "Are you sure you want to delete this branch?"
+    "deleteLocationConfirm": "Are you sure you want to delete this branch?",
+    "statsTotalRemaining": "Total Remaining",
+    "statsDebtors": "Customers with Debt"
   },
   "suppliers": {
     "title": "Suppliers",
