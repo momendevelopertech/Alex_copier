@@ -13,6 +13,7 @@ export async function GET(
     const payments = await prisma.customerPayment.findMany({
       where: { customerId: id },
       orderBy: { paymentDate: "desc" },
+      include: { company: { select: { id: true, name: true } } },
     });
     return NextResponse.json(payments);
   } catch {
@@ -35,7 +36,7 @@ export async function POST(
     }
     const { id } = await params;
     const body = await request.json();
-    const { amount, paymentDate, notes } = body;
+    const { amount, paymentDate, notes, companyId } = body;
 
     if (!amount || Number(amount) <= 0) {
       return NextResponse.json({ error: "المبلغ يجب أن يكون أكبر من صفر", code: "INVALID_AMOUNT" }, { status: 400 });
@@ -46,15 +47,24 @@ export async function POST(
       return NextResponse.json({ error: "العميل غير موجود", code: "NOT_FOUND" }, { status: 404 });
     }
 
+    if (companyId) {
+      const company = await prisma.company.findUnique({ where: { id: companyId } });
+      if (!company) {
+        return NextResponse.json({ error: "الشركة غير موجودة", code: "COMPANY_NOT_FOUND" }, { status: 404 });
+      }
+    }
+
     const paymentAmount = Number(amount);
     const newRemaining = Math.max(0, customer.remainingDebt - paymentAmount);
+    const payDate = paymentDate ? new Date(paymentDate) : new Date();
 
     const [payment] = await prisma.$transaction([
       prisma.customerPayment.create({
         data: {
           customerId: id,
+          companyId: companyId || null,
           amount: paymentAmount,
-          paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+          paymentDate: payDate,
           notes: notes || null,
         },
       }),
@@ -62,9 +72,18 @@ export async function POST(
         where: { id },
         data: {
           remainingDebt: newRemaining,
-          lastPaymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+          lastPaymentDate: payDate,
         },
       }),
+      ...(companyId
+        ? [
+            prisma.customerLedger.upsert({
+              where: { customerId_companyId: { customerId: id, companyId } },
+              update: { balance: { decrement: paymentAmount } },
+              create: { customerId: id, companyId, balance: -paymentAmount },
+            }),
+          ]
+        : []),
     ]);
 
     return NextResponse.json(payment, { status: 201 });

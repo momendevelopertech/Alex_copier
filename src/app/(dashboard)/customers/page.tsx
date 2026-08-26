@@ -47,7 +47,7 @@ interface Customer {
   remainingDebt: number;
   lastPaymentDate: string | null;
   locations: CustomerLocation[];
-  payments?: { id: string; amount: number; paymentDate: string; notes?: string | null }[];
+  payments?: { id: string; amount: number; paymentDate: string; notes?: string | null; company?: { id: string; name: string } | null }[];
   createdAt: string;
   machines?: { id: string; serialNumber: string; manufacturer?: string | null; model?: string | null; currentStatus: string }[];
   serviceRequests?: { id: string; requestNumber: string; status: string; priority: string; createdAt: string; machine?: { serialNumber: string } | null }[];
@@ -114,6 +114,7 @@ export default function CustomersPage() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
   const [paymentNotes, setPaymentNotes] = useState("");
+  const [paymentCompanyId, setPaymentCompanyId] = useState("");
   const [savingPayment, setSavingPayment] = useState(false);
   const PAGE_SIZE = 15;
 
@@ -341,6 +342,7 @@ export default function CustomersPage() {
     setPaymentAmount("");
     setPaymentDate(new Date().toISOString().slice(0, 10));
     setPaymentNotes("");
+    setPaymentCompanyId("");
     setShowPaymentModal(true);
   };
 
@@ -354,7 +356,7 @@ export default function CustomersPage() {
       const res = await fetch(`/api/customers/${paymentCustomer.id}/payments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: amt, paymentDate, notes: paymentNotes || undefined }),
+        body: JSON.stringify({ amount: amt, paymentDate, notes: paymentNotes || undefined, companyId: paymentCompanyId || undefined }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) { toastError(apiErrorMessage(data, t)); return; }
@@ -550,6 +552,7 @@ export default function CustomersPage() {
                       <div key={p.id} className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-xs border border-amber-100">
                         <span className="text-gray-600">{date(p.paymentDate)}</span>
                         <span className="font-bold text-green-700">+{p.amount.toLocaleString("ar-EG")} ج.م</span>
+                        {p.company && <span className="text-blue-600 truncate max-w-[100px]">{p.company.name}</span>}
                         {p.notes && <span className="text-gray-400 truncate max-w-[120px]">{p.notes}</span>}
                       </div>
                     ))}
@@ -806,6 +809,15 @@ export default function CustomersPage() {
               <div className="flex justify-between"><span className="text-gray-500">المتبقي:</span><span className="font-bold text-red-600">{paymentCustomer.remainingDebt.toLocaleString("ar-EG")} ج.م</span></div>
             </div>
           )}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">الشركة</label>
+            <select value={paymentCompanyId} onChange={(e) => setPaymentCompanyId(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">بدون شركة</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-slate-700">المبلغ *</label>
             <input type="number" min="0.01" step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" required />

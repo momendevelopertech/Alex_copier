@@ -145,6 +145,7 @@ model Company {
   settlements           Settlement[]
   accounts              Account[]
   journalEntries        JournalEntry[]
+  payments              CustomerPayment[]
 }
 
 model Customer {
@@ -185,14 +186,16 @@ model Customer {
 }
 
 model CustomerPayment {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   customerId  String
+  companyId   String?
   amount      Float
-  paymentDate DateTime @default(now())
+  paymentDate DateTime  @default(now())
   notes       String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  company  Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
 }
 
 model CustomerLocation {
