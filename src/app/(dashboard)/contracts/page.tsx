@@ -12,8 +12,10 @@ import PrinterLoader from "@/components/PrinterLoader";
 import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 import FormModal from "@/components/FormModal";
 import SelectWithAdd from "@/components/SelectWithAdd";
+import { DateTimeCell } from "@/components/DateTimeCell";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
+import SubmitButton from "@/components/SubmitButton";
 
 const TYPE_LABELS: Record<string, string> = {
   MAINTENANCE_ONLY: "صيانة فقط",
@@ -83,6 +85,7 @@ export default function ContractsPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingContract, setViewingContract] = useState<Contract | null>(null);
@@ -132,6 +135,7 @@ export default function ContractsPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     await fetch("/api/contracts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -141,6 +145,7 @@ export default function ContractsPage() {
         amountPaid: parseFloat(form.amountPaid) || 0,
       }),
     });
+    setSaving(false);
     setForm({ customerId: "", contractType: "MAINTENANCE_ONLY", startDate: "", endDate: "", value: "", amountPaid: "", paymentMethod: "CASH", billingCycle: "MONTHLY", notes: "", machineIds: [] });
     setShowForm(false);
     fetchData();
@@ -148,7 +153,8 @@ export default function ContractsPage() {
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingId) return;
+    if (!editingId) { setSaving(false); return; }
+    setSaving(true);
     await fetch(`/api/contracts/${editingId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -158,6 +164,7 @@ export default function ContractsPage() {
         amountPaid: parseFloat(form.amountPaid) || 0,
       }),
     });
+    setSaving(false);
     setEditingId(null);
     setForm({ customerId: "", contractType: "MAINTENANCE_ONLY", startDate: "", endDate: "", value: "", amountPaid: "", paymentMethod: "CASH", billingCycle: "MONTHLY", notes: "", machineIds: [] });
     setShowForm(false);
@@ -355,7 +362,7 @@ export default function ContractsPage() {
 
             <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
               <button type="button" onClick={() => { setShowForm(false); setEditingId(null); setForm({ customerId: "", contractType: "MAINTENANCE_ONLY", startDate: "", endDate: "", value: "", amountPaid: "", paymentMethod: "CASH", billingCycle: "MONTHLY", notes: "", machineIds: [] }); }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
-              <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"><Save size={16} /> {t("common.save")}</button>
+              <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-blue-600 hover:bg-blue-700 text-white"><Save size={16} /></SubmitButton>
             </div>
           </form>
       </FormModal>
@@ -410,8 +417,8 @@ export default function ContractsPage() {
                     <td className="px-4 py-3"><span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${contractTypeColors[c.contractType] || ""}`}>{TYPE_LABELS[c.contractType] || c.contractType}</span></td>
                     <td className="px-4 py-3"><span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[c.status] || ""}`}>{STATUS_LABELS[c.status] || c.status}</span></td>
                     <td className="px-4 py-3 text-sm">{c.value.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-sm">{new Date(c.startDate).toLocaleDateString("ar-EG")}</td>
-                    <td className="px-4 py-3 text-sm">{new Date(c.endDate).toLocaleDateString("ar-EG")}</td>
+                    <td className="px-4 py-3 text-sm"><DateTimeCell value={c.startDate} /></td>
+                    <td className="px-4 py-3 text-sm"><DateTimeCell value={c.endDate} /></td>
                     <td className="px-4 py-3 text-sm text-center">{c.machines.length}</td>
                     <td className="px-4 py-3 text-sm">
                       <div className="flex gap-2">
@@ -466,11 +473,11 @@ export default function ContractsPage() {
               </div>
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-slate-500">{t("contracts.startDate")}</label>
-                <p className="text-sm text-slate-900">{new Date(viewingContract.startDate).toLocaleDateString("ar-EG")}</p>
+                <p className="text-sm text-slate-900"><DateTimeCell value={viewingContract.startDate} /></p>
               </div>
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-slate-500">{t("contracts.endDate")}</label>
-                <p className="text-sm text-slate-900">{new Date(viewingContract.endDate).toLocaleDateString("ar-EG")}</p>
+                <p className="text-sm text-slate-900"><DateTimeCell value={viewingContract.endDate} /></p>
               </div>
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-slate-500">{t("contracts.value")}</label>

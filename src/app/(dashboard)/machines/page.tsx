@@ -7,13 +7,15 @@ import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
-import { Plus, Trash2, Upload } from "lucide-react";
+import { Plus, Trash2, Upload, Save } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import FormModal from "@/components/FormModal";
 import ImportDialog from "@/components/ImportDialog";
 import PrinterLoader from "@/components/PrinterLoader";
+import { DateTimeCell } from "@/components/DateTimeCell";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
+import SubmitButton from "@/components/SubmitButton";
 
 interface Machine {
   id: string;
@@ -82,6 +84,7 @@ const { success: toastSuccess } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<MachineDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -147,6 +150,7 @@ const { success: toastSuccess } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     await fetch("/api/machines", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -157,6 +161,7 @@ const { success: toastSuccess } = useToast();
         currentOwnerId: form.currentOwnerId || null,
       }),
     });
+    setSaving(false);
     setForm(emptyForm);
     setShowForm(false);
     fetchMachines();
@@ -180,7 +185,7 @@ const { success: toastSuccess } = useToast();
     setDetailsLoading(false);
   };
 
-  const date = (value: string) => new Date(value).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-GB");
+  const date = (value: string) => value ? `${new Date(value).toLocaleDateString("en-GB")} ${new Date(value).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : "—";
   const isOpen = (status: string) => !["RESOLVED", "CLOSED"].includes(status);
 
   return (
@@ -243,7 +248,7 @@ const { success: toastSuccess } = useToast();
           </div>
           <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end md:col-span-2 lg:col-span-3">
             <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
-            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">{t("common.save")}</button>
+            <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-blue-600 hover:bg-blue-700 text-white"><Save size={16} /></SubmitButton>
           </div>
         </form>
       </FormModal>
@@ -327,7 +332,7 @@ const { success: toastSuccess } = useToast();
                     <td className="px-4 py-3 text-sm">{machine.paperSize}</td>
                     <td className="px-4 py-3 text-sm">{machine.currentOwner?.name || "—"}</td>
                     <td className="px-4 py-3 text-sm">
-                      {new Date(machine.createdAt).toLocaleDateString("ar-EG")}
+                      <DateTimeCell value={machine.createdAt} />
                     </td>
                     <td className="px-4 py-3">
                       <button

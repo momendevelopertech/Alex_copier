@@ -12,6 +12,7 @@ import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
 import FormModal from "@/components/FormModal";
+import SubmitButton from "@/components/SubmitButton";
 
 interface Company {
   id: string;
@@ -341,9 +342,7 @@ export default function ProductsPage() {
 
             <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
               <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
-              <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                <Save size={16} /> {saving ? t("common.saving") : t("common.save")}
-              </button>
+              <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-blue-600 hover:bg-blue-700 text-white"><Save size={16} /></SubmitButton>
             </div>
           </form>
       </FormModal>

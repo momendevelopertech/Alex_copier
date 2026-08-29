@@ -10,6 +10,8 @@ import PrinterLoader from "@/components/PrinterLoader";
 import { useToast } from "@/components/UIProvider";
 import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 import { apiErrorMessage } from "@/lib/api-client";
+import { Save } from "lucide-react";
+import SubmitButton from "@/components/SubmitButton";
 
 interface InventoryItem {
   id: string;
@@ -64,6 +66,7 @@ export default function InventoryPage() {
     notes: "",
   });
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
 
@@ -134,6 +137,7 @@ export default function InventoryPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     const response = await fetch("/api/inventory", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -142,8 +146,10 @@ export default function InventoryPage() {
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
       toastError(apiErrorMessage(data, t));
+      setSaving(false);
       return;
     }
+    setSaving(false);
     setForm({ warehouseId: "", productId: "", quantity: 1, movementType: "PURCHASE_IN", notes: "" });
     setShowForm(false);
     fetchInventory();
@@ -225,9 +231,7 @@ export default function InventoryPage() {
               <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-200">
                 {t("common.cancel")}
               </button>
-              <button type="submit" className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
-                {t("common.save")}
-              </button>
+              <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-emerald-600 hover:bg-emerald-700 text-white"><Save size={16} /></SubmitButton>
             </div>
           </form>
         </div>

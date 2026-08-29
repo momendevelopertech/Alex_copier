@@ -18,7 +18,27 @@ export async function GET() {
       },
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json(purchases);
+
+    const salesOrders = await prisma.salesOrder.findMany({
+      where: { id: { in: (await prisma.interCompanyInvoice.findMany({ select: { salesOrderId: true } })).filter(x => x.salesOrderId).map(x => x.salesOrderId!) } },
+      select: { id: true, items: { include: { product: true } } },
+    });
+
+    const intercompany = await prisma.interCompanyInvoice.findMany({
+      include: {
+        fromCompany: true,
+        toCompany: true,
+      },
+      orderBy: { createdAt: "desc" },
+    }).then((rows) => rows.map((inv) => {
+      const so = salesOrders.find((s) => s.id === inv.salesOrderId);
+      return {
+        ...inv,
+        items: so?.items ?? [],
+      };
+    }));
+
+    return NextResponse.json({ orders: purchases, intercompany });
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch purchases" }, { status: 500 });
   }

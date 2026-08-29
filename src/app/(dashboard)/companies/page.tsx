@@ -9,6 +9,7 @@ import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import { useToast, useConfirm } from "@/components/UIProvider";
 import { Pencil, Plus, Printer, Save, Trash2 } from "lucide-react";
 import FormModal from "@/components/FormModal";
+import SubmitButton from "@/components/SubmitButton";
 
 interface CompanyData {
   id: string;
@@ -218,14 +219,7 @@ export default function CompaniesPage() {
           </div>
           <div className="md:col-span-2 lg:col-span-3 flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
             <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Save size={16} />
-              {saving ? t("common.saving") : t("common.save")}
-            </button>
+            <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-blue-600 hover:bg-blue-700 text-white"><Save size={16} /></SubmitButton>
           </div>
         </form>
       </FormModal>
@@ -252,6 +246,26 @@ export default function CompaniesPage() {
       </div>
 
       <div className="mb-5"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("common.company")}...`} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 md:max-w-md" /></div>
+
+      {companies.length > 0 && (
+        <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+          {companies.map((company) => {
+            const active = selectedId === company.id;
+            return (
+              <button
+                key={company.id}
+                onClick={() => setSelectedId(active ? null : company.id)}
+                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+                  active ? "bg-indigo-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <span className="text-base">{COMPANY_ICONS[company.name] || "🏢"}</span>
+                {company.nameAr || company.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {companies.filter(company => [company.name, company.nameAr].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())).map((company) => (

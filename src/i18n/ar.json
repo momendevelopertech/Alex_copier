@@ -426,7 +426,12 @@
       "cancelled": "ملغي"
     },
     "searchPlaceholder": "ابحث بالمورد أو الشركة أو رقم الطلب...",
-    "companyFilter": "الشركة"
+    "companyFilter": "الشركة",
+    "intercompanyTitle": "الشراءات الداخلية بين الشركات",
+    "intercompanyHint": "فواتير شراء داخلية تُنشأ تلقائياً عند البيع الداخلي",
+    "sellerCompany": "الشركة البائعة",
+    "buyerCompany": "الشركة المشترية",
+    "credit": "آجل"
   },
   "sales": {
     "title": "المبيعات",
@@ -461,7 +466,14 @@
     "searchPlaceholder": "ابحث برقم الطلب أو العميل أو المنتج أو النوع...",
     "companyFilter": "الشركة",
     "typeFilter": "نوع الطلب",
-    "dateFrom": ""
+    "dateFrom": "",
+    "interCompanySale": "بيع داخلي",
+    "interCompanyHint": "عملية بيع داخلي من شركة إلى أخرى ثم بيع عادي للعميل في نفس اللحظة. الكمية تُنقص من مخزون شركة المصدر.",
+    "fromCompany": "شركة المصدر (صاحبة المخزون)",
+    "toCompany": "شركة الوجهة (التي تبيع للعميل)",
+    "interCompanyPayment": "طريقة دفع البيع الداخلي",
+    "interCompanyPrice": "سعر الشراء الداخلي",
+    "costPrice": "سعر التكلفة"
   },
   "inventory": {
     "title": "المخزون",
@@ -709,6 +721,7 @@
     "REQUEST_FIELDS_REQUIRED": "العميل ووصف المشكلة مطلوبان",
     "INVALID_PRIORITY": "قيمة الأولوية غير صالحة",
     "SALE_FIELDS_REQUIRED": "بيانات البيع غير مكتملة",
+    "INTERCOMPANY_FIELDS_REQUIRED": "اختر شركة المصدر وشركة الوجهة والعميل",
     "INVALID_SALE_ITEMS": "بنود البيع غير صالحة",
     "CONTRACT_FIELDS_REQUIRED": "العميل وتاريخا البداية والنهاية مطلوبان",
     "LINKED_USER_MUST_BE_ENGINEER": "الحساب المرتبط يجب أن يكون بدور مهندس",

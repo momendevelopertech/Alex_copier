@@ -8,6 +8,9 @@ import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 import FormModal from "@/components/FormModal";
+import SubmitButton from "@/components/SubmitButton";
+import { DateTimeCell } from "@/components/DateTimeCell";
+import { Save } from "lucide-react";
 
 interface Machine {
   id: string;
@@ -43,6 +46,7 @@ export default function WorkshopPage() {
   const { t, dir } = useI18n();
   const [machines, setMachines] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [scrapTarget, setScrapTarget] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -102,11 +106,13 @@ export default function WorkshopPage() {
 
   const handleScrap = async (e: React.FormEvent, machineId: string) => {
     e.preventDefault();
+    setSaving(true);
     await fetch(`/api/workshop/${machineId}/scrap`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(scrapForm),
     });
+    setSaving(false);
     setScrapForm({ reason: "", approvedBy: "", scrapValue: 0 });
     setScrapTarget(null);
     fetchMachines();
@@ -171,7 +177,7 @@ export default function WorkshopPage() {
                         {STATUS_LABELS[machine.status] || machine.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm">{machine.purchaseDate ? new Date(machine.purchaseDate).toLocaleDateString("ar-EG") : "-"}</td>
+                    <td className="px-4 py-3 text-sm"><DateTimeCell value={machine.purchaseDate} /></td>
                     <td className="px-4 py-3 text-sm max-w-xs truncate">{machine.notes || "-"}</td>
                     <td className="px-4 py-3 text-sm">
                       <button
@@ -226,7 +232,7 @@ export default function WorkshopPage() {
           </div>
           <div className="md:col-span-2 flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
             <button type="button" onClick={() => setScrapTarget(null)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
-            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700">{t("common.submit")}</button>
+            <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-red-600 hover:bg-red-700 text-white"><Save size={16} /></SubmitButton>
           </div>
         </form>
       </FormModal>

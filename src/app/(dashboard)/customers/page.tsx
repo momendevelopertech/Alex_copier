@@ -14,6 +14,7 @@ import { useConfirm, useToast } from "@/components/UIProvider";
 import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 import { apiErrorMessage } from "@/lib/api-client";
 import FormModal from "@/components/FormModal";
+import SubmitButton from "@/components/SubmitButton";
 
 interface CustomerLocation {
   id: string;
@@ -114,6 +115,7 @@ export default function CustomersPage() {
   const [paymentNotes, setPaymentNotes] = useState("");
   const [paymentCompanyId, setPaymentCompanyId] = useState("");
   const [savingPayment, setSavingPayment] = useState(false);
+  const [savingLocation, setSavingLocation] = useState(false);
   const PAGE_SIZE = 15;
 
   const fetchCustomers = async () => {
@@ -304,6 +306,7 @@ export default function CustomersPage() {
     e.preventDefault();
     if (!selected) return;
     setLocError("");
+    setSavingLocation(true);
     const res = await fetch(
       editingLocationId ? `/api/locations/${editingLocationId}` : `/api/customers/${selected.id}/locations`,
       {
@@ -313,6 +316,7 @@ export default function CustomersPage() {
       },
     );
     const data = await res.json().catch(() => null);
+    setSavingLocation(false);
     if (!res.ok) {
       setLocError(apiErrorMessage(data, t));
       return;
@@ -365,7 +369,7 @@ export default function CustomersPage() {
     }
   };
 
-  const date = (value: string) => new Date(value).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-GB");
+  const date = (value: string) => value ? `${new Date(value).toLocaleDateString("en-GB")} ${new Date(value).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : "—";
   const isOpen = (status: string) => !["RESOLVED", "CLOSED"].includes(status);
 
   return (
@@ -482,9 +486,7 @@ export default function CustomersPage() {
           )}
           <div className="md:col-span-3 flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
             <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
-            <button type="submit" disabled={saving} className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">
-              <Save size={16} />{saving ? t("common.saving") : t("common.save")}
-            </button>
+            <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-blue-600 hover:bg-blue-700 text-white"><Save size={16} /></SubmitButton>
           </div>
         </form>
       </FormModal>
@@ -611,7 +613,7 @@ export default function CustomersPage() {
                   </div>
                   <div className="flex items-end justify-end gap-2">
                     <button type="button" onClick={resetLocForm} className="rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-100">{t("common.cancel")}</button>
-                    <button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">{t("common.save")}</button>
+                    <SubmitButton loading={savingLocation} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-blue-600 hover:bg-blue-700 text-white"><Save size={16} /></SubmitButton>
                   </div>
                 </form>
               )}
@@ -825,9 +827,7 @@ export default function CustomersPage() {
           </div>
           <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
             <button type="button" onClick={() => { setShowPaymentModal(false); setPaymentCustomer(null); }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
-            <button type="submit" disabled={savingPayment} className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 disabled:opacity-40">
-              {savingPayment ? "جاري الحفظ..." : "تسجيل الدفعة"}
-            </button>
+            <SubmitButton loading={savingPayment} label="تسجيل الدفعة" loadingLabel={t("common.saving")} className="bg-green-600 hover:bg-green-700 text-white"><Save size={16} /></SubmitButton>
           </div>
         </form>
       </FormModal>

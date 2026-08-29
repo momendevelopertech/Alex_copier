@@ -12,11 +12,13 @@ import { Save, Trash2, X } from "lucide-react";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
+import { DateTimeCell } from "@/components/DateTimeCell";
 import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 import FormModal from "@/components/FormModal";
 import SelectWithAdd from "@/components/SelectWithAdd";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
+import SubmitButton from "@/components/SubmitButton";
 
 const PRIORITY_LABELS: Record<string, string> = {
   NORMAL: "عادي",
@@ -92,6 +94,7 @@ export default function ServiceRequestsPage() {
   const myEngineerId = engineers.find((engineer) => engineer.user?.id === session?.user?.id || engineer.userId === session?.user?.id)?.id ?? null;
   const [machines, setMachines] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [assignEngineerId, setAssignEngineerId] = useState("");
@@ -139,6 +142,7 @@ export default function ServiceRequestsPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     await fetch("/api/service-requests", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -148,6 +152,7 @@ export default function ServiceRequestsPage() {
         machineId: form.machineId || undefined,
       }),
     });
+    setSaving(false);
     setForm({ customerId: "", locationId: "", machineId: "", description: "", priority: "NORMAL" });
     setShowForm(false);
     fetchData();
@@ -313,7 +318,7 @@ export default function ServiceRequestsPage() {
           </div>
           <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
             <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"><X size={16} className="ms-1 inline-block" />{t("common.cancel")}</button>
-            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"><Save size={16} />{t("common.save")}</button>
+            <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-blue-600 hover:bg-blue-700 text-white"><Save size={16} /></SubmitButton>
           </div>
         </form>
       </FormModal>
@@ -393,7 +398,7 @@ export default function ServiceRequestsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm">{req.engineer?.name || "-"}</td>
-                    <td className="px-4 py-3 text-sm">{new Date(req.createdAt).toLocaleDateString("ar-EG")}</td>
+                    <td className="px-4 py-3 text-sm"><DateTimeCell value={req.createdAt} /></td>
                     <td className="px-4 py-3 text-sm text-center">{req.problems.length}</td>
                     <td className="px-4 py-3 text-sm">{renderStars(req.customerRating)}</td>
                     <td className="px-4 py-3 text-sm">

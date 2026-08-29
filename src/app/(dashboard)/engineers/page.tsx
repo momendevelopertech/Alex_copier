@@ -6,11 +6,13 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
-import { Pencil, Plus, Trash2, Package, Eye } from "lucide-react";
+import { Pencil, Plus, Trash2, Package, Eye, Save } from "lucide-react";
 import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
 import FormModal from "@/components/FormModal";
+import SubmitButton from "@/components/SubmitButton";
+import { DateTimeCell } from "@/components/DateTimeCell";
 
 interface EngineerArea {
   id: string;
@@ -86,6 +88,7 @@ export default function EngineersPage() {
   const [form, setForm] = useState(emptyForm);
   const [selectedAccount, setSelectedAccount] = useState<LinkableUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<Engineer | null>(null);
   const [engineerSales, setEngineerSales] = useState<SalesOrder[]>([]);
   const [salesLoading, setSalesLoading] = useState(false);
@@ -213,6 +216,7 @@ export default function EngineersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     const body = {
       name: form.name,
       phone: form.phone || null,
@@ -230,6 +234,7 @@ export default function EngineersPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+    setSaving(false);
     setForm(emptyForm);
     setSelectedAccount(null);
     setEditingId(null);
@@ -351,7 +356,7 @@ export default function EngineersPage() {
           </div>
           <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end md:col-span-2 lg:col-span-3">
             <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
-            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">{t("common.save")}</button>
+            <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-blue-600 hover:bg-blue-700 text-white"><Save size={16} /></SubmitButton>
           </div>
         </form>
       </FormModal>
@@ -424,7 +429,7 @@ export default function EngineersPage() {
                           <td className="px-4 py-2.5 text-sm">{sale.company?.nameAr || sale.company?.name || "—"}</td>
                           <td className="px-4 py-2.5 text-sm">{sale.items?.map((item) => item.product?.name).filter(Boolean).join(", ") || "—"}</td>
                           <td className="px-4 py-2.5 text-sm font-semibold">{sale.total.toLocaleString()}</td>
-                          <td className="px-4 py-2.5 text-sm text-gray-500">{new Date(sale.orderDate).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-GB")}</td>
+                          <td className="px-4 py-2.5 text-sm text-gray-500"><DateTimeCell value={sale.orderDate} /></td>
                         </tr>
                       ))}
                     </tbody>

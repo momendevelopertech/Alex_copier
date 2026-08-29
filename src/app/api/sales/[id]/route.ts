@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePageAccess } from "@/lib/auth-helpers";
+import { recalculatePaymentStatus } from "@/lib/payment-status";
 
 export async function GET(
   request: Request,
@@ -37,22 +38,261 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
+    const { items, installments, ...raw } = body;
 
-    const sale = await prisma.salesOrder.update({
+    if (!raw.companyId || !raw.customerId || !raw.orderType || !raw.paymentMethod || !Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ error: "بيانات البيع غير مكتملة", code: "SALE_FIELDS_REQUIRED" }, { status: 400 });
+    }
+    if (items.some((item: { productId?: string; quantity?: number; unitPrice?: number }) => !item.productId || !Number.isInteger(item.quantity) || (item.quantity ?? 0) <= 0 || !Number.isFinite(item.unitPrice) || (item.unitPrice ?? -1) < 0)) {
+      return NextResponse.json({ error: "بنود البيع غير صالحة", code: "INVALID_SALE_ITEMS" }, { status: 400 });
+    }
+
+    const existing = await prisma.salesOrder.findUnique({
       where: { id },
-      data: body,
       include: {
-        customer: true,
-        items: {
-          include: { product: true, tradeInProduct: true },
-        },
-        installments: true,
+        items: { include: { tradeInProduct: true } },
+        installments: { select: { id: true } },
+        returns: { select: { status: true } },
       },
     });
+    if (!existing) {
+      return NextResponse.json({ error: "فاتورة البيع غير موجودة", code: "SALE_NOT_FOUND" }, { status: 404 });
+    }
+    const hasActiveReturns = existing.returns.some(
+      (r) => r.status === "APPROVED" || r.status === "COMPLETED"
+    );
+    if (hasActiveReturns) {
+      return NextResponse.json({ error: "لا يمكن تعديل فاتورة لها مرتجعات مقبولة. احذف المرتجعات أولاً", code: "HAS_ACTIVE_RETURNS" }, { status: 400 });
+    }
 
-    return NextResponse.json(sale);
+    const resolvedTaxRate = raw.isTaxInvoice ? 14 : Number(raw.taxRate) || 0;
+    const companyId = String(raw.companyId).trim();
+    const customerId = String(raw.customerId).trim();
+    const orderType = String(raw.orderType).trim() as "MACHINE_SALE" | "SPARE_PART_SALE";
+    const paymentMethod = String(raw.paymentMethod).trim() as "CASH" | "CREDIT" | "INSTALLMENT" | "MIXED";
+    const notes = raw.notes ? String(raw.notes) : null;
+    const engineerId = typeof raw.engineerId === "string" && raw.engineerId.trim() ? raw.engineerId : null;
+    const discountVal = Math.max(0, Number(raw.discount) || 0);
+    const discountType = (raw.discountType === "PERCENTAGE" ? "PERCENTAGE" : "FIXED") as "FIXED" | "PERCENTAGE";
+    const isTaxInvoice = Boolean(raw.isTaxInvoice);
+
+    const subtotal = items.reduce(
+      (sum: number, item: { quantity: number; unitPrice: number; discount?: number }) =>
+        sum + item.quantity * item.unitPrice - Math.min(item.discount ?? 0, item.quantity * item.unitPrice),
+      0
+    );
+    const orderDiscount = discountType === "PERCENTAGE" ? subtotal * Math.min(discountVal, 100) / 100 : Math.min(discountVal, subtotal);
+    const taxable = subtotal - orderDiscount;
+    const total = Math.round((taxable + taxable * Math.max(0, resolvedTaxRate) / 100) * 100) / 100;
+
+    const warehouse = await prisma.warehouse.findFirst({
+      where: { companyId, isMain: true },
+      select: { id: true },
+    });
+
+    // Original debt contribution (reverse) — matches the POST forward logic
+    const originalDebt = existing.paymentMethod !== "CASH" ? existing.total : 0;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      // 1) Reverse stock from the ORIGINAL order using recorded movements
+      const stockMovements = await tx.stockMovement.findMany({ where: { referenceId: id } });
+      for (const movement of stockMovements) {
+        if (movement.movementType === "SALE_OUT") {
+          await tx.warehouseInventory.upsert({
+            where: { warehouseId_productId: { warehouseId: movement.warehouseId, productId: movement.productId } },
+            update: { quantity: { increment: movement.quantity } },
+            create: { warehouseId: movement.warehouseId, productId: movement.productId, quantity: movement.quantity },
+          });
+        } else if (movement.movementType === "PURCHASE_IN") {
+          await tx.warehouseInventory.upsert({
+            where: { warehouseId_productId: { warehouseId: movement.warehouseId, productId: movement.productId } },
+            update: { quantity: { decrement: movement.quantity } },
+            create: { warehouseId: movement.warehouseId, productId: movement.productId, quantity: 0 },
+          });
+        }
+      }
+      await tx.stockMovement.deleteMany({ where: { referenceId: id } });
+
+      // 2) Remove original line items + trade-in products
+      const oldTradeInProductIds = existing.items
+        .map((it) => it.tradeInProductId)
+        .filter((pid): pid is string => Boolean(pid));
+      await tx.salesOrderItem.deleteMany({ where: { salesOrderId: id } });
+      if (oldTradeInProductIds.length > 0) {
+        await tx.product.deleteMany({ where: { id: { in: oldTradeInProductIds } } });
+      }
+      // 3) Remove installments (will be recreated if provided)
+      if (existing.installments.length > 0) {
+        await tx.installment.deleteMany({ where: { salesOrderId: id } });
+      }
+
+      // 4) Reverse original customer debt
+      if (originalDebt > 0) {
+        await tx.customer.update({
+          where: { id: existing.customerId },
+          data: { totalDebt: { decrement: originalDebt }, remainingDebt: { decrement: originalDebt } },
+        });
+        await tx.customerLedger.upsert({
+          where: { customerId_companyId: { customerId: existing.customerId, companyId: existing.companyId } },
+          update: { balance: { decrement: originalDebt } },
+          create: { customerId: existing.customerId, companyId: existing.companyId, balance: 0 },
+        });
+      }
+
+      // 5) Deduct new stock
+      if (warehouse) {
+        for (const item of items as { productId: string; quantity: number }[]) {
+          const iv = await tx.warehouseInventory.findUnique({
+            where: { warehouseId_productId: { warehouseId: warehouse.id, productId: item.productId } },
+          });
+          const available = iv?.quantity ?? 0;
+          if (available < item.quantity || !iv) {
+            throw new Error(`INSUFFICIENT_STOCK:${item.productId}`);
+          }
+          await tx.warehouseInventory.update({
+            where: { warehouseId_productId: { warehouseId: warehouse.id, productId: item.productId } },
+            data: { quantity: available - item.quantity },
+          });
+        }
+      }
+
+      const installmentData = Array.isArray(installments) && installments.length > 0
+        ? {
+            create: installments.map(
+              (inst: { installmentNo: number; amount: number; dueDate: string }) => ({
+                installmentNo: inst.installmentNo,
+                amount: inst.amount,
+                dueDate: new Date(inst.dueDate),
+              })
+            ),
+          }
+        : undefined;
+
+      // 6) Update the order header (keep same id to preserve references)
+      await tx.salesOrder.update({
+        where: { id },
+        data: {
+          companyId,
+          customerId,
+          engineerId,
+          orderType,
+          paymentMethod,
+          notes,
+          discount: discountVal,
+          discountType,
+          taxRate: resolvedTaxRate,
+          isTaxInvoice,
+          total,
+          paidAmount: paymentMethod === "CASH" ? total : 0,
+          tradeInTotal: 0,
+          ...(installmentData && { installments: installmentData }),
+        },
+      });
+
+      // 7) Apply new customer debt
+      if (paymentMethod !== "CASH") {
+        await tx.customer.update({
+          where: { id: customerId },
+          data: { totalDebt: { increment: total }, remainingDebt: { increment: total } },
+        });
+        await tx.customerLedger.upsert({
+          where: { customerId_companyId: { customerId, companyId } },
+          update: { balance: { increment: total } },
+          create: { customerId, companyId, balance: total },
+        });
+      }
+
+      // 8) Create new items + trade-in
+      let tradeInTotal = 0;
+      for (const item of items as {
+        productId: string;
+        quantity: number;
+        unitPrice: number;
+        discount?: number;
+        tradeIn?: { name: string; brand?: string; condition?: string; value: number; serialNumber?: string };
+      }[]) {
+        let tradeInProductId: string | undefined;
+        if (item.tradeIn && item.tradeIn.value > 0) {
+          const tradeInProduct = await tx.product.create({
+            data: {
+              name: item.tradeIn.name,
+              productType: orderType === "MACHINE_SALE" ? "MACHINE" : "SPARE_PART",
+              companyId,
+              isTradeIn: true,
+              tradeInValue: item.tradeIn.value,
+              brand: item.tradeIn.brand || null,
+              condition: item.tradeIn.condition || null,
+              description: item.tradeIn.serialNumber ? `S/N: ${item.tradeIn.serialNumber}` : null,
+            },
+          });
+          tradeInProductId = tradeInProduct.id;
+          tradeInTotal += item.tradeIn.value;
+          if (warehouse) {
+            await tx.warehouseInventory.create({
+              data: { warehouseId: warehouse.id, productId: tradeInProduct.id, quantity: 1 },
+            });
+            await tx.stockMovement.create({
+              data: {
+                warehouseId: warehouse.id,
+                productId: tradeInProduct.id,
+                quantity: 1,
+                movementType: "PURCHASE_IN",
+                referenceId: id,
+                notes: `منتج استبدال — ${item.tradeIn.name}`,
+              },
+            });
+          }
+        }
+        await tx.salesOrderItem.create({
+          data: {
+            salesOrderId: id,
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            discount: Math.min(item.discount ?? 0, item.quantity * item.unitPrice),
+            tradeInProductId: tradeInProductId || null,
+            tradeInValue: item.tradeIn?.value || 0,
+          },
+        });
+        if (warehouse) {
+          await tx.stockMovement.create({
+            data: {
+              warehouseId: warehouse.id,
+              productId: item.productId,
+              quantity: item.quantity,
+              movementType: "SALE_OUT",
+              referenceId: id,
+              notes: `بيع — ${orderType} — ${id}`,
+            },
+          });
+        }
+      }
+
+      if (tradeInTotal > 0) {
+        await tx.salesOrder.update({ where: { id }, data: { tradeInTotal } });
+      }
+
+      await recalculatePaymentStatus(tx, id);
+
+      return tx.salesOrder.findUnique({
+        where: { id },
+        include: {
+          customer: true,
+          company: true,
+          engineer: true,
+          items: { include: { product: true, tradeInProduct: true } },
+          installments: true,
+        },
+      });
+    }, { timeout: 120000 });
+
+    return NextResponse.json(updated);
   } catch (error) {
-    return NextResponse.json({ error: "Failed to update sales order" }, { status: 500 });
+    if (error instanceof Error && error.message.startsWith("INSUFFICIENT_STOCK")) {
+      return NextResponse.json({ error: "الكمية المتاحة في المخزون لا تكفي لهذه الحركة", code: "INSUFFICIENT_STOCK" }, { status: 409 });
+    }
+    console.error("Failed to update sales order:", error);
+    return NextResponse.json({ error: "Failed to update sales order", detail: error instanceof Error ? error.message : undefined }, { status: 500 });
   }
 }
 

@@ -12,6 +12,8 @@ import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
 import FormModal from "@/components/FormModal";
+import SubmitButton from "@/components/SubmitButton";
+import { DateTimeCell } from "@/components/DateTimeCell";
 
 interface Company {
   id: string;
@@ -271,13 +273,7 @@ export default function WarehousesPage() {
           </div>
           <div className="md:col-span-3 flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
             <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Save size={16} />{saving ? t("common.saving") : t("common.save")}
-            </button>
+            <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-blue-600 hover:bg-blue-700 text-white"><Save size={16} /></SubmitButton>
           </div>
         </form>
       </FormModal>
@@ -361,7 +357,7 @@ export default function WarehousesPage() {
                       {detailMovements.map((m, idx) => (
                         <tr key={m.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm text-gray-500">{idx + 1}</td>
-                          <td className="px-4 py-3 text-sm text-gray-500">{new Date(m.createdAt).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US")}</td>
+                          <td className="px-4 py-3 text-sm text-gray-500"><DateTimeCell value={m.createdAt} /></td>
                           <td className="px-4 py-3 text-sm font-medium">{m.product?.name || "—"}</td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${isIncoming(m.movementType) ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>

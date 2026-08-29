@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/i18n/context";
 import PrinterLoader from "@/components/PrinterLoader";
+import { DateTimeCell } from "@/components/DateTimeCell";
 
 interface ReportPayload {
   contracts: Array<{
@@ -384,7 +385,7 @@ export default function ReportsPage() {
                               <tr key={item.id} className="border-t border-gray-100 hover:bg-white">
                                 <td className="px-4 py-3 text-sm font-medium">{item.serialNumber}</td>
                                 <td className="px-4 py-3 text-sm">{item.machineName}</td>
-                                <td className="px-4 py-3 text-sm">{new Date(item.warrantyEnd).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-GB")}</td>
+                                <td className="px-4 py-3 text-sm"><DateTimeCell value={item.warrantyEnd} /></td>
                                 <td className="px-4 py-3 text-sm">
                                   <span className={item.daysLeft <= 30 ? "inline-flex rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700" : "inline-flex rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-700"}>
                                     {item.daysLeft <= 0 ? `منتهي (${item.daysLeft} يوم)` : `${item.daysLeft} يوم متبقي`}
@@ -437,7 +438,7 @@ export default function ReportsPage() {
                             {(report?.investorDistribution ?? []).flatMap((cycle) =>
                               cycle.distributions.map((distribution) => (
                                 <tr key={`${cycle.id}-${distribution.investor}`} className="border-t border-gray-100 hover:bg-white">
-                                  <td className="px-4 py-3 text-sm">{new Date(cycle.cycleDate).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-GB")}</td>
+                                  <td className="px-4 py-3 text-sm"><DateTimeCell value={cycle.cycleDate} /></td>
                                   <td className="px-4 py-3 text-sm">{distribution.investor}</td>
                                   <td className="px-4 py-3 text-sm font-medium">{moneyFormatter(distribution.amount, locale)}</td>
                                 </tr>

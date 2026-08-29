@@ -12,10 +12,12 @@ import SelectWithAdd from "@/components/SelectWithAdd";
 import { CheckCircle2, Plus, Save, Trash2 } from "lucide-react";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
 import ExportButton from "@/components/ExportButton";
+import { DateTimeCell } from "@/components/DateTimeCell";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 import { apiErrorMessage } from "@/lib/api-client";
+import SubmitButton from "@/components/SubmitButton";
 
 interface Company { id: string; name: string; }
 interface Customer { id: string; name: string; }
@@ -45,6 +47,7 @@ export default function SettlementsPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [engineers, setEngineers] = useState<Engineer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const urlParams = useUrlParams(["focus"]);
   const focusedSettlement = urlParams.focus ? settlements.find((s) => s.id === urlParams.focus) : undefined;
@@ -75,10 +78,12 @@ export default function SettlementsPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     await fetch("/api/settlements", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...form, amount: parseFloat(form.amount) || 0, customerId: form.customerId || undefined, engineerId: form.engineerId || undefined, collectedBy: "" }),
     });
+    setSaving(false);
     setForm({ companyId: "", customerId: "", engineerId: "", amount: "", paymentMethod: "CASH", reason: "" });
     setShowForm(false); fetchData();
   };
@@ -211,7 +216,7 @@ export default function SettlementsPage() {
             <input type="text" placeholder={t("settlements.reason")} value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className={INPUT} required />
           </div>
           <div className="md:col-span-2 flex gap-2">
-            <button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"><Save size={16} />{t("common.save")}</button>
+            <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-sky-600 hover:bg-sky-700 text-white"><Save size={16} /></SubmitButton>
             <button type="button" onClick={() => setShowForm(false)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">{t("common.cancel")}</button>
           </div>
         </form>
@@ -278,7 +283,7 @@ export default function SettlementsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm">{s.collector.name}</td>
-                      <td className="px-4 py-3 text-sm">{new Date(s.createdAt).toLocaleDateString("ar-EG")}</td>
+                      <td className="px-4 py-3 text-sm"><DateTimeCell value={s.createdAt} /></td>
                       <td className="px-4 py-3 text-sm">
                         {s.status === "INITIAL" && canVerify && (<button onClick={() => handleVerify(s.id)} className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700"><CheckCircle2 size={14} className="inline-block me-1" />{t("common.verify")}</button>)}
                         {s.status === "INITIAL" && (<button onClick={() => handleDelete(s.id)} className="ms-1 inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-600 transition hover:bg-red-100" title={t("common.delete")}><Trash2 size={12} /></button>)}

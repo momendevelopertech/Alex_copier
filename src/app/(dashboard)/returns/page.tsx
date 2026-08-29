@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
-import { Plus, RotateCcw, ArrowDownLeft, ArrowUpRight, Trash2, Pencil, Eye, Printer, FileText } from "lucide-react";
+import { Plus, RotateCcw, ArrowDownLeft, ArrowUpRight, Trash2, Pencil, Eye, Printer, FileText, Save } from "lucide-react";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import FormModal from "@/components/FormModal";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useI18n } from "@/i18n/context";
 import { useToast } from "@/components/UIProvider";
+import SubmitButton from "@/components/SubmitButton";
+import { DateTimeCell } from "@/components/DateTimeCell";
 
 interface Company { id: string; name: string; nameAr?: string; }
 interface Customer { id: string; name: string; }
@@ -88,6 +90,7 @@ export default function ReturnsPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
@@ -239,6 +242,7 @@ export default function ReturnsPage() {
       return;
     }
 
+    setSaving(true);
     try {
       const res = await fetch("/api/returns", {
         method: "POST",
@@ -264,6 +268,8 @@ export default function ReturnsPage() {
       toastSuccess("تم تسجيل المرتجع بنجاح");
     } catch {
       toastError("حدث خطأ أثناء تسجيل المرتجع");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -494,7 +500,7 @@ export default function ReturnsPage() {
                   <option value="">{t("common.selectOption")}</option>
                   {salesOrders.map((order) => (
                     <option key={order.id} value={order.id}>
-                      {order.id.slice(0, 8)} — {order.customer?.name || ""} — {new Date(order.orderDate).toLocaleDateString("ar-EG")}
+                      {order.id.slice(0, 8)} — {order.customer?.name || ""} — {new Date(order.orderDate).toLocaleDateString("en-GB")} {new Date(order.orderDate).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
                     </option>
                   ))}
                 </select>
@@ -568,9 +574,7 @@ export default function ReturnsPage() {
             <button type="button" onClick={() => { setShowForm(false); resetForm(); }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
               {t("common.cancel")}
             </button>
-            <button type="submit" className="rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-700">
-              {t("common.save")}
-            </button>
+            <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-violet-600 hover:bg-violet-700 text-white"><Save size={16} /></SubmitButton>
           </div>
         </form>
       </FormModal>
@@ -588,7 +592,7 @@ export default function ReturnsPage() {
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("returns.unitPrice")}</span><span className="mt-1 block font-medium">{viewingReturn.unitPrice.toLocaleString()}</span></div>
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("returns.total")}</span><span className="mt-1 block font-bold">{viewingReturn.total.toLocaleString()}</span></div>
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("common.status")}</span><span className={`mt-1 block rounded-full px-2 py-0.5 text-xs font-medium inline-block w-fit ${statusClasses[viewingReturn.status]}`}>{RETURN_STATUS_LABELS[viewingReturn.status]}</span></div>
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("common.date")}</span><span className="mt-1 block font-medium">{new Date(viewingReturn.createdAt).toLocaleDateString("ar-EG")}</span></div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("common.date")}</span><span className="mt-1 block font-medium"><DateTimeCell value={viewingReturn.createdAt} /></span></div>
             </div>
             {viewingReturn.reason && (
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm"><span className="block text-xs text-gray-500 mb-1">{t("common.notes")}</span><p>{viewingReturn.reason}</p></div>

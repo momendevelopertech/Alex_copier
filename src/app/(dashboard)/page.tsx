@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/context";
 import Link from "next/link";
 import PrinterLoader from "@/components/PrinterLoader";
+import { DateTimeCell } from "@/components/DateTimeCell";
 import type { AlertKind, DashboardPayload } from "@/lib/dashboard";
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -569,7 +570,7 @@ export default function Dashboard() {
                       {request.engineerName ?? "—"}
                     </td>
                     <td className="py-2 px-2 text-xs text-gray-400 whitespace-nowrap">
-                      {new Date(request.createdAt).toLocaleDateString("ar-EG")}
+                      <DateTimeCell value={request.createdAt} />
                     </td>
                   </tr>
                 ))}

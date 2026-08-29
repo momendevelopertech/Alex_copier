@@ -11,6 +11,7 @@ import { AddFormBoundary } from "@/hooks/useAutoAddForm";
 import { useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
 import FormModal from "@/components/FormModal";
+import { DateTimeCell } from "@/components/DateTimeCell";
 import { RotateCcw, Save, X } from "lucide-react";
 
 interface Company {
@@ -208,7 +209,7 @@ export default function TradeInsPage() {
                       <span className="font-bold text-amber-600">{(product.tradeInValue || 0).toLocaleString("ar-EG")} ج.م</span>
                     </td>
                     <td className="px-4 py-3 text-slate-700">{product.company?.name || "—"}</td>
-                    <td className="px-4 py-3 text-gray-500">{new Date(product.createdAt).toLocaleDateString("ar-EG")}</td>
+                    <td className="px-4 py-3 text-gray-500"><DateTimeCell value={product.createdAt} /></td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         <button onClick={() => setShowView(product)} className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2 text-xs font-medium text-blue-600 transition hover:bg-blue-100" title="عرض">
@@ -240,7 +241,7 @@ export default function TradeInsPage() {
               <div><span className="text-xs font-medium text-gray-500">النوع</span><p className="mt-1 text-sm text-slate-900">{showView.productType === "MACHINE" ? "ماكينة" : "قطعة غيار"}</p></div>
               <div><span className="text-xs font-medium text-gray-500">الشركة</span><p className="mt-1 text-sm text-slate-900">{showView.company?.name || "—"}</p></div>
               <div><span className="text-xs font-medium text-gray-500">الحالة النشطة</span><p className="mt-1 text-sm text-slate-900">{showView.isActive ? "نشط" : "غير نشط"}</p></div>
-              <div><span className="text-xs font-medium text-gray-500">تاريخ الإضافة</span><p className="mt-1 text-sm text-slate-900">{new Date(showView.createdAt).toLocaleDateString("ar-EG")}</p></div>
+              <div><span className="text-xs font-medium text-gray-500">تاريخ الإضافة</span><p className="mt-1 text-sm text-slate-900"><DateTimeCell value={showView.createdAt} /></p></div>
             </div>
           </div>
         </FormModal>

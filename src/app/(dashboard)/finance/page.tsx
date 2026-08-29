@@ -11,6 +11,8 @@ import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import FormModal from "@/components/FormModal";
+import SubmitButton from "@/components/SubmitButton";
+import { DateTimeCell } from "@/components/DateTimeCell";
 
 interface Company { id: string; name: string; }
 interface Expense {
@@ -23,6 +25,7 @@ export default function FinancePage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [companyFilter, setCompanyFilter] = useState("");
@@ -84,10 +87,12 @@ export default function FinancePage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     await fetch("/api/expenses", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...form, amount: parseFloat(form.amount) || 0, paidBy: "" }),
     });
+    setSaving(false);
     setForm({ companyId: "", category: "", description: "", amount: "" });
     setShowForm(false); fetchData();
   };
@@ -114,7 +119,7 @@ export default function FinancePage() {
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("common.description")}</label><textarea placeholder={t("common.description")} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" rows={2} required /></div>
             <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
               <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"><X size={16} className="ms-1 inline-block" />{t("common.cancel")}</button>
-              <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"><Save size={16} />{t("common.save")}</button>
+              <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-blue-600 hover:bg-blue-700 text-white"><Save size={16} /></SubmitButton>
             </div>
           </form>
         </FormModal>
@@ -161,7 +166,7 @@ export default function FinancePage() {
                 <tbody className="divide-y divide-gray-200">
                   {paged.map((expense) => (
                     <tr key={expense.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm">{new Date(expense.date || expense.createdAt).toLocaleDateString("ar-EG")}</td>
+                      <td className="px-4 py-3 text-sm"><DateTimeCell value={expense.date || expense.createdAt} /></td>
                       <td className="px-4 py-3 text-sm">{expense.category}</td>
                       <td className="px-4 py-3 text-sm">{expense.description}</td>
                       <td className="px-4 py-3 text-sm">{expense.amount.toLocaleString()}</td>

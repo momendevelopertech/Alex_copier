@@ -112,6 +112,10 @@ async function main() {
     { id: 'user-amr-maintenance', name: 'عمرو', email: 'amr.maintenance@alex-copier.com', role: 'MAINTENANCE_MANAGER' as const, companyId: company1.id },
     { id: 'user-ali', name: 'علي خالد', email: 'ali@alex-copier.com', role: 'WORKSHOP_MANAGER' as const, companyId: company1.id },
     { id: 'user-fatma', name: 'فاطمة عبدالله', email: 'fatma@alex-copier.com', role: 'SALES_EMPLOYEE' as const, companyId: company1.id },
+    // محاسب خاص بشركة جملة قطع غيار (company2)
+    { id: 'user-parts-accountant', name: 'كريم', email: 'parts.accountant@alex-copier.com', role: 'ACCOUNTANT' as const, companyId: company2.id },
+    // محاسب خاص بشركة القطاعي (company3)
+    { id: 'user-sectory-accountant', name: 'مروة', email: 'sectory.accountant@alex-copier.com', role: 'ACCOUNTANT' as const, companyId: company3.id },
   ];
 
   for (const u of users) {
@@ -1019,6 +1023,30 @@ async function main() {
     await prisma.account.create({ data: a });
   }
 
+  // حسابات خاصة بشركة جملة قطع غيار (company2) وشركة القطاعي (company3)
+  // حتى يمكن تسجيل البيع الداخلي والقيود المحاسبية لكل شركة على حدة
+  const companyAccounts = [
+    { id: 'acc2-1', code: '1001', name: 'الصندوق', accountType: 'ASSET' as const, companyId: company2.id, balance: 300000 },
+    { id: 'acc2-2', code: '1100', name: 'المدينون', accountType: 'ASSET' as const, companyId: company2.id, balance: 450000 },
+    { id: 'acc2-3', code: '1200', name: 'المخزون', accountType: 'ASSET' as const, companyId: company2.id, balance: 1800000 },
+    { id: 'acc2-4', code: '2001', name: 'الدائنون', accountType: 'LIABILITY' as const, companyId: company2.id, balance: 600000 },
+    { id: 'acc2-5', code: '3001', name: 'رأس المال', accountType: 'EQUITY' as const, companyId: company2.id, balance: 2000000 },
+    { id: 'acc2-6', code: '4001', name: 'إيرادات المبيعات', accountType: 'REVENUE' as const, companyId: company2.id, balance: 1500000 },
+    { id: 'acc2-7', code: '5001', name: 'تكلفة البضاعة المباعة', accountType: 'EXPENSE' as const, companyId: company2.id, balance: 950000 },
+
+    { id: 'acc3-1', code: '1001', name: 'الصندوق', accountType: 'ASSET' as const, companyId: company3.id, balance: 200000 },
+    { id: 'acc3-2', code: '1100', name: 'المدينون', accountType: 'ASSET' as const, companyId: company3.id, balance: 350000 },
+    { id: 'acc3-3', code: '1200', name: 'المخزون', accountType: 'ASSET' as const, companyId: company3.id, balance: 900000 },
+    { id: 'acc3-4', code: '2001', name: 'الدائنون', accountType: 'LIABILITY' as const, companyId: company3.id, balance: 400000 },
+    { id: 'acc3-5', code: '3001', name: 'رأس المال', accountType: 'EQUITY' as const, companyId: company3.id, balance: 1500000 },
+    { id: 'acc3-6', code: '4001', name: 'إيرادات المبيعات', accountType: 'REVENUE' as const, companyId: company3.id, balance: 1100000 },
+    { id: 'acc3-7', code: '5001', name: 'تكلفة البضاعة المباعة', accountType: 'EXPENSE' as const, companyId: company3.id, balance: 700000 },
+  ];
+
+  for (const a of companyAccounts) {
+    await prisma.account.create({ data: a });
+  }
+
   // -------------------------------------------
   // JOURNAL ENTRIES (5)
   // -------------------------------------------
@@ -1087,7 +1115,7 @@ async function main() {
   console.log('? Seed completed successfully!');
   console.log('?? Summary:');
   console.log('  - 3 companies');
-  console.log('  - 7 users');
+  console.log('  - 9 users');
   console.log('  - 15 customers with 25 locations');
   console.log('  - 5 suppliers');
   console.log('  - 6 engineers with areas and skills');
@@ -1107,7 +1135,7 @@ async function main() {
   console.log('  - 8 expenses');
   console.log('  - 10 warranties');
   console.log('  - 6 engineer salaries');
-  console.log('  - 10 accounts');
+  console.log('  - 24 accounts');
   console.log('  - 5 journal entries');
 }
 

@@ -8,7 +8,9 @@ import FilterSelect from "@/components/FilterSelect";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useConfirm } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
-import { Plus, Pencil, Power, Eye, EyeOff, X, Trash2 } from "lucide-react";
+import { Plus, Pencil, Power, Eye, EyeOff, X, Trash2, Save } from "lucide-react";
+import SubmitButton from "@/components/SubmitButton";
+import { DateTimeCell } from "@/components/DateTimeCell";
 
 interface User {
   id: string;
@@ -309,7 +311,7 @@ export default function SettingsPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                            {new Date(user.createdAt).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-GB")}
+                            <DateTimeCell value={user.createdAt} />
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1">
@@ -479,16 +481,7 @@ export default function SettingsPage() {
               >
                 {t("common.cancel")}
               </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {saving && (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" />
-                )}
-                {saving ? t("common.loading") : t("common.save")}
-              </button>
+              <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-blue-600 hover:bg-blue-700 text-white"><Save size={16} /></SubmitButton>
             </div>
           </form>
         </div>

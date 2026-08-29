@@ -6,11 +6,12 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
-import { Plus, Trash2, Upload } from "lucide-react";
+import { Plus, Trash2, Upload, Save } from "lucide-react";
 import ImportDialog from "@/components/ImportDialog";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import FormModal from "@/components/FormModal";
+import SubmitButton from "@/components/SubmitButton";
 
 interface Supplier {
   id: string;
@@ -48,6 +49,7 @@ const { success: toastSuccess } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [companyFilter, setCompanyFilter] = useState("");
   const [showImport, setShowImport] = useState(false);
   const [page, setPage] = useState(1);
@@ -105,11 +107,13 @@ const { success: toastSuccess } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     await fetch("/api/suppliers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
+    setSaving(false);
     setForm(emptyForm);
     setShowForm(false);
     fetchSuppliers();
@@ -172,7 +176,7 @@ const { success: toastSuccess } = useToast();
           </div>
           <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end md:col-span-2 lg:col-span-3">
             <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
-            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">{t("common.save")}</button>
+            <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-blue-600 hover:bg-blue-700 text-white"><Save size={16} /></SubmitButton>
           </div>
         </form>
       </FormModal>

@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useI18n } from "@/i18n/context";
 import { useToast } from "@/components/UIProvider";
 import PrinterLoader from "@/components/PrinterLoader";
+import { DateTimeCell } from "@/components/DateTimeCell";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 
@@ -90,9 +91,6 @@ const moneyFormatter = new Intl.NumberFormat("ar-EG", {
   currency: "EGP",
   maximumFractionDigits: 0,
 });
-
-const formatDate = (date: string) =>
-  new Date(date).toLocaleDateString("ar-EG");
 
 const STATUS_BADGE: Record<string, string> = {
   INITIAL: "bg-yellow-100 text-yellow-700",
@@ -360,7 +358,7 @@ export default function CompanyReportPage() {
                   <tbody>
                     {salesOrders.map((row) => (
                       <tr key={row.id} className="border-t border-gray-100 hover:bg-slate-50/50">
-                        <td className="px-4 py-3 text-sm">{formatDate(row.orderDate || row.createdAt)}</td>
+                        <td className="px-4 py-3 text-sm"><DateTimeCell value={row.orderDate || row.createdAt} /></td>
                         <td className="px-4 py-3 text-sm font-medium">{row.id.slice(0, 8)}</td>
                         <td className="px-4 py-3 text-sm">{row.customer?.name || "—"}</td>
                         <td className="px-4 py-3 text-sm">{statusBadge(row.paymentMethod)}</td>
@@ -398,7 +396,7 @@ export default function CompanyReportPage() {
                   <tbody>
                     {purchaseOrders.map((row) => (
                       <tr key={row.id} className="border-t border-gray-100 hover:bg-slate-50/50">
-                        <td className="px-4 py-3 text-sm">{formatDate(row.orderDate || row.createdAt)}</td>
+                        <td className="px-4 py-3 text-sm"><DateTimeCell value={row.orderDate || row.createdAt} /></td>
                         <td className="px-4 py-3 text-sm font-medium">{row.id.slice(0, 8)}</td>
                         <td className="px-4 py-3 text-sm">{row.supplier?.name || "—"}</td>
                         <td className="px-4 py-3 text-sm font-bold text-blue-700">{moneyFormatter.format(row.total)}</td>
@@ -434,7 +432,7 @@ export default function CompanyReportPage() {
                   <tbody>
                     {expenseItems.map((row) => (
                       <tr key={row.id} className="border-t border-gray-100 hover:bg-slate-50/50">
-                        <td className="px-4 py-3 text-sm">{formatDate(row.date)}</td>
+                        <td className="px-4 py-3 text-sm"><DateTimeCell value={row.date} /></td>
                         <td className="px-4 py-3 text-sm font-medium">{row.category}</td>
                         <td className="px-4 py-3 text-sm">{row.description}</td>
                         <td className="px-4 py-3 text-sm font-bold text-orange-700">{moneyFormatter.format(row.amount)}</td>
@@ -471,7 +469,7 @@ export default function CompanyReportPage() {
                   <tbody>
                     {settlementItems.map((row) => (
                       <tr key={row.id} className="border-t border-gray-100 hover:bg-slate-50/50">
-                        <td className="px-4 py-3 text-sm">{formatDate(row.createdAt)}</td>
+                        <td className="px-4 py-3 text-sm"><DateTimeCell value={row.createdAt} /></td>
                         <td className="px-4 py-3 text-sm font-medium">{row.id.slice(0, 8)}</td>
                         <td className="px-4 py-3 text-sm font-bold text-purple-700">{moneyFormatter.format(row.amount)}</td>
                         <td className="px-4 py-3 text-sm">{row.collector?.name || "—"}</td>
@@ -508,7 +506,7 @@ export default function CompanyReportPage() {
                   <tbody>
                     {returnItems.map((row) => (
                       <tr key={row.id} className="border-t border-gray-100 hover:bg-slate-50/50">
-                        <td className="px-4 py-3 text-sm">{formatDate(row.createdAt)}</td>
+                        <td className="px-4 py-3 text-sm"><DateTimeCell value={row.createdAt} /></td>
                         <td className="px-4 py-3 text-sm">{row.customer?.name || "—"}</td>
                         <td className="px-4 py-3 text-sm font-bold text-red-700">{moneyFormatter.format(row.total)}</td>
                         <td className="px-4 py-3 text-sm">{row.reason}</td>

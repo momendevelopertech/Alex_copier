@@ -8,19 +8,35 @@ export async function GET() {
     const user = await requireAuth();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const sales = await prisma.salesOrder.findMany({
-      include: {
-        customer: true,
-        company: true,
-        engineer: true,
-        items: {
-          include: { product: true, tradeInProduct: true },
+    const [sales, invoices] = await Promise.all([
+      prisma.salesOrder.findMany({
+        include: {
+          customer: true,
+          company: true,
+          engineer: true,
+          items: {
+            include: { product: true, tradeInProduct: true },
+          },
+          installments: true,
         },
-        installments: true,
-      },
-      orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.interCompanyInvoice.findMany({
+        select: { salesOrderId: true, fromCompanyId: true, toCompanyId: true, total: true },
+      }),
+    ]);
+    const interMap = new Map(invoices
+      .filter((i) => i.salesOrderId)
+      .map((i) => [i.salesOrderId, i]));
+    const data = sales.map((s) => {
+      const invoice = interMap.get(s.id);
+      return {
+        ...s,
+        isIntercompany: Boolean(invoice),
+        ...(invoice ? { interCompanyFromCompanyId: invoice.fromCompanyId, interCompanyToCompanyId: invoice.toCompanyId, interCompanyTotal: invoice.total } : {}),
+      };
     });
-    return NextResponse.json(sales);
+    return NextResponse.json(data);
   } catch (error) {
     console.error("Sales GET error:", error);
     return NextResponse.json({ error: "Failed to fetch sales" }, { status: 500 });

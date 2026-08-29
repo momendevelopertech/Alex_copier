@@ -411,7 +411,12 @@
       "cancelled": "Cancelled"
     },
     "searchPlaceholder": "Search by supplier, company, or order no....",
-    "companyFilter": "Company"
+    "companyFilter": "Company",
+    "intercompanyTitle": "Inter-company purchases",
+    "intercompanyHint": "Internal purchase invoices created automatically on internal sale",
+    "sellerCompany": "Selling company",
+    "buyerCompany": "Buying company",
+    "credit": "On credit"
   },
   "sales": {
     "title": "Sales",
@@ -445,7 +450,14 @@
     "overdue": "Overdue",
     "searchPlaceholder": "Search by order no., customer, product, or type...",
     "companyFilter": "Company",
-    "typeFilter": "Order type"
+    "typeFilter": "Order type",
+    "interCompanySale": "Inter-Company Sale",
+    "interCompanyHint": "Internal sale from one company to another, then a normal sale to the customer in the same moment. Quantity is deducted from the source company's stock.",
+    "fromCompany": "Source company (stock owner)",
+    "toCompany": "Destination company (sells to customer)",
+    "interCompanyPayment": "Inter-company payment method",
+    "interCompanyPrice": "Inter-company purchase price",
+    "costPrice": "Cost price"
   },
   "inventory": {
     "title": "Inventory",
@@ -682,6 +694,7 @@
     "REQUEST_FIELDS_REQUIRED": "Customer and problem description are required",
     "INVALID_PRIORITY": "Invalid priority value",
     "SALE_FIELDS_REQUIRED": "Sale data is incomplete",
+    "INTERCOMPANY_FIELDS_REQUIRED": "Select source company, destination company, and customer",
     "INVALID_SALE_ITEMS": "Sale items are invalid",
     "CONTRACT_FIELDS_REQUIRED": "Customer and start/end dates are required",
     "LINKED_USER_MUST_BE_ENGINEER": "The linked account must have the engineer role",

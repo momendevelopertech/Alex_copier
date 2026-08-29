@@ -7,6 +7,7 @@ import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 import FormModal from "@/components/FormModal";
+import SubmitButton from "@/components/SubmitButton";
 import { Plus, Save, Trash2, X } from "lucide-react";
 import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import { useConfirm, useToast } from "@/components/UIProvider";
@@ -37,6 +38,7 @@ export default function InvestorsPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
 
@@ -87,6 +89,7 @@ export default function InvestorsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     await fetch("/api/investors", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -97,6 +100,7 @@ export default function InvestorsPage() {
         ownershipPct: parseFloat(form.ownershipPct),
       }),
     });
+    setSaving(false);
     setForm(emptyForm);
     setShowForm(false);
     fetchInvestors();
@@ -133,7 +137,7 @@ export default function InvestorsPage() {
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("investors.ownershipPct")}</label><input type="number" step="0.01" placeholder={t("investors.ownershipPct") + " %"} value={form.ownershipPct} onChange={(e) => setField("ownershipPct", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required /></div>
             <div className="flex flex-col-reverse gap-3 pt-1 md:col-span-2 sm:flex-row sm:justify-end">
               <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"><X size={16} className="ms-1 inline-block" />{t("common.cancel")}</button>
-              <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"><Save size={16} />{t("common.save")}</button>
+              <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-blue-600 hover:bg-blue-700 text-white"><Save size={16} /></SubmitButton>
             </div>
           </form>
         </FormModal>

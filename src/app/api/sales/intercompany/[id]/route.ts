@@ -1,0 +1,388 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requirePageAccess, requireAuth } from "@/lib/auth-helpers";
+import { recalculatePaymentStatus } from "@/lib/payment-status";
+
+type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+interface InterItem {
+  productId: string;
+  quantity: number;
+  internalPrice: number;
+  customerPrice: number;
+  costPrice?: number;
+}
+
+interface AccountRefs {
+  cash: string;
+  receivables: string;
+  inventory: string;
+  revenue: string;
+  cogs: string;
+}
+
+async function getCompanyAccounts(tx: PrismaTx, companyId: string): Promise<AccountRefs> {
+  const cash = await tx.account.findFirst({ where: { companyId, code: "1001" } });
+  const receivables = await tx.account.findFirst({ where: { companyId, code: "1100" } });
+  const inventory = await tx.account.findFirst({ where: { companyId, code: "1200" } });
+  const revenue = await tx.account.findFirst({ where: { companyId, code: "4001" } });
+  const cogs = await tx.account.findFirst({ where: { companyId, code: "5001" } });
+
+  if (!cash || !receivables || !inventory || !revenue || !cogs) {
+    throw new Error("ACCOUNT_CHART_MISSING");
+  }
+  return {
+    cash: cash.id,
+    receivables: receivables.id,
+    inventory: inventory.id,
+    revenue: revenue.id,
+    cogs: cogs.id,
+  };
+}
+
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const actor = await requirePageAccess("sales");
+    if (!actor) {
+      const authed = await requireAuth();
+      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized", code: authed ? "FORBIDDEN" : "UNAUTHORIZED" }, { status: authed ? 403 : 401 });
+    }
+
+    const { id: orderId } = await params;
+    const body = await request.json();
+    const {
+      fromCompanyId,
+      toCompanyId,
+      customerId,
+      orderType,
+      paymentMethod,
+      paidAmount,
+      isTaxInvoice,
+      taxRate,
+      discount,
+      discountType,
+      notes,
+      items,
+    } = body;
+
+    if (
+      !fromCompanyId || !toCompanyId || !customerId || !orderType || !paymentMethod ||
+      fromCompanyId === toCompanyId ||
+      !Array.isArray(items) || items.length === 0
+    ) {
+      return NextResponse.json({ error: "بيانات البيع الداخلي غير مكتملة", code: "INTERCOMPANY_FIELDS_REQUIRED" }, { status: 400 });
+    }
+
+    for (const item of items as InterItem[]) {
+      if (
+        !item.productId || !Number.isInteger(item.quantity) || item.quantity <= 0 ||
+        !Number.isFinite(item.internalPrice) || item.internalPrice < 0 ||
+        !Number.isFinite(item.customerPrice) || item.customerPrice < 0
+      ) {
+        return NextResponse.json({ error: "بنود البيع الداخلي غير صالحة", code: "INVALID_INTERCOMPANY_ITEMS" }, { status: 400 });
+      }
+    }
+
+    const resolvedTaxRate = isTaxInvoice ? 14 : Number(taxRate) || 0;
+    const orderDiscount = Number(discount) || 0;
+    const _discountType = (discountType === "PERCENTAGE" ? "PERCENTAGE" : "FIXED") as "FIXED" | "PERCENTAGE";
+    const internalPaidAmount = Number(body.internalPaidAmount) || 0;
+    const internalPaymentMethod = String(body.internalPaymentMethod || "CREDIT");
+    const paid = Number(paidAmount) || 0;
+
+    const subtotal = (items as InterItem[]).reduce((s, it) => s + it.customerPrice * it.quantity, 0);
+    const discountValue = _discountType === "PERCENTAGE" ? (subtotal * orderDiscount) / 100 : orderDiscount;
+    const totalNoTax = Math.max(subtotal - discountValue, 0);
+    const taxVal = isTaxInvoice ? (totalNoTax * resolvedTaxRate) / 100 : 0;
+    const total = totalNoTax + taxVal;
+    const internalTotal = (items as InterItem[]).reduce((s, it) => s + it.internalPrice * it.quantity, 0);
+    const costTotal = (items as InterItem[]).reduce((s, it) => s + (it.costPrice || 0) * it.quantity, 0);
+    const finalPaid = Math.min(paid, total);
+
+    const result = await prisma.$transaction(async (tx: PrismaTx) => {
+      const existing = await tx.salesOrder.findUnique({
+        where: { id: orderId },
+        include: { items: { include: { product: true } }, installments: true },
+      });
+      if (!existing) {
+        throw new Error("ORDER_NOT_FOUND");
+      }
+
+      const invoice = await tx.interCompanyInvoice.findFirst({ where: { salesOrderId: orderId } });
+      if (!invoice) {
+        throw new Error("NOT_INTERCOMPANY");
+      }
+
+      const existingCustomer = await tx.customer.findUnique({ where: { id: existing.customerId! } });
+      const origDebt = existing.paymentMethod !== "CASH" ? (existing.total - existing.paidAmount) : 0;
+
+      // ══════════ REVERSAL ══════════
+      // عكس ديون العميل الأصلية
+      if (origDebt > 0 && existingCustomer) {
+        await tx.customer.update({
+          where: { id: existing.customerId! },
+          data: {
+            totalDebt: { decrement: origDebt },
+            remainingDebt: { decrement: origDebt },
+          },
+        });
+        await tx.customerLedger.upsert({
+          where: { customerId_companyId: { customerId: existing.customerId!, companyId: existing.companyId } },
+          update: { balance: { decrement: origDebt } },
+          create: { customerId: existing.customerId!, companyId: existing.companyId, balance: -origDebt },
+        });
+      }
+
+      // حذف القيود المحاسبية للشركتين
+      await tx.journalEntry.deleteMany({ where: { referenceType: "InterCompanyInvoice", referenceId: invoice.id } });
+      await tx.journalEntry.deleteMany({ where: { referenceType: "SalesOrder", referenceId: orderId } });
+
+      // عكس حركات المخزون المرتبطة بالأمر
+      const movements = await tx.stockMovement.findMany({ where: { referenceId: orderId } });
+      for (const m of movements) {
+        const inv = await tx.warehouseInventory.findUnique({
+          where: { warehouseId_productId: { warehouseId: m.warehouseId, productId: m.productId } },
+        });
+        const base = inv?.quantity ?? 0;
+        const newQty = m.movementType === "SALE_OUT" || m.movementType === "INTER_COMPANY_IN" ? base + m.quantity : base - m.quantity;
+        if (inv) {
+          await tx.warehouseInventory.update({
+            where: { warehouseId_productId: { warehouseId: m.warehouseId, productId: m.productId } },
+            data: { quantity: newQty },
+          });
+        } else if (m.movementType === "SALE_OUT" || m.movementType === "INTER_COMPANY_IN") {
+          await tx.warehouseInventory.create({
+            data: { warehouseId: m.warehouseId, productId: m.productId, quantity: m.quantity },
+          });
+        }
+      }
+      await tx.stockMovement.deleteMany({ where: { referenceId: orderId } });
+
+      // حذف البنود والأقساط القديمة
+      await tx.salesOrderItem.deleteMany({ where: { salesOrderId: orderId } });
+      await tx.installment.deleteMany({ where: { salesOrderId: orderId } });
+
+      // ══════════ APPLY ══════════
+      const warehouses = await tx.warehouse.findMany({
+        where: { companyId: { in: [fromCompanyId, toCompanyId] }, isMain: true },
+      });
+      const sourceWarehouse = warehouses.find((w: { companyId: string }) => w.companyId === fromCompanyId);
+      const targetWarehouse = warehouses.find((w: { companyId: string }) => w.companyId === toCompanyId);
+      if (!sourceWarehouse || !targetWarehouse) {
+        throw new Error("WAREHOUSE_NOT_FOUND");
+      }
+
+      await tx.salesOrder.update({
+        where: { id: orderId },
+        data: {
+          companyId: toCompanyId,
+          customerId,
+          orderType,
+          paymentMethod,
+          notes,
+          discount: orderDiscount,
+          discountType: _discountType,
+          taxRate: resolvedTaxRate,
+          isTaxInvoice: Boolean(isTaxInvoice),
+          total,
+          paidAmount: paymentMethod === "CASH" ? total : finalPaid,
+          paymentStatus: "PENDING",
+          tradeInTotal: 0,
+        },
+      });
+
+      if (invoice.fromCompanyId !== fromCompanyId || invoice.toCompanyId !== toCompanyId) {
+        await tx.interCompanyInvoice.update({
+          where: { id: invoice.id },
+          data: { fromCompanyId, toCompanyId, total: internalTotal, notes: notes || null },
+        });
+      } else {
+        await tx.interCompanyInvoice.update({
+          where: { id: invoice.id },
+          data: { total: internalTotal, notes: notes || null },
+        });
+      }
+
+      // سحب المخزون من شركة المصدر
+      for (const item of items as InterItem[]) {
+        const src = await tx.warehouseInventory.findUnique({
+          where: { warehouseId_productId: { warehouseId: sourceWarehouse.id, productId: item.productId } },
+        });
+        const available = src?.quantity ?? 0;
+        if (available < item.quantity || !src) {
+          throw new Error(`INSUFFICIENT_STOCK:${item.productId}`);
+        }
+        await tx.warehouseInventory.update({
+          where: { warehouseId_productId: { warehouseId: sourceWarehouse.id, productId: item.productId } },
+          data: { quantity: available - item.quantity },
+        });
+        await tx.stockMovement.create({
+          data: {
+            warehouseId: sourceWarehouse.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            movementType: "INTER_COMPANY_OUT",
+            referenceId: orderId,
+            notes: `تحويل داخلي من ${fromCompanyId} إلى ${toCompanyId}`,
+          },
+        });
+
+        const tgt = await tx.warehouseInventory.findUnique({
+          where: { warehouseId_productId: { warehouseId: targetWarehouse.id, productId: item.productId } },
+        });
+        if (tgt) {
+          await tx.warehouseInventory.update({
+            where: { warehouseId_productId: { warehouseId: targetWarehouse.id, productId: item.productId } },
+            data: { quantity: tgt.quantity + item.quantity },
+          });
+        } else {
+          await tx.warehouseInventory.create({
+            data: { warehouseId: targetWarehouse.id, productId: item.productId, quantity: item.quantity },
+          });
+        }
+        await tx.stockMovement.create({
+          data: {
+            warehouseId: targetWarehouse.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            movementType: "INTER_COMPANY_IN",
+            referenceId: orderId,
+            notes: `تحويل داخلي من ${fromCompanyId} إلى ${toCompanyId}`,
+          },
+        });
+      }
+
+      // تصريف المخزون من شركة الوجهة للعميل
+      for (const item of items as InterItem[]) {
+        const tgt = await tx.warehouseInventory.findUnique({
+          where: { warehouseId_productId: { warehouseId: targetWarehouse.id, productId: item.productId } },
+        });
+        if (tgt && tgt.quantity >= item.quantity) {
+          await tx.warehouseInventory.update({
+            where: { warehouseId_productId: { warehouseId: targetWarehouse.id, productId: item.productId } },
+            data: { quantity: tgt.quantity - item.quantity },
+          });
+        }
+        await tx.stockMovement.create({
+          data: {
+            warehouseId: targetWarehouse.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            movementType: "SALE_OUT",
+            referenceId: orderId,
+            notes: `بيع داخلي للعميل — ${orderId}`,
+          },
+        });
+        await tx.salesOrderItem.create({
+          data: {
+            salesOrderId: orderId,
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.customerPrice,
+            discount: 0,
+          },
+        });
+      }
+
+      // ديون العميل الجديدة
+      if (paymentMethod !== "CASH" && finalPaid < total) {
+        await tx.customer.update({
+          where: { id: customerId },
+          data: {
+            totalDebt: { increment: total - finalPaid },
+            remainingDebt: { increment: total - finalPaid },
+          },
+        });
+        await tx.customerLedger.upsert({
+          where: { customerId_companyId: { customerId, companyId: toCompanyId } },
+          update: { balance: { increment: total - finalPaid } },
+          create: { customerId, companyId: toCompanyId, balance: total - finalPaid },
+        });
+      }
+
+      await recalculatePaymentStatus(tx, orderId);
+
+      // القيود المحاسبية لشركة المصدر
+      const srcAccounts = await getCompanyAccounts(tx, fromCompanyId);
+      const srcEntryNumber = `JE-IC-${Date.now()}-1`;
+      if (internalTotal > 0) {
+        const srcCash = internalPaymentMethod === "CASH" ? internalTotal : Math.min(internalPaidAmount, internalTotal);
+        const srcReceivable = internalTotal - srcCash;
+        await tx.journalEntry.create({
+          data: {
+            companyId: fromCompanyId,
+            entryNumber: srcEntryNumber,
+            date: new Date(),
+            description: `بيع داخلي إلى ${toCompanyId} — ${invoice.invoiceNumber}`,
+            referenceType: "InterCompanyInvoice",
+            referenceId: invoice.id,
+            isVerified: true,
+            items: {
+              create: [
+                ...(srcCash > 0 ? [{ accountId: srcAccounts.cash, debit: srcCash, credit: 0 }] : []),
+                ...(srcReceivable > 0 ? [{ accountId: srcAccounts.receivables, debit: srcReceivable, credit: 0 }] : []),
+                { accountId: srcAccounts.revenue, debit: 0, credit: internalTotal },
+                ...(costTotal > 0 ? [
+                  { accountId: srcAccounts.cogs, debit: costTotal, credit: 0 },
+                  { accountId: srcAccounts.inventory, debit: 0, credit: costTotal },
+                ] : []),
+              ],
+            },
+          },
+        });
+      }
+
+      // القيود المحاسبية لشركة الوجهة
+      const tgtAccounts = await getCompanyAccounts(tx, toCompanyId);
+      const tgtEntryNumber = `JE-IC-${Date.now()}-2`;
+      const tgtCash = paymentMethod === "CASH" ? total : finalPaid;
+      const tgtReceivable = total - tgtCash;
+      await tx.journalEntry.create({
+        data: {
+          companyId: toCompanyId,
+          entryNumber: tgtEntryNumber,
+          date: new Date(),
+          description: `بيع للعميل + شراء داخلي من ${fromCompanyId} — ${orderId.slice(0, 8)}`,
+          referenceType: "SalesOrder",
+          referenceId: orderId,
+          isVerified: true,
+          items: {
+            create: [
+              ...(tgtCash > 0 ? [{ accountId: tgtAccounts.cash, debit: tgtCash, credit: 0 }] : []),
+              ...(tgtReceivable > 0 ? [{ accountId: tgtAccounts.receivables, debit: tgtReceivable, credit: 0 }] : []),
+              { accountId: tgtAccounts.revenue, debit: 0, credit: total },
+              ...(internalTotal > 0 ? [{ accountId: tgtAccounts.cogs, debit: internalTotal, credit: 0 }] : []),
+              { accountId: tgtAccounts.inventory, debit: 0, credit: internalTotal },
+            ],
+          },
+        },
+      });
+
+      const finalOrder = await tx.salesOrder.findUnique({
+        where: { id: orderId },
+        include: {
+          customer: true,
+          company: true,
+          items: { include: { product: true } },
+        },
+      });
+
+      return { interInvoice: invoice, order: finalOrder, internalTotal, costTotal, total };
+    }, { timeout: 120000 });
+
+    return NextResponse.json(result);
+  } catch (error) {
+    if (error instanceof Error && error.message === "ACCOUNT_CHART_MISSING") {
+      return NextResponse.json({ error: "شجرة الحسابات غير مكتملة لإحدى الشركتين", code: "ACCOUNT_CHART_MISSING" }, { status: 400 });
+    }
+    if (error instanceof Error && error.message === "ORDER_NOT_FOUND") {
+      return NextResponse.json({ error: "أمر البيع غير موجود", code: "ORDER_NOT_FOUND" }, { status: 404 });
+    }
+    if (error instanceof Error && error.message === "NOT_INTERCOMPANY") {
+      return NextResponse.json({ error: "هذا الأمر ليس بيعًا داخليًا", code: "NOT_INTERCOMPANY" }, { status: 400 });
+    }
+    console.error("Failed to update intercompany sale:", error);
+    const msg = error instanceof Error ? (error.message || error.name || String(error)) : "Failed to update intercompany sale";
+    return NextResponse.json({ error: msg, detail: error instanceof Error ? error.stack : undefined }, { status: 500 });
+  }
+}

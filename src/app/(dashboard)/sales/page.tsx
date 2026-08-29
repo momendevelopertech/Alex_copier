@@ -7,13 +7,15 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
-import { Eye, FileText, Pencil, Plus, Printer, RotateCcw, Save, Trash2, X } from "lucide-react";
+import { ArrowLeftRight, Eye, FileText, Pencil, Plus, Printer, RotateCcw, Save, Trash2, X } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
 import FormModal from "@/components/FormModal";
 import SelectWithAdd from "@/components/SelectWithAdd";
+import SubmitButton from "@/components/SubmitButton";
+import { DateTimeCell } from "@/components/DateTimeCell";
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CASH: "نقدي",
@@ -44,12 +46,14 @@ const paymentStatusColors: Record<string, string> = {
 interface Customer { id: string; name: string; }
 interface Company { id: string; name: string; }
 interface Engineer { id: string; name: string; email?: string | null; }
-interface Product { id: string; name: string; retailPrice?: number | null; wholesalePrice?: number | null; pricingTiers?: Record<string, number | null> | null; }
+interface Product { id: string; name: string; retailPrice?: number | null; wholesalePrice?: number | null; purchasePrice?: number | null; pricingTiers?: Record<string, number | null> | null; }
 interface SalesItem { id: string; productId: string; quantity: number; unitPrice: number; discount: number; product: Product; }
 interface SalesOrder {
   id: string; companyId: string; customerId: string; engineerId?: string | null; orderType: string; status: string; total: number; discount: number;
   discountType: string; taxRate: number; paymentMethod: string; paymentStatus: string;
   notes: string | null; orderDate: string; createdAt: string; customer: Customer; company?: Company; engineer?: Engineer | null; items: SalesItem[];
+  tradeInTotal?: number; isIntercompany?: boolean; paidAmount?: number;
+  interCompanyFromCompanyId?: string; interCompanyToCompanyId?: string; interCompanyTotal?: number;
 }
 interface ItemRow { 
   productId: string; 
@@ -66,12 +70,61 @@ interface ItemRow {
   };
 }
 
+interface InterItemRow {
+  productId: string;
+  quantity: string;
+  internalPrice: string;
+  customerPrice: string;
+  costPrice: string;
+}
+
+const COMPANY_ORDER_TIERS: Record<string, string> = {
+  company1: "jumlaMachines",
+  company2: "jumlaParts",
+  company3: "sectori",
+};
+
 const getProductTierPrice = (product: Product | undefined, tier: string) => {
   const tiers = product?.pricingTiers ?? {};
   const tierValue = tiers[tier];
   if (typeof tierValue === "number" && Number.isFinite(tierValue)) return tierValue;
   if (tier === "engineer") return product?.wholesalePrice ?? product?.retailPrice ?? 0;
   return product?.retailPrice ?? product?.wholesalePrice ?? 0;
+};
+
+type OrderKind = "regular" | "tradeIn" | "inter";
+
+const orderKind = (order: SalesOrder): OrderKind => {
+  if (order.isIntercompany) return "inter";
+  const hasTradeIn =
+    Number(order.tradeInTotal) > 0 ||
+    (Array.isArray(order.items) && order.items.some((item) => (item as any).tradeInProduct));
+  if (hasTradeIn) return "tradeIn";
+  return "regular";
+};
+
+const ORDER_KIND_STYLE: Record<OrderKind, { row: string; badge: string; dot: string }> = {
+  regular: {
+    row: "bg-sky-50/60 hover:bg-sky-100/70",
+    badge: "bg-sky-600 text-white",
+    dot: "bg-sky-600",
+  },
+  tradeIn: {
+    row: "bg-amber-50/60 hover:bg-amber-100/70",
+    badge: "bg-amber-500 text-white",
+    dot: "bg-amber-500",
+  },
+  inter: {
+    row: "bg-indigo-50/60 hover:bg-indigo-100/70",
+    badge: "bg-indigo-600 text-white",
+    dot: "bg-indigo-600",
+  },
+};
+
+const ORDER_KIND_LABEL: Record<OrderKind, string> = {
+  regular: "بيع عادي",
+  tradeIn: "استبدال",
+  inter: "بيع داخلي",
 };
 
 export default function SalesPage() {
@@ -85,7 +138,10 @@ export default function SalesPage() {
   const [engineers, setEngineers] = useState<Engineer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [inventoryByProduct, setInventoryByProduct] = useState<Record<string, number>>({});
+  const [inventoryByProductPerCompany, setInventoryByProductPerCompany] = useState<Record<string, Record<string, number>>>({});
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [savingInter, setSavingInter] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState<"regular" | "tradeIn">("regular");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -93,6 +149,9 @@ export default function SalesPage() {
   const [viewingOrder, setViewingOrder] = useState<SalesOrder | null>(null);
   const [form, setForm] = useState({ companyId: "", customerId: "", engineerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", isTaxInvoice: false, discount: "", discountType: "FIXED", taxRate: "0", notes: "" });
   const [itemRows, setItemRows] = useState<ItemRow[]>([{ productId: "", quantity: "", unitPrice: "", discount: "", priceTier: "newCustomer" }]);
+  const [showInterForm, setShowInterForm] = useState(false);
+  const [interForm, setInterForm] = useState({ fromCompanyId: "", toCompanyId: "", customerId: "", orderType: "SPARE_PART_SALE", paymentMethod: "CREDIT", internalPaymentMethod: "CREDIT", paidAmount: "", internalPaidAmount: "", isTaxInvoice: false, taxRate: "0", discount: "", notes: "" });
+  const [interRows, setInterRows] = useState<InterItemRow[]>([{ productId: "", quantity: "", internalPrice: "", customerPrice: "", costPrice: "" }]);
   const [tradeInProduct, setTradeInProduct] = useState<{ name: string; brand: string; condition: string; value: string; serialNumber: string }>({ name: "", brand: "", condition: "", value: "", serialNumber: "" });
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("");
@@ -117,6 +176,14 @@ export default function SalesPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const companyStock = (companyId: string) => inventoryByProductPerCompany[companyId] ?? {};
+  const companyProducts = (companyId: string) => {
+    const stock = companyStock(companyId);
+    const hasData = Object.keys(stock).length > 0;
+    if (companyId && hasData) return products.filter((p) => (stock[p.id] ?? 0) > 0);
+    return products;
+  };
 
   const exportSales = () => ({
     headers: [
@@ -164,10 +231,16 @@ export default function SalesPage() {
       const catalogProducts = Array.isArray(inventoryData.products) ? inventoryData.products : [];
       setProducts(catalogProducts);
       const stockMap: Record<string, number> = {};
+      const perCompanyStock: Record<string, Record<string, number>> = {};
       for (const entry of Array.isArray(inventoryData.inventory) ? inventoryData.inventory : []) {
         stockMap[entry.productId] = (stockMap[entry.productId] ?? 0) + Number(entry.quantity || 0);
+        const companyId = entry.warehouse?.companyId;
+        if (!companyId) continue;
+        perCompanyStock[companyId] = perCompanyStock[companyId] ?? {};
+        perCompanyStock[companyId][entry.productId] = (perCompanyStock[companyId][entry.productId] ?? 0) + Number(entry.quantity || 0);
       }
       setInventoryByProduct(stockMap);
+      setInventoryByProductPerCompany(perCompanyStock);
     } finally {
       setLoading(false);
     }
@@ -194,8 +267,48 @@ export default function SalesPage() {
   };
 
   const openEdit = (order: SalesOrder) => {
+    const kind = orderKind(order);
+    if (kind === "inter") {
+      const inter = order as any;
+      const fromCompanyId = inter.interCompanyFromCompanyId || "";
+      const toCompanyId = inter.interCompanyToCompanyId || order.companyId;
+      const tier = COMPANY_ORDER_TIERS[toCompanyId] || "sectori";
+      setEditingId(order.id);
+      setInterForm({
+        fromCompanyId,
+        toCompanyId,
+        customerId: order.customerId,
+        orderType: order.orderType,
+        paymentMethod: order.paymentMethod,
+        internalPaymentMethod: "CREDIT",
+        paidAmount: String(order.paidAmount),
+        internalPaidAmount: "",
+        isTaxInvoice: order.taxRate > 0,
+        taxRate: String(order.taxRate),
+        discount: String(order.discount),
+        notes: order.notes || "",
+      });
+      setInterRows(
+        order.items.length > 0
+          ? order.items.map((item: any) => {
+              const product = products.find((p) => p.id === item.productId);
+              const internalPrice = product ? getProductTierPrice(product, tier) : 0;
+              const costPrice = product?.purchasePrice || 0;
+              return {
+                productId: item.productId,
+                quantity: String(item.quantity),
+                internalPrice: String(internalPrice),
+                customerPrice: String(item.unitPrice),
+                costPrice: String(costPrice || ""),
+              };
+            })
+          : [{ productId: "", quantity: "", internalPrice: "", customerPrice: "", costPrice: "" }]
+      );
+      setShowInterForm(true);
+      return;
+    }
     setEditingId(order.id);
-    const hasTradeIn = order.items?.some((item: any) => item.tradeInProduct);
+    const hasTradeIn = kind === "tradeIn";
     setFormMode(hasTradeIn ? "tradeIn" : "regular");
     setForm({
       companyId: order.companyId,
@@ -268,25 +381,28 @@ export default function SalesPage() {
       });
     if (!items.length) { toastError(t("errors.INVALID_SALE_ITEMS")); return; }
     const safeTaxRate = form.isTaxInvoice ? 14 : (parseFloat(form.taxRate) || 0);
-    const response = await fetch("/api/sales", {
-      method: "POST",
+    const payload = {
+      ...form,
+      engineerId: form.engineerId || undefined,
+      discount: parseFloat(form.discount) || 0,
+      taxRate: safeTaxRate,
+      orderDate: new Date().toISOString(),
+      items,
+    };
+    setSaving(true);
+    const response = await fetch(editingId ? `/api/sales/${editingId}` : "/api/sales", {
+      method: editingId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        engineerId: form.engineerId || undefined,
-        discount: parseFloat(form.discount) || 0,
-        taxRate: safeTaxRate,
-        orderDate: new Date().toISOString(),
-        items,
-      }),
+      body: JSON.stringify(payload),
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) { toastError(apiErrorMessage(data, t)); return; }
+    if (!response.ok) { toastError(apiErrorMessage(data, t)); setSaving(false); return; }
     setForm({ companyId: "", customerId: "", engineerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", isTaxInvoice: false, discount: "", discountType: "FIXED", taxRate: "0", notes: "" });
     setItemRows([{ productId: "", quantity: "", unitPrice: "", discount: "", priceTier: "newCustomer" }]);
     setTradeInProduct({ name: "", brand: "", condition: "", value: "", serialNumber: "" });
     setEditingId(null);
     setFormMode("regular");
+    setSaving(false);
     setShowForm(false);
     fetchData();
     toastSuccess(t("common.savedSuccessfully"));
@@ -302,6 +418,67 @@ export default function SalesPage() {
     toastSuccess(t("common.deletedSuccessfully"));
   };
 
+  const updateInterRow = (index: number, next: Partial<InterItemRow>) => {
+    setInterRows((current) => current.map((row, rowIndex) => {
+      if (rowIndex !== index) return row;
+      const merged = { ...row, ...next };
+      if (merged.productId) {
+        const product = products.find((p) => p.id === merged.productId);
+        const targetCompanyId = interForm.toCompanyId;
+        const targetTier = COMPANY_ORDER_TIERS[targetCompanyId] || "sectori";
+        if (targetCompanyId && product) {
+          merged.internalPrice = String(getProductTierPrice(product, targetTier));
+        }
+        if (product) {
+          merged.customerPrice = merged.customerPrice || String(getProductTierPrice(product, "newCustomer"));
+          if (!merged.costPrice && product.purchasePrice) merged.costPrice = String(product.purchasePrice);
+        }
+      }
+      return merged;
+    }));
+  };
+
+  const handleInterCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const items = interRows
+      .filter((row) => row.productId && row.quantity)
+      .map((row) => ({
+        productId: row.productId,
+        quantity: Number(row.quantity),
+        internalPrice: Number(row.internalPrice) || 0,
+        customerPrice: Number(row.customerPrice) || 0,
+        costPrice: Number(row.costPrice) || 0,
+      }));
+    if (!items.length) { toastError(t("errors.INVALID_SALE_ITEMS")); return; }
+    if (!interForm.fromCompanyId || !interForm.toCompanyId || !interForm.customerId) {
+      toastError(t("errors.INTERCOMPANY_FIELDS_REQUIRED"));
+      return;
+    }
+    const safeTaxRate = interForm.isTaxInvoice ? 14 : (parseFloat(interForm.taxRate) || 0);
+    setSavingInter(true);
+    const response = await fetch(editingId ? `/api/sales/intercompany/${editingId}` : "/api/sales/intercompany", {
+      method: editingId ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...interForm,
+        discount: parseFloat(interForm.discount) || 0,
+        paidAmount: parseFloat(interForm.paidAmount) || 0,
+        internalPaidAmount: parseFloat(interForm.internalPaidAmount) || 0,
+        taxRate: safeTaxRate,
+        items,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) { toastError(apiErrorMessage(data, t)); setSavingInter(false); return; }
+    setInterForm({ fromCompanyId: "", toCompanyId: "", customerId: "", orderType: "SPARE_PART_SALE", paymentMethod: "CREDIT", internalPaymentMethod: "CREDIT", paidAmount: "", internalPaidAmount: "", isTaxInvoice: false, taxRate: "0", discount: "", notes: "" });
+    setInterRows([{ productId: "", quantity: "", internalPrice: "", customerPrice: "", costPrice: "" }]);
+    setEditingId(null);
+    setSavingInter(false);
+    setShowInterForm(false);
+    fetchData();
+    toastSuccess(t("common.savedSuccessfully"));
+  };
+
   return (
     <div dir={dir} className="space-y-5">
       <AddFormBoundary />
@@ -310,9 +487,10 @@ export default function SalesPage() {
           <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>
           <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">{t("sales.title")}</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => { setFormMode("regular"); setShowForm(true); }} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"><Plus size={16} />{t("sales.addOrder")}</button>
           <button onClick={() => { setFormMode("tradeIn"); setShowForm(true); }} className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-600"><RotateCcw size={16} />إضافة فاتورة استبدال</button>
+          <button onClick={() => setShowInterForm(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"><ArrowLeftRight size={16} />{t("sales.interCompanySale")}</button>
         </div>
       </div>
 
@@ -409,19 +587,32 @@ export default function SalesPage() {
               const rowPrice = selectedProduct ? getProductTierPrice(selectedProduct, row.priceTier || "newCustomer") : 0;
               return (
                 <div key={index}>
-                  <div className="grid gap-2 rounded-lg border border-gray-200 bg-white p-3 sm:grid-cols-[1.2fr_120px_120px_140px_120px_auto]">
+                  <div className="grid gap-2 rounded-lg border border-gray-200 bg-white p-3 sm:grid-cols-[1.2fr_120px_130px_130px_120px_auto]">
                     <div>
+                      <label className="mb-1 block text-[11px] font-medium text-gray-500">{t("sales.product")}</label>
                       <select value={row.productId} onChange={(e) => updateItemRow(index, { productId: e.target.value, priceTier: row.priceTier || "newCustomer" })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                         <option value="">{t("purchases.selectProduct")}</option>
-                        {products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
+                        {companyProducts(form.companyId).map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
                       </select>
                       {selectedProduct && (<div className="mt-1 text-[11px] text-slate-500">السعر: {rowPrice.toLocaleString()} · المتاح: {availableQty}</div>)}
                     </div>
-                    <select value={row.priceTier} onChange={(e) => updateItemRow(index, { priceTier: e.target.value, unitPrice: String(getProductTierPrice(selectedProduct || undefined, e.target.value)) })} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="legacyCustomer">عميل قديم</option><option value="newCustomer">عميل جديد</option><option value="jumlaMachines">شركة جملة آلات</option><option value="jumlaParts">شركة جملة قطع غيار</option><option value="sectori">شركة قطاعي</option><option value="engineer">مهندس</option></select>
-                    <input type="number" min="1" required placeholder={t("sales.qty")} value={row.quantity} onChange={(e) => updateItemRow(index, { quantity: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <input type="number" min="0" step="0.01" required placeholder={t("sales.unitPrice")} value={row.unitPrice} onChange={(e) => updateItemRow(index, { unitPrice: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <input type="number" min="0" step="0.01" placeholder={t("sales.discount")} value={row.discount} onChange={(e) => updateItemRow(index, { discount: e.target.value })} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    {itemRows.length > 1 && <button type="button" onClick={() => setItemRows(itemRows.filter((_, i) => i !== index))} className="rounded-lg border border-red-200 bg-red-50 px-2 text-red-600 transition hover:bg-red-100">×</button>}
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium text-gray-500">شريحة السعر</label>
+                      <select value={row.priceTier} onChange={(e) => updateItemRow(index, { priceTier: e.target.value, unitPrice: String(getProductTierPrice(selectedProduct || undefined, e.target.value)) })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="legacyCustomer">عميل قديم</option><option value="newCustomer">عميل جديد</option><option value="jumlaMachines">شركة جملة آلات</option><option value="jumlaParts">شركة جملة قطع غيار</option><option value="sectori">شركة قطاعي</option><option value="engineer">مهندس</option></select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium text-gray-500">{t("sales.qty")}</label>
+                      <input type="number" min="1" required value={row.quantity} onChange={(e) => updateItemRow(index, { quantity: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium text-gray-500">{t("sales.unitPrice")}</label>
+                      <input type="number" min="0" step="0.01" required value={row.unitPrice} onChange={(e) => updateItemRow(index, { unitPrice: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium text-gray-500">{t("sales.discount")}</label>
+                      <input type="number" min="0" step="0.01" value={row.discount} onChange={(e) => updateItemRow(index, { discount: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    {itemRows.length > 1 && <button type="button" onClick={() => setItemRows(itemRows.filter((_, i) => i !== index))} className="rounded-lg border border-red-200 bg-red-50 px-2 text-red-600 transition hover:bg-red-100 self-end">×</button>}
                   </div>
                   
                   {formMode === "tradeIn" && row.tradeIn && (
@@ -451,7 +642,153 @@ export default function SalesPage() {
 
           <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
             <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"><X size={16} className="ms-1 inline-block" />{t("common.cancel")}</button>
-            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"><Save size={16} />{t("common.save")}</button>
+            <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-blue-600 hover:bg-blue-700 text-white"><Save size={16} /></SubmitButton>
+          </div>
+        </form>
+      </FormModal>
+
+      <FormModal open={showInterForm} onClose={() => { setShowInterForm(false); setEditingId(null); }} title={editingId ? "تعديل بيع داخلي" : t("sales.interCompanySale")} wide>
+        <form onSubmit={handleInterCreate} className="space-y-5">
+          <div className="rounded-xl border-2 border-indigo-300 bg-indigo-50 p-4 text-sm text-indigo-800">
+            {t("sales.interCompanyHint")}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">{t("sales.fromCompany")}</label>
+              <select value={interForm.fromCompanyId} onChange={(e) => setInterForm({ ...interForm, fromCompanyId: e.target.value, toCompanyId: e.target.value === interForm.toCompanyId ? "" : interForm.toCompanyId })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                <option value="">{t("companies.selectCompany")}</option>
+                {companies.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">{t("sales.toCompany")}</label>
+              <select value={interForm.toCompanyId} onChange={(e) => setInterForm({ ...interForm, toCompanyId: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                <option value="">{t("companies.selectCompany")}</option>
+                {companies.filter((c) => c.id !== interForm.fromCompanyId).map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+              </select>
+            </div>
+            <SelectWithAdd
+              label={t("sales.customer")}
+              value={interForm.customerId}
+              onChange={(v) => setInterForm({ ...interForm, customerId: v })}
+              options={customers.map((c) => ({ value: c.id, label: c.name }))}
+              placeholder={t("sales.selectCustomer")}
+              required
+              quickAddTitle="إضافة عميل جديد"
+              quickAddFields={[
+                { key: "name", label: "اسم العميل", required: true },
+                { key: "phone", label: "الهاتف", placeholder: "01xxxxxxxxx" },
+                { key: "companyName", label: "اسم الشركة" },
+                { key: "email", label: "البريد الإلكتروني", type: "email" },
+                { key: "address", label: "العنوان" },
+                { key: "city", label: "المدينة" },
+                { key: "customerType", label: "نوع العميل", type: "select", options: [{ value: "INDIVIDUAL", label: "فرد" }, { value: "COMPANY", label: "شركة" }] },
+                { key: "whatsapp", label: "واتساب" },
+              ]}
+              quickAddEndpoint="/api/customers"
+              onQuickAddSuccess={(item) => {
+                setCustomers((prev) => [...prev, item]);
+                setInterForm((f) => ({ ...f, customerId: item.id }));
+              }}
+            />
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">{t("sales.orderType")}</label>
+              <select value={interForm.orderType} onChange={(e) => setInterForm({ ...interForm, orderType: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="MACHINE_SALE">{ORDER_TYPE_LABELS.MACHINE_SALE}</option>
+                <option value="SPARE_PART_SALE">{ORDER_TYPE_LABELS.SPARE_PART_SALE}</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">{t("sales.interCompanyPayment")} ({t("sales.toCompany")})</label>
+              <select value={interForm.internalPaymentMethod} onChange={(e) => setInterForm({ ...interForm, internalPaymentMethod: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="CREDIT">{PAYMENT_METHOD_LABELS.CREDIT}</option>
+                <option value="CASH">{PAYMENT_METHOD_LABELS.CASH}</option>
+                <option value="MIXED">{PAYMENT_METHOD_LABELS.MIXED}</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">{t("sales.paymentMethod")} ({t("sales.customer")})</label>
+              <select value={interForm.paymentMethod} onChange={(e) => setInterForm({ ...interForm, paymentMethod: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="CASH">{PAYMENT_METHOD_LABELS.CASH}</option>
+                <option value="CREDIT">{PAYMENT_METHOD_LABELS.CREDIT}</option>
+                <option value="INSTALLMENT">{PAYMENT_METHOD_LABELS.INSTALLMENT}</option>
+                <option value="MIXED">{PAYMENT_METHOD_LABELS.MIXED}</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">المبلغ المدفوع من العميل (اختياري — للدفع الجزئي)</label>
+              <input type="number" min="0" step="0.01" value={interForm.paidAmount} onChange={(e) => setInterForm({ ...interForm, paidAmount: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">المبلغ المدفوع في البيع الداخلي (اختياري — للدفع الجزئي)</label>
+              <input type="number" min="0" step="0.01" value={interForm.internalPaidAmount} onChange={(e) => setInterForm({ ...interForm, internalPaidAmount: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">{t("sales.total")}</label>
+              <div className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2.5">
+                <input id="interIsTax" type="checkbox" checked={interForm.isTaxInvoice} onChange={(e) => setInterForm({ ...interForm, isTaxInvoice: e.target.checked, taxRate: e.target.checked ? "14" : "0" })} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                <label htmlFor="interIsTax" className="text-sm font-medium text-slate-700">فاتورة ضريبية</label>
+                {interForm.isTaxInvoice && <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">14%</span>}
+              </div>
+            </div>
+            {interForm.isTaxInvoice && <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("sales.taxRate")}</label><input type="number" min="0" step="0.01" value={interForm.taxRate} onChange={(e) => setInterForm({ ...interForm, taxRate: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>}
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">{t("sales.discount")}</label>
+              <input type="number" min="0" value={interForm.discount} onChange={(e) => setInterForm({ ...interForm, discount: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-slate-700">{t("common.notes")}</label>
+            <textarea value={interForm.notes} onChange={(e) => setInterForm({ ...interForm, notes: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" rows={2} />
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-slate-50 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-700">{t("sales.items")}</h3>
+              <button type="button" onClick={() => setInterRows([...interRows, { productId: "", quantity: "", internalPrice: "", customerPrice: "", costPrice: "" }])} className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"><Plus size={16} />{t("purchases.addRow")}</button>
+            </div>
+            <div className="space-y-3">
+              {interRows.map((row, index) => {
+                const selectedProduct = products.find((p) => p.id === row.productId);
+                const availableQty = row.productId ? inventoryByProduct[row.productId] ?? 0 : 0;
+                return (
+                  <div key={index} className="grid gap-2 rounded-lg border border-gray-200 bg-white p-3 sm:grid-cols-[1.2fr_90px_130px_130px_110px_auto]">
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium text-gray-500">{t("sales.product")}</label>
+                      <select value={row.productId} onChange={(e) => updateInterRow(index, { productId: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        <option value="">{t("purchases.selectProduct")}</option>
+                        {companyProducts(interForm.fromCompanyId).map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
+                      </select>
+                      {selectedProduct && (<div className="mt-1 text-[11px] text-slate-500">المتاح في الشركة المختارة: {availableQty}</div>)}
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium text-gray-500">{t("sales.qty")}</label>
+                      <input type="number" min="1" required value={row.quantity} onChange={(e) => updateInterRow(index, { quantity: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium text-gray-500">{t("sales.interCompanyPrice")}</label>
+                      <input type="number" min="0" step="0.01" required value={row.internalPrice} onChange={(e) => updateInterRow(index, { internalPrice: e.target.value })} className="w-full rounded-lg border border-indigo-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium text-gray-500">{t("sales.unitPrice")}</label>
+                      <input type="number" min="0" step="0.01" required value={row.customerPrice} onChange={(e) => updateInterRow(index, { customerPrice: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium text-gray-500">{t("sales.costPrice")}</label>
+                      <input type="number" min="0" step="0.01" value={row.costPrice} onChange={(e) => updateInterRow(index, { costPrice: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    {interRows.length > 1 && <button type="button" onClick={() => setInterRows(interRows.filter((_, i) => i !== index))} className="rounded-lg border border-red-200 bg-red-50 px-2 text-red-600 transition hover:bg-red-100">×</button>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => setShowInterForm(false)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"><X size={16} className="ms-1 inline-block" />{t("common.cancel")}</button>
+            <SubmitButton loading={savingInter} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-indigo-600 hover:bg-indigo-700 text-white"><Save size={16} /></SubmitButton>
           </div>
         </form>
       </FormModal>
@@ -468,7 +805,7 @@ export default function SalesPage() {
               <div><span className="text-xs font-medium text-gray-500">{t("sales.discount")}</span><p className="mt-1 text-sm text-slate-900">{viewingOrder.discount > 0 ? `${viewingOrder.discount} (${viewingOrder.discountType === "FIXED" ? t("sales.discountTypeFixed") : t("sales.discountTypePercent")})` : "-"}</p></div>
               <div><span className="text-xs font-medium text-gray-500">{t("sales.paymentMethod")}</span><p className="mt-1 text-sm text-slate-900">{PAYMENT_METHOD_LABELS[viewingOrder.paymentMethod] || viewingOrder.paymentMethod}</p></div>
               <div><span className="text-xs font-medium text-gray-500">{t("sales.paymentStatus")}</span><p className="mt-1"><span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${paymentStatusColors[viewingOrder.paymentStatus] || ""}`}>{PAYMENT_STATUS_LABELS[viewingOrder.paymentStatus] || viewingOrder.paymentStatus}</span></p></div>
-              <div><span className="text-xs font-medium text-gray-500">{t("common.date")}</span><p className="mt-1 text-sm text-slate-900">{new Date(viewingOrder.orderDate || viewingOrder.createdAt).toLocaleDateString("ar-EG")}</p></div>
+              <div><span className="text-xs font-medium text-gray-500">{t("common.date")}</span><p className="mt-1 text-sm text-slate-900"><DateTimeCell value={viewingOrder.orderDate || viewingOrder.createdAt} /></p></div>
               {viewingOrder.engineer && <div><span className="text-xs font-medium text-gray-500">المهندس</span><p className="mt-1 text-sm text-slate-900">{viewingOrder.engineer.name}</p></div>}
               {viewingOrder.notes && <div className="md:col-span-2"><span className="text-xs font-medium text-gray-500">{t("common.notes")}</span><p className="mt-1 text-sm text-slate-900">{viewingOrder.notes}</p></div>}
             </div>
@@ -559,13 +896,26 @@ export default function SalesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {paged.map((order) => (
+                {paged.map((order) => {
+                  const kind = orderKind(order);
+                  const rowStyle = ORDER_KIND_STYLE[kind];
+                  return (
                   <Fragment key={order.id}>
-                    <tr className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium">{order.id.slice(0, 8)}</td>
+                    <tr className={`hover:bg-gray-50 ${rowStyle.row}`}>
+                      <td className="px-4 py-3 text-sm font-medium">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${rowStyle.dot}`} title={ORDER_KIND_LABEL[kind]}></span>
+                          {order.id.slice(0, 8)}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-sm">{order.company?.name || companies.find(c => c.id === order.companyId)?.name || "—"}</td>
                       <td className="px-4 py-3 text-sm">{order.customer.name}</td>
-                      <td className="px-4 py-3 text-sm">{ORDER_TYPE_LABELS[order.orderType] || order.orderType}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex flex-col gap-1">
+                          <span>{ORDER_TYPE_LABELS[order.orderType] || order.orderType}</span>
+                          <span className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${rowStyle.badge}`}>{ORDER_KIND_LABEL[kind]}</span>
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-sm">
                         {order.total.toLocaleString()}
                         {(order as any).tradeInTotal > 0 && (
@@ -579,7 +929,7 @@ export default function SalesPage() {
                           {PAYMENT_STATUS_LABELS[order.paymentStatus] || order.paymentStatus}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm">{new Date(order.orderDate || order.createdAt).toLocaleDateString("ar-EG")}</td>
+                      <td className="px-4 py-3 text-sm"><DateTimeCell value={order.orderDate || order.createdAt} /></td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
                           <button onClick={(e) => { e.stopPropagation(); setViewingOrder(order); }} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2 text-xs font-medium text-gray-600 transition hover:bg-gray-100" title={t("common.view")}>
@@ -646,7 +996,8 @@ export default function SalesPage() {
                       </tr>
                     )}
                   </Fragment>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
