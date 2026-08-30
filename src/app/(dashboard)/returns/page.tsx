@@ -8,9 +8,11 @@ import FilterSelect from "@/components/FilterSelect";
 import FormModal from "@/components/FormModal";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useI18n } from "@/i18n/context";
-import { useToast } from "@/components/UIProvider";
+import { useToast, useConfirm } from "@/components/UIProvider";
 import SubmitButton from "@/components/SubmitButton";
 import { DateTimeCell } from "@/components/DateTimeCell";
+import ExportButton from "@/components/ExportButton";
+import Pagination from "@/components/Pagination";
 
 interface Company { id: string; name: string; nameAr?: string; }
 interface Customer { id: string; name: string; }
@@ -85,6 +87,7 @@ const statusClasses: Record<string, string> = {
 export default function ReturnsPage() {
   const { t, dir } = useI18n();
   const { success: toastSuccess, error: toastError } = useToast();
+  const confirmAction = useConfirm();
   const [returns, setReturns] = useState<ReturnRecord[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -95,6 +98,8 @@ export default function ReturnsPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [companyFilter, setCompanyFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
 
   const [salesOrders, setSalesOrders] = useState<SalesOrder[]>([]);
   const [salesOrdersLoading, setSalesOrdersLoading] = useState(false);
@@ -207,6 +212,33 @@ export default function ReturnsPage() {
     });
   }, [returns, search, typeFilter, companyFilter]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredReturns.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedReturns = filteredReturns.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const exportReturns = () => ({
+    headers: [
+      t("common.type"),
+      t("common.company"),
+      t("common.product"),
+      t("returns.customerSupplier"),
+      t("returns.quantity"),
+      t("returns.unitPrice"),
+      t("returns.total"),
+      t("common.status"),
+    ],
+    rows: filteredReturns.map((item) => [
+      RETURN_TYPE_LABELS[item.type] || item.type,
+      item.company?.nameAr || item.company?.name || "",
+      item.product?.name || "",
+      item.customer?.name || item.supplier?.name || "",
+      String(item.quantity),
+      String(item.unitPrice),
+      String(item.total),
+      RETURN_STATUS_LABELS[item.status] || item.status,
+    ]),
+  });
+
   const totals = useMemo(() => {
     const saleReturns = returns.filter((i) => i.type === "SALE_RETURN").length;
     const purchaseReturns = returns.filter((i) => i.type === "PURCHASE_RETURN").length;
@@ -274,7 +306,7 @@ export default function ReturnsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("هل أنت متأكد من حذف هذا المرتجع؟")) return;
+    if (!(await confirmAction({ message: t("common.deleteConfirm") }))) return;
     try {
       const res = await fetch(`/api/returns/${id}`, { method: "DELETE" });
       if (!res.ok) {
@@ -363,12 +395,12 @@ export default function ReturnsPage() {
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 border-b border-slate-200 p-4 lg:flex-row lg:items-center lg:flex-wrap">
           <div className="w-full lg:flex-1 lg:max-w-80">
-            <SearchInput value={search} onChange={setSearch} placeholder={t("returns.searchPlaceholder")} className="w-full" />
+            <SearchInput value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder={t("returns.searchPlaceholder")} className="w-full" />
           </div>
           <div className="flex gap-2 md:ms-auto">
             <FilterSelect
               value={typeFilter}
-              onChange={setTypeFilter}
+              onChange={(v) => { setTypeFilter(v); setPage(1); }}
               options={[
                 { value: "SALE_RETURN", label: RETURN_TYPE_LABELS.SALE_RETURN },
                 { value: "PURCHASE_RETURN", label: RETURN_TYPE_LABELS.PURCHASE_RETURN },
@@ -378,11 +410,12 @@ export default function ReturnsPage() {
             />
             <FilterSelect
               value={companyFilter}
-              onChange={setCompanyFilter}
+              onChange={(v) => { setCompanyFilter(v); setPage(1); }}
               options={companies.map((c) => ({ value: c.id, label: c.nameAr || c.name }))}
               allLabel={`${t("common.company")} — ${t("common.all")}`}
               className="lg:w-56"
             />
+            <ExportButton filename="returns" getExport={exportReturns} disabled={filteredReturns.length === 0} />
           </div>
         </div>
 
@@ -416,7 +449,7 @@ export default function ReturnsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredReturns.map((item) => (
+                {pagedReturns.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">
@@ -463,6 +496,9 @@ export default function ReturnsPage() {
               </tbody>
             </table>
           </div>
+        )}
+        {filteredReturns.length > 0 && (
+          <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} totalItems={filteredReturns.length} pageSize={PAGE_SIZE} />
         )}
       </div>
 
@@ -532,7 +568,7 @@ export default function ReturnsPage() {
           {selectedItem && (
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
               <h4 className="text-sm font-semibold text-blue-800 mb-2">{t("returns.saleDetails")}</h4>
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div><span className="text-gray-500">{t("common.product")}:</span> <span className="font-medium">{selectedItem.product?.name}</span></div>
                 <div><span className="text-gray-500">{t("returns.unitPrice")}:</span> <span className="font-medium">{selectedItem.unitPrice.toLocaleString()}</span></div>
                 <div><span className="text-gray-500">{t("returns.quantity")}:</span> <span className="font-medium">{selectedItem.quantity}</span></div>
@@ -582,7 +618,7 @@ export default function ReturnsPage() {
       <FormModal open={!!viewingReturn} onClose={() => setViewingReturn(null)} title={t("returns.returnDetails")}>
         {viewingReturn && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("common.type")}</span><span className="mt-1 block font-medium">{RETURN_TYPE_LABELS[viewingReturn.type]}</span></div>
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("common.company")}</span><span className="mt-1 block font-medium">{viewingReturn.company?.nameAr || viewingReturn.company?.name}</span></div>
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("common.product")}</span><span className="mt-1 block font-medium">{viewingReturn.product?.name}</span></div>

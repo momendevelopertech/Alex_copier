@@ -395,7 +395,7 @@ export default function ContractsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[880px]">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("contracts.contractNumber")}</th>
@@ -421,7 +421,7 @@ export default function ContractsPage() {
                     <td className="px-4 py-3 text-sm"><DateTimeCell value={c.endDate} /></td>
                     <td className="px-4 py-3 text-sm text-center">{c.machines.length}</td>
                     <td className="px-4 py-3 text-sm">
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <button onClick={() => openView(c)} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2 text-xs font-medium text-gray-600 transition hover:bg-gray-100" title={t("common.view")}>
                           <Eye size={14} />{t("common.view")}
                         </button>

@@ -175,7 +175,7 @@ export default function InvestorsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[640px]">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("investors.name")}</th>

@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/i18n/context";
+
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
@@ -9,6 +11,7 @@ interface PaginationProps {
 }
 
 export default function Pagination({ currentPage, totalPages, onPageChange, totalItems, pageSize }: PaginationProps) {
+  const { t } = useI18n();
   if (totalPages <= 1) return null;
 
   const pages: (number | "...")[] = [];
@@ -28,7 +31,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange, tota
     <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between mt-4 px-4 py-3 bg-white rounded-xl shadow-sm">
       {totalItems != null && pageSize != null && (
         <span className="text-xs sm:text-sm text-gray-500 text-center">
-          عرض {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, totalItems)} من {totalItems}
+          {t("pagination.showing")} {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, totalItems)} {t("pagination.of")} {totalItems}
         </span>
       )}
       <div className="flex items-center gap-1 flex-wrap justify-center">
@@ -37,7 +40,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange, tota
           disabled={currentPage === 1}
           className="px-3 py-1 rounded-lg text-sm border border-gray-300 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          السابق
+          {t("pagination.prev")}
         </button>
         {pages.map((page, i) =>
           page === "..." ? (
@@ -61,7 +64,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange, tota
           disabled={currentPage === totalPages}
           className="px-3 py-1 rounded-lg text-sm border border-gray-300 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          التالي
+          {t("pagination.next")}
         </button>
       </div>
     </div>

@@ -154,7 +154,7 @@ export default function WorkshopPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[720px]">
               <thead>
                 <tr className="bg-gray-50">
                   <th className="text-start px-4 py-3 text-sm font-medium text-gray-500">{t("machines.serialNumber")}</th>

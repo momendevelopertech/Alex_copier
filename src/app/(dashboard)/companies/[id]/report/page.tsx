@@ -344,7 +344,8 @@ export default function CompanyReportPage() {
               <div className="border-b border-slate-200 px-5 py-3">
                 <h2 className="text-lg font-bold text-slate-900">المبيعات</h2>
               </div>
-              <table className="w-full min-w-[700px]">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[700px]">
                   <thead>
                     <tr className="bg-slate-50">
                       <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">التاريخ</th>
@@ -378,12 +379,14 @@ export default function CompanyReportPage() {
                     </tfoot>
                   )}
                 </table>
+              </div>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-200 px-5 py-3">
                 <h2 className="text-lg font-bold text-slate-900">المشتريات</h2>
               </div>
+              <div className="overflow-x-auto">
                 <table className="w-full min-w-[600px]">
                   <thead>
                     <tr className="bg-slate-50">
@@ -414,12 +417,14 @@ export default function CompanyReportPage() {
                     </tfoot>
                   )}
                 </table>
+              </div>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-200 px-5 py-3">
                 <h2 className="text-lg font-bold text-slate-900">المصروفات</h2>
               </div>
+              <div className="overflow-x-auto">
                 <table className="w-full min-w-[500px]">
                   <thead>
                     <tr className="bg-slate-50">
@@ -450,12 +455,14 @@ export default function CompanyReportPage() {
                     </tfoot>
                   )}
                 </table>
+              </div>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-200 px-5 py-3">
                 <h2 className="text-lg font-bold text-slate-900">التسويات</h2>
               </div>
+              <div className="overflow-x-auto">
                 <table className="w-full min-w-[550px]">
                   <thead>
                     <tr className="bg-slate-50">
@@ -488,12 +495,14 @@ export default function CompanyReportPage() {
                     </tfoot>
                   )}
                 </table>
+              </div>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-200 px-5 py-3">
                 <h2 className="text-lg font-bold text-slate-900">المرتجعات</h2>
               </div>
+              <div className="overflow-x-auto">
                 <table className="w-full min-w-[550px]">
                   <thead>
                     <tr className="bg-slate-50">
@@ -524,6 +533,7 @@ export default function CompanyReportPage() {
                     </tfoot>
                   )}
                 </table>
+              </div>
             </div>
           </>
         ) : (

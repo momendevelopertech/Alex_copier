@@ -168,7 +168,7 @@ export default function TradeInsPage() {
       {/* Table */}
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-start text-sm">
+          <table className="w-full min-w-[680px] text-start text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
                 <th className="px-4 py-3 text-start text-xs font-semibold uppercase tracking-wider text-gray-500">المنتج</th>
