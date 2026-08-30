@@ -6,12 +6,14 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import ExportButton from "@/components/ExportButton";
-import { Plus, Trash2, Upload, Save } from "lucide-react";
+import { Eye, Pencil, Plus, Trash2, Upload, Save } from "lucide-react";
 import ImportDialog from "@/components/ImportDialog";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import FormModal from "@/components/FormModal";
 import SubmitButton from "@/components/SubmitButton";
+import { apiErrorMessage } from "@/lib/api-client";
+import { DateTimeCell } from "@/components/DateTimeCell";
 
 interface Supplier {
   id: string;
@@ -41,13 +43,16 @@ const emptyForm = {
 export default function SuppliersPage() {
   const { t, dir } = useI18n();
   const confirmAction = useConfirm();
-const { success: toastSuccess } = useToast();
-  
+  const { success: toastSuccess, error: toastError } = useToast();
+
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Supplier | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [formError, setFormError] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [companyFilter, setCompanyFilter] = useState("");
@@ -105,26 +110,70 @@ const { success: toastSuccess } = useToast();
     ]),
   });
 
+  const openCreate = () => {
+    setForm(emptyForm);
+    setEditingId(null);
+    setFormError("");
+    setShowForm(true);
+  };
+
+  const openEdit = (supplier: Supplier) => {
+    setSelected(null);
+    setForm({
+      name: supplier.name,
+      contactName: supplier.contactName || "",
+      phone: supplier.phone || "",
+      email: supplier.email || "",
+      address: supplier.address || "",
+      taxNumber: supplier.taxNumber || "",
+      companyId: supplier.companyId || "",
+    });
+    setEditingId(supplier.id);
+    setFormError("");
+    setShowForm(true);
+  };
+
+  const openDetails = (supplier: Supplier) => {
+    setSelected(supplier);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    await fetch("/api/suppliers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    setSaving(false);
-    setForm(emptyForm);
-    setShowForm(false);
-    fetchSuppliers();
+    setFormError("");
+    try {
+      const res = await fetch(editingId ? `/api/suppliers/${editingId}` : "/api/suppliers", {
+        method: editingId ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setFormError(apiErrorMessage(data, t));
+        return;
+      }
+      setForm(emptyForm);
+      setEditingId(null);
+      setShowForm(false);
+      await fetchSuppliers();
+      toastSuccess(t("common.savedSuccessfully"));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
-      if (!(await confirmAction({ message: t("common.deleteConfirm") }))) return;
-      await fetch(`/api/suppliers/${id}`, { method: "DELETE" });
-      fetchSuppliers();
-      toastSuccess(t("common.deletedSuccessfully"));
-    };
+    if (!(await confirmAction({ message: t("common.deleteConfirm") }))) return;
+    const res = await fetch(`/api/suppliers/${id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      toastError(apiErrorMessage(data, t));
+      return;
+    }
+    setSelected(null);
+    await fetchSuppliers();
+    toastSuccess(t("common.deletedSuccessfully"));
+  };
 
   const setField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -135,21 +184,31 @@ const { success: toastSuccess } = useToast();
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>
-          <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">{t("suppliers.title")}</h1>
+          <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">
+            {t("suppliers.title")}
+            <span className="ms-2 text-sm font-medium text-gray-400">({filtered.length})</span>
+          </h1>
         </div>
-        <button onClick={() => setShowForm(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700">
+        <button onClick={openCreate} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700">
           <Plus size={16} />{t("suppliers.addSupplier")}
         </button>
       </div>
 
-      <FormModal open={showForm} onClose={() => setShowForm(false)} title={t("suppliers.addSupplier")} wide>
+      {formError && (
+        <div className="mb-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="status">
+          <span>{formError}</span>
+          <button onClick={() => setFormError("")} aria-label={t("common.close")} className="text-inherit">✕</button>
+        </div>
+      )}
+
+      <FormModal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? t("suppliers.editSupplier") : t("suppliers.addSupplier")} wide>
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-slate-700">{t("suppliers.name")}</label>
             <input type="text" value={form.name} onChange={(e) => setField("name", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
           </div>
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-slate-700">جهة الاتصال</label>
+            <label className="block text-sm font-medium text-slate-700">{t("suppliers.contactName")}</label>
             <input type="text" value={form.contactName} onChange={(e) => setField("contactName", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div className="space-y-1.5">
@@ -165,7 +224,7 @@ const { success: toastSuccess } = useToast();
             <input type="text" value={form.address} onChange={(e) => setField("address", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-slate-700">الرقم الضريبي</label>
+            <label className="block text-sm font-medium text-slate-700">{t("suppliers.taxNumber")}</label>
             <input type="text" value={form.taxNumber} onChange={(e) => setField("taxNumber", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div className="space-y-1.5">
@@ -175,10 +234,37 @@ const { success: toastSuccess } = useToast();
             </select>
           </div>
           <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end md:col-span-2 lg:col-span-3">
-            <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
+            <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.cancel")}</button>
             <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-blue-600 hover:bg-blue-700 text-white"><Save size={16} /></SubmitButton>
           </div>
         </form>
+      </FormModal>
+
+      <FormModal open={!!selected} onClose={() => setSelected(null)} title={selected ? selected.name : ""} wide>
+        {selected && (
+          <>
+            <div className="mb-4 grid grid-cols-1 gap-3 text-sm text-slate-700 md:grid-cols-2 xl:grid-cols-3">
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("suppliers.name")}</span><span className="mt-1 block font-medium text-slate-800">{selected.name || "—"}</span></div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("common.company")}</span><span className="mt-1 block font-medium text-slate-800">{selected.company?.name || "—"}</span></div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("suppliers.contactName")}</span><span className="mt-1 block font-medium text-slate-800">{selected.contactName || "—"}</span></div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("suppliers.phone")}</span><span className="mt-1 block font-medium text-slate-800" dir="ltr">{selected.phone || "—"}</span></div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("suppliers.email")}</span><span className="mt-1 block font-medium text-slate-800" dir="ltr">{selected.email || "—"}</span></div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("suppliers.address")}</span><span className="mt-1 block font-medium text-slate-800">{selected.address || "—"}</span></div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("suppliers.taxNumber")}</span><span className="mt-1 block font-medium text-slate-800" dir="ltr">{selected.taxNumber || "—"}</span></div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("common.status")}</span><span className={`mt-1 inline-flex rounded-full px-2 py-1 text-xs font-semibold ${selected.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>{selected.isActive ? t("common.active") : t("common.inactive")}</span></div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("common.creationDate")}</span><span className="mt-1 block font-medium text-slate-800"><DateTimeCell value={selected.createdAt} /></span></div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setSelected(null)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.close")}</button>
+              <button onClick={() => openEdit(selected)} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700">
+                <Pencil size={14} />{t("common.edit")}
+              </button>
+              <button onClick={() => handleDelete(selected.id)} className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700">
+                <Trash2 size={14} />{t("common.delete")}
+              </button>
+            </div>
+          </>
+        )}
       </FormModal>
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -227,14 +313,14 @@ const { success: toastSuccess } = useToast();
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px]">
+            <table className="w-full min-w-[760px]">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("suppliers.name")}</th>
-                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">جهة الاتصال</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("suppliers.contactName")}</th>
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("suppliers.phone")}</th>
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("suppliers.email")}</th>
-                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">الرقم الضريبي</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("suppliers.taxNumber")}</th>
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.actions")}</th>
                 </tr>
               </thead>
@@ -247,12 +333,17 @@ const { success: toastSuccess } = useToast();
                     <td className="px-4 py-3 text-sm">{supplier.email || "—"}</td>
                     <td className="px-4 py-3 text-sm">{supplier.taxNumber || "—"}</td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleDelete(supplier.id)}
-                        className="text-red-600 hover:text-red-800 text-sm"
-                      >
-                        <Trash2 size={14} className="inline-block me-1" />{t("common.delete")}
-                      </button>
+                      <div className="flex gap-1">
+                        <button onClick={() => openDetails(supplier)} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-100" title={t("common.view")}>
+                          <Eye size={14} />{t("common.view")}
+                        </button>
+                        <button onClick={() => openEdit(supplier)} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100" title={t("common.edit")}>
+                          <Pencil size={14} />{t("common.edit")}
+                        </button>
+                        <button onClick={() => handleDelete(supplier.id)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100" title={t("common.delete")}>
+                          <Trash2 size={14} />{t("common.delete")}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

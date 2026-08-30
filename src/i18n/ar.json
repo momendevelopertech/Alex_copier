@@ -184,7 +184,8 @@
     "inactive": "غير نشط",
     "phone": "الهاتف",
     "confirmTitle": "تأكيد",
-    "deleteConfirm": "هل أنت متأكد من الحذف؟"
+    "deleteConfirm": "هل أنت متأكد من الحذف؟",
+    "creationDate": "تاريخ الإنشاء"
   },
   "returns": {
     "title": "المرتجعات",
@@ -307,6 +308,7 @@
     "email": "البريد الإلكتروني",
     "address": "العنوان",
     "addSupplier": "إضافة مورد",
+    "editSupplier": "تعديل مورد",
     "contactName": "جهة الاتصال",
     "taxNumber": "الرقم الضريبي",
     "companyId": "معرّف الشركة",
@@ -530,6 +532,7 @@
     "accounts": "الحسابات",
     "journal": "القيود اليومية",
     "newExpense": "مصروف جديد",
+    "editExpense": "تعديل مصروف",
     "selectCompany": "اختر الشركة",
     "category": "الفئة",
     "paidBy": "الدافع",

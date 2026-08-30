@@ -184,7 +184,8 @@
     "importFailedTitle": "No rows were imported — fix the following errors and try again:",
     "importErrorGeneric": "An error occurred during import. Check the file format and try again.",
     "from": "From date",
-    "to": "To date"
+    "to": "To date",
+    "creationDate": "Created"
   },
   "pagination": {
     "showing": "Showing",
@@ -314,6 +315,7 @@
     "email": "Email",
     "address": "Address",
     "addSupplier": "Add Supplier",
+    "editSupplier": "Edit Supplier",
     "contactName": "Contact Name",
     "taxNumber": "Tax Number",
     "companyId": "Company ID",
@@ -536,6 +538,7 @@
     "accounts": "Accounts",
     "journal": "Journal",
     "newExpense": "New Expense",
+    "editExpense": "Edit Expense",
     "selectCompany": "Select Company",
     "category": "Category",
     "paidBy": "Paid By",

@@ -1,6 +1,49 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
+import { traceError } from "@/lib/prisma-errors";
+
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const actor = await requirePageAccess("finance");
+    if (!actor) {
+      const authed = await requireAuth();
+      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
+    }
+    const { id } = await params;
+    const existing = await prisma.expense.findUnique({ where: { id }, select: { id: true } });
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const body = await request.json();
+    const companyId = typeof body.companyId === "string" ? body.companyId : "";
+    const category = typeof body.category === "string" ? body.category.trim() : "";
+    const description = typeof body.description === "string" ? body.description.trim() : "";
+    const amount = Number(body.amount);
+
+    if (!companyId || !category || !description || !Number.isFinite(amount) || amount <= 0) {
+      return NextResponse.json({ error: "Invalid expense data" }, { status: 400 });
+    }
+    const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
+    if (!company) {
+      return NextResponse.json({ error: "الشركة غير موجودة", code: "COMPANY_NOT_FOUND" }, { status: 400 });
+    }
+
+    const expense = await prisma.expense.update({
+      where: { id },
+      data: { companyId, category, description, amount },
+      include: {
+        company: true,
+        payer: { select: { id: true, name: true } },
+      },
+    });
+    return NextResponse.json(expense);
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to update expense" }, { status: traceError("[expenses:PUT] update failed", error) });
+  }
+}
 
 export async function DELETE(
   _request: Request,

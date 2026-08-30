@@ -7,13 +7,15 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
-import { Plus, Save, X } from "lucide-react";
+import { Eye, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
-import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
+import { AddFormBoundary } from "@/hooks/useAutoAddForm";
 import FormModal from "@/components/FormModal";
 import SubmitButton from "@/components/SubmitButton";
 import { DateTimeCell } from "@/components/DateTimeCell";
+import { useConfirm, useToast } from "@/components/UIProvider";
+import { apiErrorMessage } from "@/lib/api-client";
 
 interface Company { id: string; name: string; }
 interface Expense {
@@ -26,11 +28,16 @@ const payerName = (expense: Expense) => expense.payer?.name || expense.paidBy;
 
 export default function FinancePage() {
   const { t, dir } = useI18n();
+  const confirmAction = useConfirm();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Expense | null>(null);
+  const [formError, setFormError] = useState("");
   const [search, setSearch] = useState("");
   const [companyFilter, setCompanyFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -55,10 +62,11 @@ export default function FinancePage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const autoAddOpen = useAutoAddForm();
   useEffect(() => {
-    if (autoAddOpen) setShowForm(true);
-  }, [autoAddOpen]);
+    const handler = () => setShowForm(true);
+    window.addEventListener("erp-open-add", handler);
+    return () => window.removeEventListener("erp-open-add", handler);
+  }, []);
 
   const filtered = expenses.filter(expense =>
     (!companyFilter || expense.companyId === companyFilter) &&
@@ -93,11 +101,33 @@ export default function FinancePage() {
     ]),
   });
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const openCreate = () => {
+    setForm({ companyId: "", category: "", description: "", amount: "" });
+    setEditingId(null);
+    setFormError("");
+    setShowForm(true);
+  };
+
+  const openEdit = (expense: Expense) => {
+    setSelected(null);
+    setForm({
+      companyId: expense.companyId,
+      category: expense.category,
+      description: expense.description,
+      amount: String(expense.amount),
+    });
+    setEditingId(expense.id);
+    setFormError("");
+    setShowForm(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const res = await fetch("/api/expenses", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+    setFormError("");
+    const res = await fetch(editingId ? `/api/expenses/${editingId}` : "/api/expenses", {
+      method: editingId ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...form, amount: parseFloat(form.amount) || 0 }),
     });
     setSaving(false);
@@ -105,11 +135,33 @@ export default function FinancePage() {
       signOut({ callbackUrl: "/login" });
       return;
     }
-    if (res.ok) {
-      setForm({ companyId: "", category: "", description: "", amount: "" });
-      setShowForm(false);
-      fetchData();
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      setFormError(apiErrorMessage(data, t));
+      return;
     }
+    setForm({ companyId: "", category: "", description: "", amount: "" });
+    setEditingId(null);
+    setShowForm(false);
+    toastSuccess(t("common.savedSuccessfully"));
+    fetchData();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!(await confirmAction({ message: t("common.deleteConfirm") }))) return;
+    const res = await fetch(`/api/expenses/${id}`, { method: "DELETE" });
+    if (res.status === 401) {
+      signOut({ callbackUrl: "/login" });
+      return;
+    }
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      toastError(apiErrorMessage(data, t));
+      return;
+    }
+    setSelected(null);
+    toastSuccess(t("common.deletedSuccessfully"));
+    fetchData();
   };
 
   return (
@@ -119,13 +171,23 @@ export default function FinancePage() {
         <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-medium tracking-[0.2em] text-sky-600 uppercase">ERP</p>
-            <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">{t("finance.expenses")}</h1>
+            <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl lg:text-3xl">
+              {t("finance.expenses")}
+              <span className="ms-2 text-sm font-medium text-gray-400">({filtered.length})</span>
+            </h1>
           </div>
-          <button onClick={() => setShowForm(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"><Plus size={16} />{t("finance.newExpense")}</button>
+          <button onClick={openCreate} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"><Plus size={16} />{t("finance.newExpense")}</button>
         </div>
 
-        <FormModal open={showForm} onClose={() => setShowForm(false)} title={t("finance.newExpense")}>
-          <form onSubmit={handleCreate} className="space-y-4">
+        {formError && (
+          <div className="mb-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="status">
+            <span>{formError}</span>
+            <button onClick={() => setFormError("")} aria-label={t("common.close")} className="text-inherit">✕</button>
+          </div>
+        )}
+
+        <FormModal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? t("finance.editExpense") : t("finance.newExpense")}>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("finance.selectCompany")}</label><select value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required><option value="">{t("finance.selectCompany")}</option>{companies.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("finance.category")}</label><input type="text" placeholder={t("finance.category")} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required /></div>
@@ -133,10 +195,34 @@ export default function FinancePage() {
             </div>
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("common.description")}</label><textarea placeholder={t("common.description")} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" rows={2} required /></div>
             <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
-              <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"><X size={16} className="ms-1 inline-block" />{t("common.cancel")}</button>
+              <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"><X size={16} className="ms-1 inline-block" />{t("common.cancel")}</button>
               <SubmitButton loading={saving} label={t("common.save")} loadingLabel={t("common.saving")} className="bg-blue-600 hover:bg-blue-700 text-white"><Save size={16} /></SubmitButton>
             </div>
           </form>
+        </FormModal>
+
+        <FormModal open={!!selected} onClose={() => setSelected(null)} title={selected ? t("finance.expenses") : ""} wide>
+          {selected && (
+            <>
+              <div className="mb-4 grid grid-cols-1 gap-3 text-sm text-slate-700 md:grid-cols-2 xl:grid-cols-3">
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("common.date")}</span><span className="mt-1 block font-medium text-slate-800"><DateTimeCell value={selected.date || selected.createdAt} /></span></div>
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("common.company")}</span><span className="mt-1 block font-medium text-slate-800">{selected.company?.name || "—"}</span></div>
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("finance.category")}</span><span className="mt-1 block font-medium text-slate-800">{selected.category}</span></div>
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("common.amount")}</span><span className="mt-1 block font-bold text-slate-800">{selected.amount.toLocaleString()}</span></div>
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("finance.paidBy")}</span><span className="mt-1 block font-medium text-slate-800">{payerName(selected)}</span></div>
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 md:col-span-2 xl:col-span-3"><span className="block text-xs text-gray-500">{t("common.description")}</span><span className="mt-1 block font-medium text-slate-800">{selected.description}</span></div>
+              </div>
+              <div className="mt-4 flex justify-end gap-2">
+                <button onClick={() => setSelected(null)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.close")}</button>
+                <button onClick={() => openEdit(selected)} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700">
+                  <Pencil size={14} />{t("common.edit")}
+                </button>
+                <button onClick={() => handleDelete(selected.id)} className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700">
+                  <Trash2 size={14} />{t("common.delete")}
+                </button>
+              </div>
+            </>
+          )}
         </FormModal>
 
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -168,14 +254,16 @@ export default function FinancePage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[760px]">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.date")}</th>
                     <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("finance.category")}</th>
                     <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.description")}</th>
+                    <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.company")}</th>
                     <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.amount")}</th>
                     <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("finance.paidBy")}</th>
+                    <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -184,8 +272,22 @@ export default function FinancePage() {
                       <td className="px-4 py-3 text-sm"><DateTimeCell value={expense.date || expense.createdAt} /></td>
                       <td className="px-4 py-3 text-sm">{expense.category}</td>
                       <td className="px-4 py-3 text-sm">{expense.description}</td>
+                      <td className="px-4 py-3 text-sm">{expense.company?.name || "—"}</td>
                       <td className="px-4 py-3 text-sm">{expense.amount.toLocaleString()}</td>
                       <td className="px-4 py-3 text-sm">{payerName(expense)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1">
+                          <button onClick={() => setSelected(expense)} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-100" title={t("common.view")}>
+                            <Eye size={14} />{t("common.view")}
+                          </button>
+                          <button onClick={() => openEdit(expense)} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100" title={t("common.edit")}>
+                            <Pencil size={14} />{t("common.edit")}
+                          </button>
+                          <button onClick={() => handleDelete(expense.id)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100" title={t("common.delete")}>
+                            <Trash2 size={14} />{t("common.delete")}
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

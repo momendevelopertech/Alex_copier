@@ -768,6 +768,12 @@ export default function CustomersPage() {
                         <button onClick={() => openDetails(customer.id)} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-100">
                           {t("common.view")}
                         </button>
+                        <button onClick={() => openEdit(customer)} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100" title={t("common.edit")}>
+                          <Pencil size={14} />{t("common.edit")}
+                        </button>
+                        <button onClick={() => handleDelete(customer.id)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100" title={t("common.delete")}>
+                          <Trash2 size={14} />{t("common.delete")}
+                        </button>
                       </div>
                     </td>
                   </tr>
