@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Fragment } from "react";
 import { useI18n } from "@/i18n/context";
 import { useToast } from "@/components/UIProvider";
 import PrinterLoader from "@/components/PrinterLoader";
@@ -73,10 +73,30 @@ interface ReportData {
       createdAt: string;
       total: number;
       reason: string;
+      type: string;
       customer?: { name: string };
+      supplier?: { name: string };
     }>;
   };
   netProfit: number;
+  incomeStatement: {
+    salesRevenue: number;
+    purchasesCost: number;
+    salesReturns: number;
+    purchaseReturns: number;
+    expenses: number;
+    settlementsCollected: number;
+    netProfit: number;
+  };
+  cashPosition: {
+    cashIn: number;
+    cashOut: number;
+    netCash: number;
+    settlementsVerified: number;
+    cashFromSales: number;
+    expenses: number;
+    cashForPurchases: number;
+  };
   monthlyData: Array<{
     month: string;
     sales: number;
@@ -180,6 +200,16 @@ export default function CompanyReportPage() {
   const [to, setTo] = useState(toISODate(today));
   const [report, setReport] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+
+  const toggleOrder = (orderId: string) => {
+    setExpandedOrders((prev) => {
+      const next = new Set(prev);
+      if (next.has(orderId)) next.delete(orderId);
+      else next.add(orderId);
+      return next;
+    });
+  };
 
   const fetchReport = () => {
     setLoading(true);
@@ -340,6 +370,94 @@ export default function CompanyReportPage() {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 print-break">
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="border-b border-slate-200 bg-slate-50 px-5 py-3">
+                  <h2 className="text-lg font-bold text-slate-900">قائمة الدخل</h2>
+                </div>
+                <table className="w-full">
+                  <tbody>
+                    <tr className="border-b border-gray-100">
+                      <td className="px-5 py-3 text-sm text-gray-600">إيرادات المبيعات</td>
+                      <td className="px-5 py-3 text-sm font-bold text-green-700 text-left">{moneyFormatter.format(report.incomeStatement.salesRevenue)}</td>
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <td className="px-5 py-3 text-sm text-gray-600">تكلفة المشتريات</td>
+                      <td className="px-5 py-3 text-sm font-bold text-blue-700 text-left">{moneyFormatter.format(-report.incomeStatement.purchasesCost)}</td>
+                    </tr>
+                    {report.incomeStatement.salesReturns > 0 && (
+                      <tr className="border-b border-gray-100">
+                        <td className="px-5 py-3 text-sm text-gray-600">مرتجعات المبيعات</td>
+                        <td className="px-5 py-3 text-sm font-bold text-red-700 text-left">{moneyFormatter.format(-report.incomeStatement.salesReturns)}</td>
+                      </tr>
+                    )}
+                    {report.incomeStatement.purchaseReturns > 0 && (
+                      <tr className="border-b border-gray-100">
+                        <td className="px-5 py-3 text-sm text-gray-600">مرتجعات المشتريات</td>
+                        <td className="px-5 py-3 text-sm font-bold text-green-700 text-left">{moneyFormatter.format(report.incomeStatement.purchaseReturns)}</td>
+                      </tr>
+                    )}
+                    <tr className="border-b border-gray-100">
+                      <td className="px-5 py-3 text-sm text-gray-600">المصروفات</td>
+                      <td className="px-5 py-3 text-sm font-bold text-orange-700 text-left">{moneyFormatter.format(-report.incomeStatement.expenses)}</td>
+                    </tr>
+                    <tr className="border-t-2 border-slate-300 bg-slate-50 font-bold">
+                      <td className="px-5 py-3 text-sm">صافي الربح / الخسارة</td>
+                      <td className={`px-5 py-3 text-sm text-left ${report.incomeStatement.netProfit >= 0 ? "text-green-700" : "text-red-600"}`}>
+                        {moneyFormatter.format(report.incomeStatement.netProfit)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="border-b border-slate-200 bg-slate-50 px-5 py-3">
+                  <h2 className="text-lg font-bold text-slate-900">الموقف النقدي</h2>
+                </div>
+                <p className="px-5 pt-3 text-xs font-semibold tracking-wide text-gray-400">التدفقات النقدية الداخلة</p>
+                <table className="w-full">
+                  <tbody>
+                    <tr className="border-b border-gray-100">
+                      <td className="px-5 py-2 text-sm text-gray-600">مدفوعات العملاء (تحصيلات معتمدة)</td>
+                      <td className="px-5 py-2 text-sm font-bold text-green-700 text-left">{moneyFormatter.format(report.cashPosition.settlementsVerified)}</td>
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <td className="px-5 py-2 text-sm text-gray-600">نقد من المبيعات</td>
+                      <td className="px-5 py-2 text-sm font-bold text-green-700 text-left">{moneyFormatter.format(report.cashPosition.cashFromSales)}</td>
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <td className="px-5 py-2 text-sm font-semibold text-gray-700">اجمالي الداخل</td>
+                      <td className="px-5 py-2 text-sm font-bold text-green-700 text-left">{moneyFormatter.format(report.cashPosition.cashIn)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p className="px-5 pt-4 text-xs font-semibold tracking-wide text-gray-400">التدفقات النقدية الخارجة</p>
+                <table className="w-full">
+                  <tbody>
+                    <tr className="border-b border-gray-100">
+                      <td className="px-5 py-2 text-sm text-gray-600">المصروفات النقدية</td>
+                      <td className="px-5 py-2 text-sm font-bold text-orange-700 text-left">{moneyFormatter.format(-report.cashPosition.expenses)}</td>
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <td className="px-5 py-2 text-sm text-gray-600">المشتريات النقدية (مستلمة)</td>
+                      <td className="px-5 py-2 text-sm font-bold text-orange-700 text-left">{moneyFormatter.format(-report.cashPosition.cashForPurchases)}</td>
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <td className="px-5 py-2 text-sm font-semibold text-gray-700">اجمالي الخارج</td>
+                      <td className="px-5 py-2 text-sm font-bold text-orange-700 text-left">{moneyFormatter.format(-report.cashPosition.cashOut)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div className="flex items-center justify-between border-t-2 border-slate-300 bg-slate-50 px-5 py-3">
+                  <span className="text-sm font-bold">صافي التدفق النقدي</span>
+                  <span className={`text-sm font-bold ${report.cashPosition.netCash >= 0 ? "text-green-700" : "text-red-600"}`}>
+                    {moneyFormatter.format(report.cashPosition.netCash)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-200 px-5 py-3">
                 <h2 className="text-lg font-bold text-slate-900">المبيعات</h2>
@@ -354,28 +472,69 @@ export default function CompanyReportPage() {
                       <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">طريقة الدفع</th>
                       <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">الاجمالي</th>
                       <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">حالة الدفع</th>
+                      <th className="px-4 py-3"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {salesOrders.map((row) => (
-                      <tr key={row.id} className="border-t border-gray-100 hover:bg-slate-50/50">
-                        <td className="px-4 py-3 text-sm"><DateTimeCell value={row.orderDate || row.createdAt} /></td>
-                        <td className="px-4 py-3 text-sm font-medium">{row.id.slice(0, 8)}</td>
-                        <td className="px-4 py-3 text-sm">{row.customer?.name || "—"}</td>
-                        <td className="px-4 py-3 text-sm">{statusBadge(row.paymentMethod)}</td>
-                        <td className="px-4 py-3 text-sm font-bold text-green-700">{moneyFormatter.format(row.total)}</td>
-                        <td className="px-4 py-3 text-sm">{statusBadge(row.paymentStatus)}</td>
-                      </tr>
-                    ))}
+                    {salesOrders.map((row) => {
+                      const expanded = expandedOrders.has(row.id);
+                      const items = row.items ?? [];
+                      return (
+                        <Fragment key={row.id}>
+                          <tr
+                            onClick={() => (items.length ? toggleOrder(row.id) : undefined)}
+                            className={`border-t border-gray-100 ${items.length ? "cursor-pointer hover:bg-slate-50/50" : ""}`}
+                          >
+                            <td className="px-4 py-3 text-sm"><DateTimeCell value={row.orderDate || row.createdAt} /></td>
+                            <td className="px-4 py-3 text-sm font-medium">{row.id.slice(0, 8)}</td>
+                            <td className="px-4 py-3 text-sm">{row.customer?.name || "—"}</td>
+                            <td className="px-4 py-3 text-sm">{statusBadge(row.paymentMethod)}</td>
+                            <td className="px-4 py-3 text-sm font-bold text-green-700">{moneyFormatter.format(row.total)}</td>
+                            <td className="px-4 py-3 text-sm">{statusBadge(row.paymentStatus)}</td>
+                            <td className="px-4 py-3 text-sm">
+                              {items.length > 0 && (
+                                <span className="text-slate-400">{expanded ? "▲" : "▼"}</span>
+                              )}
+                            </td>
+                          </tr>
+                          {expanded && items.length > 0 && (
+                            <tr className="border-t border-gray-100 bg-slate-50/60">
+                              <td colSpan={7} className="px-6 py-3">
+                                <table className="w-full min-w-[500px]">
+                                  <thead>
+                                    <tr>
+                                      <th className="px-3 py-1.5 text-right text-xs font-medium text-gray-400">المنتج</th>
+                                      <th className="px-3 py-1.5 text-right text-xs font-medium text-gray-400">الكمية</th>
+                                      <th className="px-3 py-1.5 text-right text-xs font-medium text-gray-400">سعر الوحدة</th>
+                                      <th className="px-3 py-1.5 text-right text-xs font-medium text-gray-400">الاجمالي</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {items.map((it, idx) => (
+                                      <tr key={idx} className="border-t border-gray-100">
+                                        <td className="px-3 py-1.5 text-sm">{it.product?.name || "—"}</td>
+                                        <td className="px-3 py-1.5 text-sm">{it.quantity}</td>
+                                        <td className="px-3 py-1.5 text-sm">{moneyFormatter.format(it.unitPrice)}</td>
+                                        <td className="px-3 py-1.5 text-sm font-bold">{moneyFormatter.format(it.quantity * it.unitPrice)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
                     {salesOrders.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-gray-400">لا توجد بيانات</td>
+                        <td colSpan={7} className="px-4 py-8 text-center text-gray-400">لا توجد بيانات</td>
                       </tr>
                     )}
                   </tbody>
                   {salesOrders.length > 0 && (
                     <tfoot>
-                      <SubtotalRow label="اجمالي المبيعات" value={salesTotal} colSpan={4} color="text-green-700" />
+                      <SubtotalRow label="اجمالي المبيعات" value={salesTotal} colSpan={6} color="text-green-700" />
                     </tfoot>
                   )}
                 </table>
@@ -394,26 +553,67 @@ export default function CompanyReportPage() {
                       <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">رقم الطلب</th>
                       <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">المورد</th>
                       <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">الاجمالي</th>
+                      <th className="px-4 py-3"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {purchaseOrders.map((row) => (
-                      <tr key={row.id} className="border-t border-gray-100 hover:bg-slate-50/50">
-                        <td className="px-4 py-3 text-sm"><DateTimeCell value={row.orderDate || row.createdAt} /></td>
-                        <td className="px-4 py-3 text-sm font-medium">{row.id.slice(0, 8)}</td>
-                        <td className="px-4 py-3 text-sm">{row.supplier?.name || "—"}</td>
-                        <td className="px-4 py-3 text-sm font-bold text-blue-700">{moneyFormatter.format(row.total)}</td>
-                      </tr>
-                    ))}
+                    {purchaseOrders.map((row) => {
+                      const expanded = expandedOrders.has(row.id);
+                      const items = row.items ?? [];
+                      return (
+                        <Fragment key={row.id}>
+                          <tr
+                            onClick={() => (items.length ? toggleOrder(row.id) : undefined)}
+                            className={`border-t border-gray-100 ${items.length ? "cursor-pointer hover:bg-slate-50/50" : ""}`}
+                          >
+                            <td className="px-4 py-3 text-sm"><DateTimeCell value={row.orderDate || row.createdAt} /></td>
+                            <td className="px-4 py-3 text-sm font-medium">{row.id.slice(0, 8)}</td>
+                            <td className="px-4 py-3 text-sm">{row.supplier?.name || "—"}</td>
+                            <td className="px-4 py-3 text-sm font-bold text-blue-700">{moneyFormatter.format(row.total)}</td>
+                            <td className="px-4 py-3 text-sm">
+                              {items.length > 0 && (
+                                <span className="text-slate-400">{expanded ? "▲" : "▼"}</span>
+                              )}
+                            </td>
+                          </tr>
+                          {expanded && items.length > 0 && (
+                            <tr className="border-t border-gray-100 bg-slate-50/60">
+                              <td colSpan={5} className="px-6 py-3">
+                                <table className="w-full min-w-[500px]">
+                                  <thead>
+                                    <tr>
+                                      <th className="px-3 py-1.5 text-right text-xs font-medium text-gray-400">المنتج</th>
+                                      <th className="px-3 py-1.5 text-right text-xs font-medium text-gray-400">الكمية</th>
+                                      <th className="px-3 py-1.5 text-right text-xs font-medium text-gray-400">سعر الوحدة</th>
+                                      <th className="px-3 py-1.5 text-right text-xs font-medium text-gray-400">الاجمالي</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {items.map((it, idx) => (
+                                      <tr key={idx} className="border-t border-gray-100">
+                                        <td className="px-3 py-1.5 text-sm">{it.product?.name || "—"}</td>
+                                        <td className="px-3 py-1.5 text-sm">{it.quantity}</td>
+                                        <td className="px-3 py-1.5 text-sm">{moneyFormatter.format(it.unitPrice)}</td>
+                                        <td className="px-3 py-1.5 text-sm font-bold">{moneyFormatter.format(it.quantity * it.unitPrice)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
                     {purchaseOrders.length === 0 && (
                       <tr>
-                        <td colSpan={4} className="px-4 py-8 text-center text-gray-400">لا توجد بيانات</td>
+                        <td colSpan={5} className="px-4 py-8 text-center text-gray-400">لا توجد بيانات</td>
                       </tr>
                     )}
                   </tbody>
                   {purchaseOrders.length > 0 && (
                     <tfoot>
-                       <SubtotalRow label="اجمالي المشتريات" value={purchasesTotal} colSpan={2} color="text-blue-700" />
+                       <SubtotalRow label="اجمالي المشتريات" value={purchasesTotal} colSpan={4} color="text-blue-700" />
                     </tfoot>
                   )}
                 </table>
@@ -503,11 +703,12 @@ export default function CompanyReportPage() {
                 <h2 className="text-lg font-bold text-slate-900">المرتجعات</h2>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[550px]">
+                <table className="w-full min-w-[600px]">
                   <thead>
                     <tr className="bg-slate-50">
                       <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">التاريخ</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">العميل</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">النوع</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">الطرف الآخر</th>
                       <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">الاجمالي</th>
                       <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">السبب</th>
                     </tr>
@@ -516,20 +717,27 @@ export default function CompanyReportPage() {
                     {returnItems.map((row) => (
                       <tr key={row.id} className="border-t border-gray-100 hover:bg-slate-50/50">
                         <td className="px-4 py-3 text-sm"><DateTimeCell value={row.createdAt} /></td>
-                        <td className="px-4 py-3 text-sm">{row.customer?.name || "—"}</td>
+                        <td className="px-4 py-3 text-sm">
+                          {row.type === "PURCHASE_RETURN" ? (
+                            <span className="inline-flex rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">مرتجع مشتريات</span>
+                          ) : (
+                            <span className="inline-flex rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">مرتجع مبيعات</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm">{row.customer?.name || row.supplier?.name || "—"}</td>
                         <td className="px-4 py-3 text-sm font-bold text-red-700">{moneyFormatter.format(row.total)}</td>
                         <td className="px-4 py-3 text-sm">{row.reason}</td>
                       </tr>
                     ))}
                     {returnItems.length === 0 && (
                       <tr>
-                        <td colSpan={4} className="px-4 py-8 text-center text-gray-400">لا توجد بيانات</td>
+                        <td colSpan={5} className="px-4 py-8 text-center text-gray-400">لا توجد بيانات</td>
                       </tr>
                     )}
                   </tbody>
                   {returnItems.length > 0 && (
                     <tfoot>
-                      <SubtotalRow label="اجمالي المرتجعات" value={returnsTotal} colSpan={2} color="text-red-700" />
+                      <SubtotalRow label="اجمالي المرتجعات" value={returnsTotal} colSpan={4} color="text-red-700" />
                     </tfoot>
                   )}
                 </table>

@@ -13,13 +13,25 @@ export async function GET() {
 
     const companiesWithFinance = await Promise.all(
       companies.map(async (company) => {
-        const [salesAgg, purchaseAgg, settlementCount, salesCount, purchaseCount] = await Promise.all([
+        const [salesAgg, purchaseAgg, expenseAgg, salesReturnAgg, purchaseReturnAgg, settlementCount, salesCount, purchaseCount] = await Promise.all([
           prisma.salesOrder.aggregate({
             where: { companyId: company.id },
             _sum: { total: true },
           }),
           prisma.purchaseOrder.aggregate({
             where: { companyId: company.id },
+            _sum: { total: true },
+          }),
+          prisma.expense.aggregate({
+            where: { companyId: company.id },
+            _sum: { amount: true },
+          }),
+          prisma.returnTransaction.aggregate({
+            where: { companyId: company.id, type: "SALE_RETURN" },
+            _sum: { total: true },
+          }),
+          prisma.returnTransaction.aggregate({
+            where: { companyId: company.id, type: "PURCHASE_RETURN" },
             _sum: { total: true },
           }),
           prisma.settlement.count({
@@ -35,13 +47,23 @@ export async function GET() {
 
         const totalSales = salesAgg._sum?.total ?? 0;
         const totalPurchases = purchaseAgg._sum?.total ?? 0;
+        const totalExpenses = expenseAgg._sum?.amount ?? 0;
+        const salesReturns = salesReturnAgg._sum?.total ?? 0;
+        const purchaseReturns = purchaseReturnAgg._sum?.total ?? 0;
+
+        // Income-statement style net profit (consistent with the per-company
+        // financial report): sales − purchases − expenses − sales returns + purchase returns.
+        const netProfit = totalSales - totalPurchases - totalExpenses - salesReturns + purchaseReturns;
 
         return {
           ...company,
           totalSales,
           totalPurchases,
+          totalExpenses,
+          salesReturns,
+          purchaseReturns,
           totalSettlements: settlementCount,
-          netProfit: totalSales - totalPurchases,
+          netProfit,
           counts: {
             salesOrders: salesCount,
             purchaseOrders: purchaseCount,
