@@ -31,7 +31,8 @@
       "maintenance": "Maintenance",
       "finance": "Finance",
       "admin": "Reports & Admin"
-    }
+    },
+    "expenses": "Expenses"
   },
   "dashboard": {
     "title": "Dashboard",

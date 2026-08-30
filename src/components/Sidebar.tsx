@@ -81,7 +81,7 @@ const navGroups: { key: string; items: NavItem[] }[] = [
   {
     key: "navigation.group.finance",
     items: [
-      { key: "navigation.finance", href: "/finance", icon: Wallet, page: "finance" },
+      { key: "navigation.expenses", href: "/finance", icon: Wallet, page: "finance" },
       { key: "navigation.settlements", href: "/settlements", icon: Receipt, page: "settlements", canAdd: true },
       { key: "navigation.investors", href: "/investors", icon: PieChart, page: "investors", canAdd: true },
     ],

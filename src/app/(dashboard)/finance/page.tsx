@@ -18,7 +18,10 @@ interface Company { id: string; name: string; }
 interface Expense {
   id: string; companyId: string; category: string; description: string; amount: number;
   paidBy: string; date: string; createdAt: string; company: Company;
+  payer?: { id: string; name?: string | null };
 }
+
+const payerName = (expense: Expense) => expense.payer?.name || expense.paidBy;
 
 export default function FinancePage() {
   const { t, dir } = useI18n();
@@ -81,20 +84,23 @@ export default function FinancePage() {
       expense.category,
       expense.description,
       String(expense.amount),
-      expense.paidBy,
+      payerName(expense),
     ]),
   });
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    await fetch("/api/expenses", {
+    const res = await fetch("/api/expenses", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, amount: parseFloat(form.amount) || 0, paidBy: "" }),
+      body: JSON.stringify({ ...form, amount: parseFloat(form.amount) || 0 }),
     });
     setSaving(false);
-    setForm({ companyId: "", category: "", description: "", amount: "" });
-    setShowForm(false); fetchData();
+    if (res.ok) {
+      setForm({ companyId: "", category: "", description: "", amount: "" });
+      setShowForm(false);
+      fetchData();
+    }
   };
 
   return (
@@ -170,7 +176,7 @@ export default function FinancePage() {
                       <td className="px-4 py-3 text-sm">{expense.category}</td>
                       <td className="px-4 py-3 text-sm">{expense.description}</td>
                       <td className="px-4 py-3 text-sm">{expense.amount.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-sm">{expense.paidBy}</td>
+                      <td className="px-4 py-3 text-sm">{payerName(expense)}</td>
                     </tr>
                   ))}
                 </tbody>

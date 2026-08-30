@@ -31,7 +31,8 @@
       "maintenance": "الصيانة",
       "finance": "المالية",
       "admin": "التقارير والإدارة"
-    }
+    },
+    "expenses": "المصروفات"
   },
   "dashboard": {
     "title": "لوحة التحكم",

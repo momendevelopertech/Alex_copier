@@ -9,6 +9,7 @@ export async function GET() {
     const expenses = await prisma.expense.findMany({
       include: {
         company: true,
+        payer: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -20,17 +21,33 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-
     const actor = await requirePageAccess("finance");
     if (!actor) {
       const authed = await requireAuth();
       return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
     }
-        const body = await request.json();
+
+    const body = await request.json();
+    const companyId = typeof body.companyId === "string" ? body.companyId : "";
+    const category = typeof body.category === "string" ? body.category.trim() : "";
+    const description = typeof body.description === "string" ? body.description.trim() : "";
+    const amount = Number(body.amount);
+
+    if (!companyId || !category || !description || !Number.isFinite(amount) || amount <= 0) {
+      return NextResponse.json({ error: "Invalid expense data" }, { status: 400 });
+    }
+
     const expense = await prisma.expense.create({
-      data: body,
+      data: {
+        companyId,
+        category,
+        description,
+        amount,
+        paidBy: actor.id,
+      },
       include: {
         company: true,
+        payer: { select: { id: true, name: true } },
       },
     });
     return NextResponse.json(expense, { status: 201 });
