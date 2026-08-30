@@ -412,6 +412,8 @@
     },
     "searchPlaceholder": "Search by supplier, company, or order no....",
     "companyFilter": "Company",
+    "tabExternal": "External purchases",
+    "tabIntercompany": "Inter-company",
     "intercompanyTitle": "Inter-company purchases",
     "intercompanyHint": "Internal purchase invoices created automatically on internal sale",
     "sellerCompany": "Selling company",

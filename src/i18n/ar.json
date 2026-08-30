@@ -427,6 +427,8 @@
     },
     "searchPlaceholder": "ابحث بالمورد أو الشركة أو رقم الطلب...",
     "companyFilter": "الشركة",
+    "tabExternal": "المشتريات العادية",
+    "tabIntercompany": "الشراءات الداخلية",
     "intercompanyTitle": "الشراءات الداخلية بين الشركات",
     "intercompanyHint": "فواتير شراء داخلية تُنشأ تلقائياً عند البيع الداخلي",
     "sellerCompany": "الشركة البائعة",

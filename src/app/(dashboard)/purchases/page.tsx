@@ -29,7 +29,7 @@ interface ItemRow { productId: string; quantity: string; unitPrice: string; }
 interface InterCompanyItem { id: string; product: Product | null; quantity: number; unitPrice: number; }
 interface InterCompanyInvoice {
   id: string; invoiceNumber: string; total: number; invoiceDate: string; createdAt: string; notes: string | null;
-  fromCompany: Company; toCompany: Company; items: InterCompanyItem[];
+  fromCompany: Company; toCompany: Company; items: InterCompanyItem[]; internalPaymentMethod?: string;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -70,6 +70,11 @@ export default function PurchasesPage() {
   const PAGE_SIZE = 15;
   const [icPage, setIcPage] = useState(1);
   const IC_PAGE_SIZE = 10;
+  const [tab, setTab] = useState<"external" | "inter">("external");
+  const [icSearch, setIcSearch] = useState("");
+  const [icCompanyFilter, setIcCompanyFilter] = useState("");
+  const [icDateFrom, setIcDateFrom] = useState("");
+  const [icDateTo, setIcDateTo] = useState("");
 
   const fetchData = async () => {
     try {
@@ -106,12 +111,13 @@ export default function PurchasesPage() {
   );
   const hasActiveFilters = statusFilter !== "" || companyFilter !== "" || supplierFilter !== "" || dateFrom !== "" || dateTo !== "" || search !== "";
   const icFiltered = intercompanyInvoices.filter(ic =>
-    (!companyFilter || ic.toCompany.id === companyFilter) &&
-    inDateRange(ic.invoiceDate || ic.createdAt, dateFrom, dateTo) &&
-    (matchesQuery(ic.fromCompany?.name, search) ||
-      matchesQuery(ic.toCompany?.name, search) ||
-      matchesQuery(ic.invoiceNumber, search))
+    (!icCompanyFilter || ic.toCompany.id === icCompanyFilter) &&
+    inDateRange(ic.invoiceDate || ic.createdAt, icDateFrom, icDateTo) &&
+    (matchesQuery(ic.fromCompany?.name, icSearch) ||
+      matchesQuery(ic.toCompany?.name, icSearch) ||
+      matchesQuery(ic.invoiceNumber, icSearch))
   );
+  const icHasActiveFilters = icSearch !== "" || icCompanyFilter !== "" || icDateFrom !== "" || icDateTo !== "";
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
@@ -243,15 +249,30 @@ export default function PurchasesPage() {
         </form>
       </FormModal>
 
+      <div className="flex gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm" role="tablist">
+        {([{ id: "external", label: t("purchases.tabExternal") }, { id: "inter", label: t("purchases.tabIntercompany") }] as const).map((tb) => (
+          <button
+            key={tb.id}
+            role="tab"
+            aria-selected={tab === tb.id}
+            onClick={() => setTab(tb.id)}
+            className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${tab === tb.id ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"}`}
+          >
+            {tb.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "external" ? (
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
           <div className="w-full md:w-80 md:flex-none"><SearchInput value={search} onChange={setSearch} placeholder={t("purchases.searchPlaceholder")} /></div>
-          <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); setIcPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("common.status")} — ${t("common.all")}`} className="md:w-40" />
-          <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); setIcPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} — ${t("common.all")}`} className="md:w-40" />
-          <FilterSelect value={supplierFilter} onChange={(v) => { setSupplierFilter(v); setPage(1); setIcPage(1); }} options={suppliers.map((s) => ({ value: s.id, label: s.name }))} allLabel={`${t("purchases.supplier")} — ${t("common.all")}`} className="md:w-44" />
-          <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={(v) => { setDateFrom(v); setPage(1); setIcPage(1); }} onToChange={(v) => { setDateTo(v); setPage(1); setIcPage(1); }} />
+          <FilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))} allLabel={`${t("common.status")} — ${t("common.all")}`} className="md:w-40" />
+          <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} — ${t("common.all")}`} className="md:w-40" />
+          <FilterSelect value={supplierFilter} onChange={(v) => { setSupplierFilter(v); setPage(1); }} options={suppliers.map((s) => ({ value: s.id, label: s.name }))} allLabel={`${t("purchases.supplier")} — ${t("common.all")}`} className="md:w-44" />
+          <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={(v) => { setDateFrom(v); setPage(1); }} onToChange={(v) => { setDateTo(v); setPage(1); }} />
           {hasActiveFilters && (
-            <button onClick={() => { setSearch(""); setStatusFilter(""); setCompanyFilter(""); setSupplierFilter(""); setDateFrom(""); setDateTo(""); setPage(1); setIcPage(1); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
+            <button onClick={() => { setSearch(""); setStatusFilter(""); setCompanyFilter(""); setSupplierFilter(""); setDateFrom(""); setDateTo(""); setPage(1); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
               {t("common.resetFilters")}
             </button>
           )}
@@ -320,8 +341,18 @@ export default function PurchasesPage() {
         )}
         <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
       </div>
-
+      ) : (
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
+          <div className="w-full md:w-80 md:flex-none"><SearchInput value={icSearch} onChange={setIcSearch} placeholder={t("purchases.searchPlaceholder")} /></div>
+          <FilterSelect value={icCompanyFilter} onChange={(v) => { setIcCompanyFilter(v); setIcPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("purchases.buyerCompany")} — ${t("common.all")}`} className="md:w-44" />
+          <DateRangeFilter from={icDateFrom} to={icDateTo} onFromChange={(v) => { setIcDateFrom(v); setIcPage(1); }} onToChange={(v) => { setIcDateTo(v); setIcPage(1); }} />
+          {icHasActiveFilters && (
+            <button onClick={() => { setIcSearch(""); setIcCompanyFilter(""); setIcDateFrom(""); setIcDateTo(""); setIcPage(1); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
+              {t("common.resetFilters")}
+            </button>
+          )}
+        </div>
         <div className="flex items-center justify-between border-b border-slate-200 p-4">
           <h2 className="text-base font-semibold text-slate-900">{t("purchases.intercompanyTitle")}</h2>
           <span className="text-xs text-slate-400">{t("purchases.intercompanyHint")}</span>
@@ -340,7 +371,7 @@ export default function PurchasesPage() {
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("purchases.buyerCompany")}</th>
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("purchases.items")}</th>
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("purchases.total")}</th>
-                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.paymentMethod")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("sales.paymentMethod")}</th>
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.date")}</th>
                 </tr>
               </thead>
@@ -353,7 +384,11 @@ export default function PurchasesPage() {
                     <td className="px-4 py-3 text-sm">{ic.items && ic.items.length ? ic.items.map((x) => x.product?.name).join("، ") : "—"}</td>
                     <td className="px-4 py-3 text-sm">{ic.total.toLocaleString()}</td>
                     <td className="px-4 py-3 text-sm">
-                      <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">{t("purchases.credit")}</span>
+                      {ic.internalPaymentMethod === "CASH" ? (
+                        <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">{t("sales.cash")}</span>
+                      ) : (
+                        <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">{t("sales.credit")}</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm"><DateTimeCell value={ic.invoiceDate || ic.createdAt} /></td>
                   </tr>
@@ -366,6 +401,7 @@ export default function PurchasesPage() {
           <Pagination currentPage={icSafePage} totalPages={icTotalPages} onPageChange={setIcPage} totalItems={icFiltered.length} pageSize={IC_PAGE_SIZE} />
         )}
       </div>
+      )}
     </div>
   );
 }

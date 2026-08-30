@@ -154,6 +154,8 @@ export async function POST(request: Request) {
           invoiceDate: new Date(),
           notes: notes || null,
           salesOrderId: order.id,
+          internalPaymentMethod: internalPaymentMethod === "CASH" ? "CASH" : "CREDIT",
+          internalPaidAmount: Math.min(internalPaidAmount, internalTotal),
         },
       });
 

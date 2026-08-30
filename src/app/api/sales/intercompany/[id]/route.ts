@@ -194,12 +194,24 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       if (invoice.fromCompanyId !== fromCompanyId || invoice.toCompanyId !== toCompanyId) {
         await tx.interCompanyInvoice.update({
           where: { id: invoice.id },
-          data: { fromCompanyId, toCompanyId, total: internalTotal, notes: notes || null },
+          data: {
+            fromCompanyId,
+            toCompanyId,
+            total: internalTotal,
+            notes: notes || null,
+            internalPaymentMethod: internalPaymentMethod === "CASH" ? "CASH" : "CREDIT",
+            internalPaidAmount: Math.min(internalPaidAmount, internalTotal),
+          },
         });
       } else {
         await tx.interCompanyInvoice.update({
           where: { id: invoice.id },
-          data: { total: internalTotal, notes: notes || null },
+          data: {
+            total: internalTotal,
+            notes: notes || null,
+            internalPaymentMethod: internalPaymentMethod === "CASH" ? "CASH" : "CREDIT",
+            internalPaidAmount: Math.min(internalPaidAmount, internalTotal),
+          },
         });
       }
 

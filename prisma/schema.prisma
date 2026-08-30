@@ -656,17 +656,19 @@ model PurchaseInvoice {
 }
 
 model InterCompanyInvoice {
-  id              String   @id @default(cuid())
-  fromCompanyId   String
-  toCompanyId     String
-  invoiceNumber   String
-  total           Float
-  invoiceDate     DateTime
-  purchaseOrderId String?
-  salesOrderId    String?
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  fromCompanyId        String
+  toCompanyId          String
+  invoiceNumber        String
+  total                Float
+  invoiceDate          DateTime
+  purchaseOrderId      String?
+  salesOrderId         String?
+  notes                String?
+  internalPaymentMethod String  @default("CREDIT")
+  internalPaidAmount   Float    @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   fromCompany Company @relation("InterCompanySales", fields: [fromCompanyId], references: [id], onDelete: Cascade)
   toCompany   Company @relation("InterCompanyPurchases", fields: [toCompanyId], references: [id], onDelete: Cascade)
