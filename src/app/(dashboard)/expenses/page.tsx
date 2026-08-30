@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { signOut } from "next-auth/react";
 import { useI18n } from "@/i18n/context";
 import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
@@ -42,6 +43,10 @@ export default function FinancePage() {
   const fetchData = async () => {
     try {
       const [eRes, cRes] = await Promise.all([fetch("/api/expenses"), fetch("/api/companies")]);
+      if (eRes.status === 401 || cRes.status === 401) {
+        signOut({ callbackUrl: "/login" });
+        return;
+      }
       setExpenses(await eRes.json()); setCompanies(await cRes.json());
     } finally {
       setLoading(false);
@@ -96,6 +101,10 @@ export default function FinancePage() {
       body: JSON.stringify({ ...form, amount: parseFloat(form.amount) || 0 }),
     });
     setSaving(false);
+    if (res.status === 401) {
+      signOut({ callbackUrl: "/login" });
+      return;
+    }
     if (res.ok) {
       setForm({ companyId: "", category: "", description: "", amount: "" });
       setShowForm(false);

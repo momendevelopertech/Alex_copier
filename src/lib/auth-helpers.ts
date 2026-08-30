@@ -1,9 +1,21 @@
 import { auth } from "@/auth";
 import { hasPageAccess, type Page } from "@/lib/permissions";
+import { prisma } from "@/lib/prisma";
 
 export async function requireAuth() {
   const session = await auth();
   if (!session?.user) {
+    return null;
+  }
+  const userId = (session.user as { id?: string }).id;
+  if (!userId) {
+    return null;
+  }
+  const dbUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, isActive: true },
+  });
+  if (!dbUser || !dbUser.isActive) {
     return null;
   }
   return session.user;
