@@ -52,6 +52,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(expense, { status: 201 });
   } catch (error) {
+    console.error("[expenses:POST] create failed:", error);
     return NextResponse.json({ error: "Failed to create expense" }, { status: 500 });
   }
 }
