@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requirePageAccess } from "@/lib/auth-helpers";
+import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
 import { recalculatePaymentStatus } from "@/lib/payment-status";
+import { traceError } from "@/lib/prisma-errors";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requireAuth();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const { id } = await params;
     const sale = await prisma.salesOrder.findUnique({
       where: { id },
@@ -36,6 +39,11 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const actor = await requirePageAccess("sales");
+    if (!actor) {
+      const authed = await requireAuth();
+      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
+    }
     const { id } = await params;
     const body = await request.json();
     const { items, installments, ...raw } = body;
@@ -75,6 +83,29 @@ export async function PUT(
     const discountVal = Math.max(0, Number(raw.discount) || 0);
     const discountType = (raw.discountType === "PERCENTAGE" ? "PERCENTAGE" : "FIXED") as "FIXED" | "PERCENTAGE";
     const isTaxInvoice = Boolean(raw.isTaxInvoice);
+
+    const [company, customer] = await Promise.all([
+      prisma.company.findUnique({ where: { id: companyId }, select: { id: true } }),
+      prisma.customer.findUnique({ where: { id: customerId }, select: { id: true } }),
+    ]);
+    if (!company) {
+      return NextResponse.json({ error: "الشركة غير موجودة", code: "COMPANY_NOT_FOUND" }, { status: 400 });
+    }
+    if (!customer) {
+      return NextResponse.json({ error: "العميل غير موجود", code: "CUSTOMER_NOT_FOUND" }, { status: 400 });
+    }
+    if (engineerId) {
+      const engineer = await prisma.engineer.findUnique({ where: { id: engineerId }, select: { id: true } });
+      if (!engineer) {
+        return NextResponse.json({ error: "المهندس غير موجود", code: "ENGINEER_NOT_FOUND" }, { status: 400 });
+      }
+    }
+    const productIds = items.map((item: { productId: string }) => item.productId);
+    const distinctProducts = new Set(productIds);
+    const foundProducts = await prisma.product.count({ where: { id: { in: productIds } } });
+    if (foundProducts !== distinctProducts.size) {
+      return NextResponse.json({ error: "منتج غير موجود في سجل المنتجات", code: "PRODUCT_NOT_FOUND" }, { status: 400 });
+    }
 
     const subtotal = items.reduce(
       (sum: number, item: { quantity: number; unitPrice: number; discount?: number }) =>
@@ -291,8 +322,7 @@ export async function PUT(
     if (error instanceof Error && error.message.startsWith("INSUFFICIENT_STOCK")) {
       return NextResponse.json({ error: "الكمية المتاحة في المخزون لا تكفي لهذه الحركة", code: "INSUFFICIENT_STOCK" }, { status: 409 });
     }
-    console.error("Failed to update sales order:", error);
-    return NextResponse.json({ error: "Failed to update sales order", detail: error instanceof Error ? error.message : undefined }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update sales order", detail: error instanceof Error ? error.message : undefined }, { status: traceError("[sales:PUT] update failed", error) });
   }
 }
 

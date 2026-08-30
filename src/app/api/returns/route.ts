@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
 import { recalculatePaymentStatus } from "@/lib/payment-status";
+import { traceError } from "@/lib/prisma-errors";
 
 export async function GET() {
   try {
@@ -204,7 +205,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: "مرتجع المشتريات غير مدعوم بعد", code: "NOT_IMPLEMENTED" }, { status: 501 });
   } catch (error) {
-    console.error("Failed to create return transaction:", error);
-    return NextResponse.json({ error: "Failed to create return transaction" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create return transaction" }, { status: traceError("[returns:POST] create failed", error) });
   }
 }

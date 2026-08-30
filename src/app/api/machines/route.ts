@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
+import { traceError } from "@/lib/prisma-errors";
 
 export async function GET() {
   try {
@@ -33,6 +34,25 @@ export async function POST(request: Request) {
         const body = await request.json();
     const { currentOwnerId, companyId, ...data } = body;
 
+    if (currentOwnerId) {
+      const owner = await prisma.customer.findUnique({ where: { id: currentOwnerId }, select: { id: true } });
+      if (!owner) {
+        return NextResponse.json({ error: "المالك الحالي غير موجود", code: "CUSTOMER_NOT_FOUND" }, { status: 400 });
+      }
+    }
+    if (companyId) {
+      const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
+      if (!company) {
+        return NextResponse.json({ error: "الشركة غير موجودة", code: "COMPANY_NOT_FOUND" }, { status: 400 });
+      }
+    }
+    if (data.productId) {
+      const product = await prisma.product.findUnique({ where: { id: data.productId }, select: { id: true } });
+      if (!product) {
+        return NextResponse.json({ error: "المنتج غير موجود", code: "PRODUCT_NOT_FOUND" }, { status: 400 });
+      }
+    }
+
     const machine = await prisma.machine.create({
       data: { ...data, currentOwnerId: currentOwnerId || null },
       include: {
@@ -58,6 +78,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json(machine, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to create machine" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create machine" }, { status: traceError("[machines:POST] create failed", error) });
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
 import { notifySettlementVerified } from "@/lib/notifications";
+import { traceError } from "@/lib/prisma-errors";
 
 export async function GET(
   request: Request,
@@ -103,7 +104,7 @@ export async function PUT(
 
     return NextResponse.json(settlement);
   } catch (error) {
-    return NextResponse.json({ error: "Failed to update settlement" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update settlement" }, { status: traceError("[settlements:PUT] update failed", error) });
   }
 }
 

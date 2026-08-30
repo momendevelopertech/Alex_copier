@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
+import { traceError } from "@/lib/prisma-errors";
 
 export async function GET() {
   try {
@@ -37,6 +38,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid expense data" }, { status: 400 });
     }
 
+    const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
+    if (!company) {
+      return NextResponse.json({ error: "الشركة غير موجودة", code: "COMPANY_NOT_FOUND" }, { status: 400 });
+    }
+
     const expense = await prisma.expense.create({
       data: {
         companyId,
@@ -52,7 +58,6 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(expense, { status: 201 });
   } catch (error) {
-    console.error("[expenses:POST] create failed:", error);
-    return NextResponse.json({ error: "Failed to create expense" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create expense" }, { status: traceError("[expenses:POST] create failed", error) });
   }
 }

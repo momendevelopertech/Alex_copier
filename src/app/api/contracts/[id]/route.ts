@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
+import { traceError } from "@/lib/prisma-errors";
 
 export async function GET(
   request: Request,
@@ -88,6 +89,14 @@ export async function PUT(
     if (earlyTerminationFee !== undefined) updateData.earlyTerminationFee = earlyTerminationFee != null ? Number(earlyTerminationFee) : null;
     if (notes !== undefined) updateData.notes = notes;
 
+    if (Array.isArray(machineIds) && machineIds.length > 0) {
+      const distinctMachines = new Set(machineIds as string[]);
+      const foundMachines = await prisma.machine.count({ where: { id: { in: [...distinctMachines] } } });
+      if (foundMachines !== distinctMachines.size) {
+        return NextResponse.json({ error: "جهاز غير موجود في سجل الأجهزة", code: "MACHINE_NOT_FOUND" }, { status: 400 });
+      }
+    }
+
     const contract = await prisma.$transaction(async (tx) => {
       if (machineIds) {
         await tx.contractMachine.deleteMany({ where: { contractId: id } });
@@ -120,7 +129,7 @@ export async function PUT(
     if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
       return NextResponse.json({ error: "Contract not found", code: "NOT_FOUND" }, { status: 404 });
     }
-    return NextResponse.json({ error: "Failed to update contract" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update contract" }, { status: traceError("[contracts:PUT] update failed", error) });
   }
 }
 

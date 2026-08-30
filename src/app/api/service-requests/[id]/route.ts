@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
 import { notifyServiceRequestAssigned, notifyServiceRequestStatusChanged } from "@/lib/notifications";
+import { traceError } from "@/lib/prisma-errors";
 
 async function getScopedRequest(id: string, user: { id: string; role?: string }) {
   const serviceRequest = await prisma.serviceRequest.findUnique({
@@ -89,6 +90,12 @@ export async function PUT(
     if (body.status && !VALID_STATUSES.includes(body.status)) {
       return NextResponse.json({ error: "قيمة الحالة غير صالحة" }, { status: 400 });
     }
+    if ("engineerId" in body && body.engineerId) {
+      const engineer = await prisma.engineer.findUnique({ where: { id: body.engineerId }, select: { id: true } });
+      if (!engineer) {
+        return NextResponse.json({ error: "المهندس غير موجود", code: "ENGINEER_NOT_FOUND" }, { status: 400 });
+      }
+    }
 
     const data: Record<string, unknown> = {};
     if ("status" in body) data.status = body.status;
@@ -139,7 +146,7 @@ export async function PUT(
 
     return NextResponse.json(serviceRequest);
   } catch (error) {
-    return NextResponse.json({ error: "Failed to update service request" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update service request" }, { status: traceError("[service-requests:PUT] update failed", error) });
   }
 }
 

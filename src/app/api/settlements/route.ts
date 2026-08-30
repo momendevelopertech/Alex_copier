@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
 import { notifySettlementPendingVerification } from "@/lib/notifications";
+import { traceError } from "@/lib/prisma-errors";
 
 export async function GET() {
   try {
@@ -53,6 +54,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "المستخدم المُحصِّل غير موجود", code: "USER_NOT_FOUND" }, { status: 400 });
     }
 
+    const company = await prisma.company.findUnique({ where: { id: body.companyId }, select: { id: true } });
+    if (!company) {
+      return NextResponse.json({ error: "الشركة غير موجودة", code: "COMPANY_NOT_FOUND" }, { status: 400 });
+    }
+    if (body.customerId) {
+      const customer = await prisma.customer.findUnique({ where: { id: body.customerId }, select: { id: true } });
+      if (!customer) {
+        return NextResponse.json({ error: "العميل غير موجود", code: "CUSTOMER_NOT_FOUND" }, { status: 400 });
+      }
+    }
+    if (body.engineerId) {
+      const engineer = await prisma.engineer.findUnique({ where: { id: body.engineerId }, select: { id: true } });
+      if (!engineer) {
+        return NextResponse.json({ error: "المهندس غير موجود", code: "ENGINEER_NOT_FOUND" }, { status: 400 });
+      }
+    }
+
     const settlementNumber = `STL-${Date.now()}`;
 
     const settlement = await prisma.settlement.create({
@@ -86,6 +104,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json(settlement, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to create settlement" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create settlement" }, { status: traceError("[settlements:POST] create failed", error) });
   }
 }

@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
+import { traceError } from "@/lib/prisma-errors";
 
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const actor = await requirePageAccess("suppliers");
+    if (!actor) {
+      const authed = await requireAuth();
+      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
+    }
     const { id } = await params;
     const body = await request.json();
 
@@ -20,7 +24,7 @@ export async function PUT(
 
     return NextResponse.json(supplier);
   } catch (error) {
-    return NextResponse.json({ error: "Failed to update supplier" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update supplier" }, { status: traceError("[suppliers:PUT] update failed", error) });
   }
 }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
+import { traceError } from "@/lib/prisma-errors";
 
 export async function GET() {
   try {
@@ -79,6 +80,29 @@ export async function POST(request: Request) {
       0
     ) ?? 0;
 
+    const companyId = typeof data.companyId === "string" ? data.companyId : "";
+    const supplierId = typeof data.supplierId === "string" ? data.supplierId : "";
+    const [company, supplier] = await Promise.all([
+      companyId ? prisma.company.findUnique({ where: { id: companyId }, select: { id: true } }) : null,
+      supplierId ? prisma.supplier.findUnique({ where: { id: supplierId }, select: { id: true } }) : null,
+    ]);
+    if (companyId && !company) {
+      return NextResponse.json({ error: "الشركة غير موجودة", code: "COMPANY_NOT_FOUND" }, { status: 400 });
+    }
+    if (supplierId && !supplier) {
+      return NextResponse.json({ error: "المورد غير موجود", code: "SUPPLIER_NOT_FOUND" }, { status: 400 });
+    }
+    if (Array.isArray(items) && items.length > 0) {
+      const ids = items.map((item: { productId: string }) => item.productId).filter(Boolean);
+      const distinct = new Set(ids);
+      if (distinct.size > 0) {
+        const found = await prisma.product.count({ where: { id: { in: ids } } });
+        if (found !== distinct.size) {
+          return NextResponse.json({ error: "منتج غير موجود في سجل المنتجات", code: "PRODUCT_NOT_FOUND" }, { status: 400 });
+        }
+      }
+    }
+
     const purchaseOrder = await prisma.purchaseOrder.create({
       data: {
         ...data,
@@ -104,6 +128,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json(purchaseOrder, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to create purchase order" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create purchase order" }, { status: traceError("[purchases:POST] create failed", error) });
   }
 }

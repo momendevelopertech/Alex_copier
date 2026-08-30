@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
 import { notifyServiceRequestCreated } from "@/lib/notifications";
+import { traceError } from "@/lib/prisma-errors";
 
 export async function GET() {
   try {
@@ -75,6 +76,24 @@ export async function POST(request: Request) {
     if (data.priority && !["NORMAL", "IMPORTANT", "URGENT", "EMERGENCY"].includes(data.priority)) {
       return NextResponse.json({ error: "قيمة الأولوية غير صالحة", code: "INVALID_PRIORITY" }, { status: 400 });
     }
+    if (data.machineId) {
+      const machine = await prisma.machine.findUnique({ where: { id: data.machineId }, select: { id: true } });
+      if (!machine) {
+        return NextResponse.json({ error: "الجهاز غير موجود", code: "MACHINE_NOT_FOUND" }, { status: 400 });
+      }
+    }
+    if (data.locationId) {
+      const location = await prisma.customerLocation.findUnique({ where: { id: data.locationId }, select: { id: true } });
+      if (!location) {
+        return NextResponse.json({ error: "الموقع غير موجود", code: "LOCATION_NOT_FOUND" }, { status: 400 });
+      }
+    }
+    if (data.engineerId) {
+      const engineer = await prisma.engineer.findUnique({ where: { id: data.engineerId }, select: { id: true } });
+      if (!engineer) {
+        return NextResponse.json({ error: "المهندس غير موجود", code: "ENGINEER_NOT_FOUND" }, { status: 400 });
+      }
+    }
 
     const requestNumber = `SR-${Date.now()}`;
 
@@ -125,7 +144,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json(serviceRequest, { status: 201 });
   } catch (error) {
-    console.error("[service-requests] POST failed:", error);
-    return NextResponse.json({ error: "Failed to create service request" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create service request" }, { status: traceError("[service-requests:POST] create failed", error) });
   }
 }

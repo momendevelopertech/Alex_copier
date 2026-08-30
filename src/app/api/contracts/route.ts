@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
+import { traceError } from "@/lib/prisma-errors";
 
 export async function GET() {
   try {
@@ -85,6 +86,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "المبلغ المدفوع غير صالح", code: "INVALID_AMOUNT_PAID" }, { status: 400 });
     }
 
+    const customer = await prisma.customer.findUnique({ where: { id: customerId }, select: { id: true } });
+    if (!customer) {
+      return NextResponse.json({ error: "العميل غير موجود", code: "CUSTOMER_NOT_FOUND" }, { status: 400 });
+    }
+    if (Array.isArray(machineIds) && machineIds.length > 0) {
+      const distinctMachines = new Set(machineIds as string[]);
+      const foundMachines = await prisma.machine.count({ where: { id: { in: [...distinctMachines] } } });
+      if (foundMachines !== distinctMachines.size) {
+        return NextResponse.json({ error: "جهاز غير موجود في سجل الأجهزة", code: "MACHINE_NOT_FOUND" }, { status: 400 });
+      }
+    }
+
     let contractNumber: string;
     try {
       contractNumber = `CTR-${Date.now()}`;
@@ -126,7 +139,7 @@ export async function POST(request: Request) {
       }
       throw e;
     }
-  } catch {
-    return NextResponse.json({ error: "Failed to create contract" }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to create contract" }, { status: traceError("[contracts:POST] create failed", error) });
   }
 }

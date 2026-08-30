@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
 import { recalculatePaymentStatus } from "@/lib/payment-status";
+import { traceError } from "@/lib/prisma-errors";
 
 /**
  * POST /api/sales/[id]/payments
@@ -65,6 +66,13 @@ export async function POST(
     const paymentDateTime = paymentDate ? new Date(paymentDate) : new Date();
     const targetCompanyId = companyId || order.companyId;
 
+    if (companyId) {
+      const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
+      if (!company) {
+        return NextResponse.json({ error: "الشركة غير موجودة", code: "COMPANY_NOT_FOUND" }, { status: 400 });
+      }
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       // Create customer payment record
       await tx.customerPayment.create({
@@ -125,10 +133,9 @@ export async function POST(
       order: updatedOrder,
     });
   } catch (error) {
-    console.error("Payment recording error:", error);
     return NextResponse.json(
       { error: "Failed to record payment" },
-      { status: 500 }
+      { status: traceError("[sales/payments:POST] record failed", error) }
     );
   }
 }

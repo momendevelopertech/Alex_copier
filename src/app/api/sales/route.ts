@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
 import { recalculatePaymentStatus } from "@/lib/payment-status";
+import { traceError } from "@/lib/prisma-errors";
 
 export async function GET() {
   try {
@@ -84,6 +85,29 @@ export async function POST(request: Request) {
     const orderDiscount = discountType === "PERCENTAGE" ? subtotal * Math.min(discountVal, 100) / 100 : Math.min(discountVal, subtotal);
     const taxable = subtotal - orderDiscount;
     const total = Math.round((taxable + taxable * Math.max(0, resolvedTaxRate) / 100) * 100) / 100;
+
+    const [company, customer] = await Promise.all([
+      prisma.company.findUnique({ where: { id: companyId }, select: { id: true } }),
+      prisma.customer.findUnique({ where: { id: customerId }, select: { id: true } }),
+    ]);
+    if (!company) {
+      return NextResponse.json({ error: "الشركة غير موجودة", code: "COMPANY_NOT_FOUND" }, { status: 400 });
+    }
+    if (!customer) {
+      return NextResponse.json({ error: "العميل غير موجود", code: "CUSTOMER_NOT_FOUND" }, { status: 400 });
+    }
+    if (engineerId) {
+      const engineer = await prisma.engineer.findUnique({ where: { id: engineerId }, select: { id: true } });
+      if (!engineer) {
+        return NextResponse.json({ error: "المهندس غير موجود", code: "ENGINEER_NOT_FOUND" }, { status: 400 });
+      }
+    }
+    const productIds = items.map((item: { productId: string }) => item.productId);
+    const distinctProducts = new Set(productIds);
+    const foundProducts = await prisma.product.count({ where: { id: { in: productIds } } });
+    if (foundProducts !== distinctProducts.size) {
+      return NextResponse.json({ error: "منتج غير موجود في سجل المنتجات", code: "PRODUCT_NOT_FOUND" }, { status: 400 });
+    }
 
     const warehouse = await prisma.warehouse.findFirst({
       where: { companyId, isMain: true },
@@ -266,8 +290,7 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message.startsWith("INSUFFICIENT_STOCK")) {
       return NextResponse.json({ error: "الكمية المتاحة في المخزون لا تكفي لهذه الحركة", code: "INSUFFICIENT_STOCK" }, { status: 409 });
     }
-    console.error("Failed to create sales order:", error);
     const msg = error instanceof Error ? (error.message || error.name || String(error)) : "Failed to create sales order";
-    return NextResponse.json({ error: msg, detail: error instanceof Error ? error.stack : undefined }, { status: 500 });
+    return NextResponse.json({ error: msg, detail: error instanceof Error ? error.stack : undefined }, { status: traceError("[sales:POST] create failed", error) });
   }
 }

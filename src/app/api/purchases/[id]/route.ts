@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
+import { traceError } from "@/lib/prisma-errors";
 
 export async function GET(
   _request: Request,
@@ -45,6 +46,29 @@ export async function PUT(
         0
       ) ?? 0;
 
+    if (data.companyId !== undefined) {
+      const company = await prisma.company.findUnique({ where: { id: data.companyId }, select: { id: true } });
+      if (!company) {
+        return NextResponse.json({ error: "الشركة غير موجودة", code: "COMPANY_NOT_FOUND" }, { status: 400 });
+      }
+    }
+    if (data.supplierId !== undefined) {
+      const supplier = await prisma.supplier.findUnique({ where: { id: data.supplierId }, select: { id: true } });
+      if (!supplier) {
+        return NextResponse.json({ error: "المورد غير موجود", code: "SUPPLIER_NOT_FOUND" }, { status: 400 });
+      }
+    }
+    if (Array.isArray(items) && items.length > 0) {
+      const ids = items.map((item: { productId: string }) => item.productId).filter(Boolean);
+      const distinct = new Set(ids);
+      if (distinct.size > 0) {
+        const found = await prisma.product.count({ where: { id: { in: ids } } });
+        if (found !== distinct.size) {
+          return NextResponse.json({ error: "منتج غير موجود في سجل المنتجات", code: "PRODUCT_NOT_FOUND" }, { status: 400 });
+        }
+      }
+    }
+
     const po = await prisma.purchaseOrder.update({
       where: { id },
       data: {
@@ -54,14 +78,16 @@ export async function PUT(
         ...(data.orderDate !== undefined ? { orderDate: data.orderDate } : {}),
         ...(data.notes !== undefined ? { notes: data.notes } : {}),
         total,
-        items: {
-          deleteMany: {},
-          create: items.map((item: { productId: string; quantity: number; unitPrice: number }) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-          })),
-        },
+        items: Array.isArray(items)
+          ? {
+              deleteMany: {},
+              create: items.map((item: { productId: string; quantity: number; unitPrice: number }) => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+              })),
+            }
+          : undefined,
       },
       include: {
         supplier: true,
@@ -72,8 +98,7 @@ export async function PUT(
 
     return NextResponse.json(po);
   } catch (error: unknown) {
-    console.error("Failed to update purchase order:", error);
-    return NextResponse.json({ error: "Failed to update purchase order" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update purchase order" }, { status: traceError("[purchases:PUT] update failed", error) });
   }
 }
 

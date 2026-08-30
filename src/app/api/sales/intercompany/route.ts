@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePageAccess, requireAuth } from "@/lib/auth-helpers";
 import { recalculatePaymentStatus } from "@/lib/payment-status";
+import { traceError } from "@/lib/prisma-errors";
 
 type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -86,6 +87,27 @@ export async function POST(request: Request) {
       ) {
         return NextResponse.json({ error: "بنود البيع الداخلي غير صالحة", code: "INVALID_INTERCOMPANY_ITEMS" }, { status: 400 });
       }
+    }
+
+    const [fromCompany, toCompany, customer] = await Promise.all([
+      prisma.company.findUnique({ where: { id: fromCompanyId }, select: { id: true } }),
+      prisma.company.findUnique({ where: { id: toCompanyId }, select: { id: true } }),
+      prisma.customer.findUnique({ where: { id: customerId }, select: { id: true } }),
+    ]);
+    if (!fromCompany) {
+      return NextResponse.json({ error: "شركة المصدر غير موجودة", code: "FROM_COMPANY_NOT_FOUND" }, { status: 400 });
+    }
+    if (!toCompany) {
+      return NextResponse.json({ error: "شركة الوجهة غير موجودة", code: "TO_COMPANY_NOT_FOUND" }, { status: 400 });
+    }
+    if (!customer) {
+      return NextResponse.json({ error: "العميل غير موجود", code: "CUSTOMER_NOT_FOUND" }, { status: 400 });
+    }
+    const productIds = items.map((item: InterItem) => item.productId);
+    const distinctProducts = new Set(productIds);
+    const foundProducts = await prisma.product.count({ where: { id: { in: productIds } } });
+    if (foundProducts !== distinctProducts.size) {
+      return NextResponse.json({ error: "منتج غير موجود في سجل المنتجات", code: "PRODUCT_NOT_FOUND" }, { status: 400 });
     }
 
     const resolvedTaxRate = isTaxInvoice ? 14 : Number(taxRate) || 0;
@@ -335,8 +357,10 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message === "ACCOUNT_CHART_MISSING") {
       return NextResponse.json({ error: "شجرة الحسابات غير مكتملة لإحدى الشركتين", code: "ACCOUNT_CHART_MISSING" }, { status: 400 });
     }
-    console.error("Failed to create intercompany sale:", error);
+    if (error instanceof Error && error.message === "WAREHOUSE_NOT_FOUND") {
+      return NextResponse.json({ error: "المستودع الرئيسي غير موجود لإحدى الشركتين", code: "WAREHOUSE_NOT_FOUND" }, { status: 400 });
+    }
     const msg = error instanceof Error ? (error.message || error.name || String(error)) : "Failed to create intercompany sale";
-    return NextResponse.json({ error: msg, detail: error instanceof Error ? error.stack : undefined }, { status: 500 });
+    return NextResponse.json({ error: msg, detail: error instanceof Error ? error.stack : undefined }, { status: traceError("[sales/intercompany:POST] create failed", error) });
   }
 }
