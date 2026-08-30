@@ -79,6 +79,7 @@ export default function MachinesPage() {
 const { success: toastSuccess } = useToast();
   
   const [machines, setMachines] = useState<Machine[]>([]);
+  const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const urlParams = useUrlParams(["serial"]);
   const [search, setSearchInput] = useSearchWithDefault(urlParams.serial ?? "");
   const [showForm, setShowForm] = useState(false);
@@ -94,9 +95,9 @@ const { success: toastSuccess } = useToast();
 
   const fetchMachines = async () => {
     try {
-      const res = await fetch("/api/machines");
-      const data = await res.json();
-      setMachines(data);
+      const [mRes, cRes] = await Promise.all([fetch("/api/machines"), fetch("/api/customers")]);
+      setMachines(await mRes.json());
+      setCustomers(await cRes.json());
     } finally {
       setLoading(false);
     }
@@ -240,7 +241,10 @@ const { success: toastSuccess } = useToast();
           </div>
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-slate-700">المالك الحالي</label>
-            <input type="text" value={form.currentOwnerId} onChange={(e) => setField("currentOwnerId", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <select value={form.currentOwnerId} onChange={(e) => setField("currentOwnerId", e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">بدون مالك</option>
+              {customers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+            </select>
           </div>
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-slate-700">{t("common.notes")}</label>

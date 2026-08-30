@@ -201,7 +201,7 @@ export default function PurchasesPage() {
     if (!form.supplierId) { toastError(t("purchases.selectSupplier")); return; }
     setSaving(true);
     try {
-      const payload = { ...form, orderDate: new Date().toISOString(), items };
+      const payload = editingId ? { ...form, items } : { ...form, orderDate: new Date().toISOString(), items };
       const url = editingId ? `/api/purchases/${editingId}` : "/api/purchases";
       const method = editingId ? "PUT" : "POST";
       const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
@@ -349,12 +349,14 @@ export default function PurchasesPage() {
               required
               quickAddTitle="إضافة مورد جديد"
               quickAddFields={[
+                { key: "companyId", label: "الشركة", type: "select", required: true, options: companies.map((c) => ({ value: c.id, label: c.name })) },
                 { key: "name", label: "اسم المورد", required: true },
                 { key: "contactName", label: "اسم التواصل" },
                 { key: "phone", label: "الهاتف", placeholder: "01xxxxxxxxx" },
                 { key: "email", label: "البريد الإلكتروني", type: "email" },
                 { key: "address", label: "العنوان" },
               ]}
+              quickAddDefaults={{ companyId: form.companyId }}
               quickAddEndpoint="/api/suppliers"
               onQuickAddSuccess={(item) => {
                 setSuppliers((prev) => [...prev, item]);

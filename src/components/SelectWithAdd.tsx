@@ -24,6 +24,7 @@ interface SelectWithAddProps {
   quickAddTitle: string;
   quickAddFields: QuickAddField[];
   quickAddEndpoint: string;
+  quickAddDefaults?: Record<string, string>;
   onQuickAddSuccess?: (newItem: { id: string; name: string }) => void;
   selectClassName?: string;
 }
@@ -40,6 +41,7 @@ export default function SelectWithAdd({
   quickAddTitle,
   quickAddFields,
   quickAddEndpoint,
+  quickAddDefaults = {},
   onQuickAddSuccess,
   selectClassName,
 }: SelectWithAddProps) {
@@ -55,7 +57,7 @@ export default function SelectWithAdd({
   const openQuickAdd = () => {
     const initial: Record<string, string> = {};
     for (const field of quickAddFields) {
-      initial[field.key] = "";
+      initial[field.key] = quickAddDefaults[field.key] ?? "";
     }
     setQuickAddForm(initial);
     setError("");

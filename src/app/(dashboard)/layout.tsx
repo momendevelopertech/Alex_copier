@@ -18,7 +18,7 @@ const pageTitles: Record<string, string> = {
   "/returns": "returns.title",
   "/inventory": "inventory.title",
   "/workshop": "workshop.title",
-  "/finance": "finance.title",
+  "/expenses": "finance.title",
   "/settlements": "settlements.title",
   "/reports": "reports.title",
   "/users": "users.title",

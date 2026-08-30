@@ -26,8 +26,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
     }
     const body = await request.json();
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const companyId = typeof body.companyId === "string" ? body.companyId.trim() : "";
+
+    if (!name || !companyId) {
+      return NextResponse.json({ error: "Supplier name and company are required" }, { status: 400 });
+    }
+
+    const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
+    if (!company) {
+      return NextResponse.json({ error: "Selected company does not exist" }, { status: 400 });
+    }
+
     const supplier = await prisma.supplier.create({
-      data: body,
+      data: {
+        name,
+        companyId,
+        contactName: typeof body.contactName === "string" ? body.contactName.trim() : null,
+        phone: typeof body.phone === "string" ? body.phone.trim() : null,
+        email: typeof body.email === "string" ? body.email.trim() : null,
+        address: typeof body.address === "string" ? body.address.trim() : null,
+        taxNumber: typeof body.taxNumber === "string" ? body.taxNumber.trim() : null,
+      },
       include: {
         company: true,
       },
