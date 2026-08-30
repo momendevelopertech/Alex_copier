@@ -45,8 +45,12 @@ export async function GET(request: Request) {
       const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
       const taxAmount = order.taxRate > 0 ? ((subtotal - order.discount) * order.taxRate) / 100 : 0;
 
+      const hasTradeIn = order.tradeInTotal > 0 || order.items.some((it) => it.tradeInProductId);
+      const subType = order.orderType === "SPARE_PART_SALE" ? "SPARE_PART_SALE" : hasTradeIn ? "TRADE_IN" : "MACHINE_SALE";
+
       invoiceData = {
         type: "sale",
+        subType,
         id: order.id,
         date: order.orderDate?.toISOString() || order.createdAt.toISOString(),
         companyName: order.company?.name || "الشركة",

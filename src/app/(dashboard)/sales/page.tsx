@@ -496,6 +496,18 @@ export default function SalesPage() {
 
       <FormModal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? "تعديل فاتورة بيع" : formMode === "tradeIn" ? "إضافة فاتورة استبدال" : t("sales.addOrder")} wide>
         <form onSubmit={handleCreate} className="space-y-5">
+          {(() => {
+            const isTradeIn = formMode === "tradeIn";
+            const kind = isTradeIn ? "tradein" : form.orderType === "SPARE_PART_SALE" ? "spare" : "machine";
+            const cfg: Record<string, string> = { machine: "border-blue-200 bg-blue-50 text-blue-700", spare: "border-green-200 bg-green-50 text-green-700", tradein: "border-amber-200 bg-amber-50 text-amber-700" };
+            const label = isTradeIn ? "فاتورة استبدال" : form.orderType === "SPARE_PART_SALE" ? "فاتورة بيع قطع غيار" : "فاتورة بيع جهاز";
+            return (
+              <div className={`flex items-center justify-between rounded-xl border px-4 py-3 ${cfg[kind]}`}>
+                <span className="text-sm font-bold">{label}</span>
+                <span className="text-xs opacity-80">{editingId ? "تعديل" : "إضافة جديدة"}</span>
+              </div>
+            );
+          })()}
           {formMode === "tradeIn" && (
             <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 space-y-3">
               <div className="flex items-center gap-2">
@@ -796,6 +808,18 @@ export default function SalesPage() {
       {viewingOrder && (
         <FormModal open={!!viewingOrder} onClose={() => setViewingOrder(null)} title="تفاصيل فاتورة بيع" wide>
           <div className="space-y-4">
+            {(() => {
+              const isTradeIn = (viewingOrder as any).tradeInTotal > 0 || viewingOrder.items.some((it: any) => it.tradeInProduct);
+              const kind = viewingOrder.orderType === "SPARE_PART_SALE" ? "spare" : isTradeIn ? "tradein" : "machine";
+              const cfg: Record<string, string> = { machine: "border-blue-200 bg-blue-50 text-blue-700", spare: "border-green-200 bg-green-50 text-green-700", tradein: "border-amber-200 bg-amber-50 text-amber-700" };
+              const label = isTradeIn ? "فاتورة استبدال" : (ORDER_TYPE_LABELS[viewingOrder.orderType] || viewingOrder.orderType);
+              return (
+                <div className={`flex items-center justify-between rounded-xl border px-4 py-3 ${cfg[kind] || cfg.machine}`}>
+                  <span className="text-sm font-bold">{label}</span>
+                  <span className="text-xs opacity-80">#{viewingOrder.id.slice(0, 8)}</span>
+                </div>
+              );
+            })()}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div><span className="text-xs font-medium text-gray-500">{t("sales.orderNumber")}</span><p className="mt-1 text-sm font-medium text-slate-900">{viewingOrder.id.slice(0, 8)}</p></div>
               <div><span className="text-xs font-medium text-gray-500">{t("common.company")}</span><p className="mt-1 text-sm text-slate-900">{viewingOrder.company?.name || companies.find(c => c.id === viewingOrder.companyId)?.name || "—"}</p></div>
