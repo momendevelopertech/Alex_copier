@@ -21,11 +21,66 @@ export async function GET(
   }
 }
 
-export async function DELETE(
-  _request: Request,
+export async function PUT(
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const actor = await requirePageAccess("purchases");
+    if (!actor) {
+      const authed = await requireAuth();
+      return NextResponse.json({ error: authed ? "Forbidden" : "Unauthorized" }, { status: authed ? 403 : 401 });
+    }
+    const { id } = await params;
+    const existing = await prisma.purchaseOrder.findUnique({ where: { id }, select: { id: true } });
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const body = await request.json();
+    const { items, ...data } = body;
+
+    const total =
+      items?.reduce(
+        (sum: number, item: { quantity: number; unitPrice: number }) =>
+          sum + item.quantity * item.unitPrice,
+        0
+      ) ?? 0;
+
+    const po = await prisma.purchaseOrder.update({
+      where: { id },
+      data: {
+        ...(data.companyId !== undefined ? { companyId: data.companyId } : {}),
+        ...(data.supplierId !== undefined ? { supplierId: data.supplierId } : {}),
+        ...(data.status !== undefined ? { status: data.status } : {}),
+        ...(data.orderDate !== undefined ? { orderDate: data.orderDate } : {}),
+        ...(data.notes !== undefined ? { notes: data.notes } : {}),
+        total,
+        items: {
+          deleteMany: {},
+          create: items.map((item: { productId: string; quantity: number; unitPrice: number }) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+          })),
+        },
+      },
+      include: {
+        supplier: true,
+        items: { include: { product: true } },
+        invoices: true,
+      },
+    });
+
+    return NextResponse.json(po);
+  } catch (error: unknown) {
+    console.error("Failed to update purchase order:", error);
+    return NextResponse.json({ error: "Failed to update purchase order" }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {  try {
     const actor = await requirePageAccess("purchases");
     if (!actor) {
       const authed = await requireAuth();

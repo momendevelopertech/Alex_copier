@@ -7,7 +7,7 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
-import { FileText, Plus, Printer, Save, Trash2, X } from "lucide-react";
+import { Eye, FileText, Pencil, Plus, Printer, Save, Trash2, X } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 import FormModal from "@/components/FormModal";
@@ -19,18 +19,45 @@ import { DateTimeCell } from "@/components/DateTimeCell";
 
 interface Supplier { id: string; name: string; }
 interface Company { id: string; name: string; }
-interface Product { id: string; name: string; }
+interface Customer { id: string; name: string; }
+interface Product {
+  id: string; name: string;
+  pricingTiers?: Record<string, number>; wholesalePrice?: number | null; retailPrice?: number | null; purchasePrice?: number | null;
+}
 interface PurchaseItem { id: string; productId: string; quantity: number; unitPrice: number; product: Product; }
 interface PurchaseOrder {
   id: string; companyId: string; supplierId: string; status: string; total: number; notes: string | null;
   orderDate: string; createdAt: string; supplier: Supplier; company?: Company; items: PurchaseItem[];
 }
 interface ItemRow { productId: string; quantity: string; unitPrice: string; }
-interface InterCompanyItem { id: string; product: Product | null; quantity: number; unitPrice: number; }
+interface InterCompanyItem { id: string; productId: string; product: Product | null; quantity: number; unitPrice: number; }
 interface InterCompanyInvoice {
   id: string; invoiceNumber: string; total: number; invoiceDate: string; createdAt: string; notes: string | null;
   fromCompany: Company; toCompany: Company; items: InterCompanyItem[]; internalPaymentMethod?: string;
+  internalPaidAmount?: number; salesOrderId?: string | null;
+  customer?: { id: string; name: string } | null;
+  orderType?: string; paymentMethod?: string; paidAmount?: number; taxRate?: number; discount?: number; discountType?: string;
 }
+interface InterRow { productId: string; quantity: string; internalPrice: string; customerPrice: string; costPrice: string; }
+interface InterForm {
+  fromCompanyId: string; toCompanyId: string; customerId: string; orderType: string; paymentMethod: string;
+  internalPaymentMethod: string; paidAmount: string; internalPaidAmount: string; isTaxInvoice: boolean; taxRate: string;
+  discount: string; notes: string;
+}
+
+const COMPANY_ORDER_TIERS: Record<string, string> = {
+  company1: "jumlaMachines",
+  company2: "jumlaParts",
+  company3: "sectori",
+};
+
+const getProductTierPrice = (product: Product | undefined, tier: string) => {
+  const tiers = product?.pricingTiers ?? {};
+  const tierValue = tiers[tier];
+  if (typeof tierValue === "number" && Number.isFinite(tierValue)) return tierValue;
+  if (tier === "engineer") return product?.wholesalePrice ?? product?.retailPrice ?? 0;
+  return product?.retailPrice ?? product?.wholesalePrice ?? 0;
+};
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: "مسودة",
@@ -64,7 +91,7 @@ export default function PurchasesPage() {
   const [supplierFilter, setSupplierFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [form, setForm] = useState({ companyId: "", supplierId: "", notes: "" });
+  const [form, setForm] = useState({ companyId: "", supplierId: "", notes: "", status: "" });
   const [itemRows, setItemRows] = useState<ItemRow[]>([{ productId: "", quantity: "", unitPrice: "" }]);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
@@ -75,15 +102,29 @@ export default function PurchasesPage() {
   const [icCompanyFilter, setIcCompanyFilter] = useState("");
   const [icDateFrom, setIcDateFrom] = useState("");
   const [icDateTo, setIcDateTo] = useState("");
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [viewingOrder, setViewingOrder] = useState<PurchaseOrder | null>(null);
+  const [viewingIc, setViewingIc] = useState<InterCompanyInvoice | null>(null);
+  const [editingIc, setEditingIc] = useState<string | null>(null);
+  const [interForm, setInterForm] = useState<InterForm>({
+    fromCompanyId: "", toCompanyId: "", customerId: "", orderType: "MACHINE_SALE", paymentMethod: "CREDIT",
+    internalPaymentMethod: "CREDIT", paidAmount: "", internalPaidAmount: "", isTaxInvoice: false, taxRate: "0",
+    discount: "0", notes: "",
+  });
+  const [interRows, setInterRows] = useState<InterRow[]>([{ productId: "", quantity: "", internalPrice: "", customerPrice: "", costPrice: "" }]);
+  const [showIcForm, setShowIcForm] = useState(false);
 
   const fetchData = async () => {
     try {
-      const [pRes, sRes, prRes, coRes] = await Promise.all([fetch("/api/purchases"), fetch("/api/suppliers"), fetch("/api/inventory"), fetch("/api/companies")]);
+      const [pRes, sRes, prRes, coRes, cuRes] = await Promise.all([fetch("/api/purchases"), fetch("/api/suppliers"), fetch("/api/inventory"), fetch("/api/companies"), fetch("/api/customers")]);
       const pData = await pRes.json();
       setOrders(Array.isArray(pData) ? pData : pData.orders || []);
       setIntercompanyInvoices(Array.isArray(pData) ? [] : pData.intercompany || []);
       setSuppliers(await sRes.json());
       setCompanies(await coRes.json());
+      const cu = await cuRes.json();
+      setCustomers(Array.isArray(cu) ? cu.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })) : []);
       const inv = await prRes.json();
       const allProducts: (Product | undefined)[] = Array.isArray(inv) ? inv.map((i: { product?: Product }) => i.product) : [];
       setProducts(Array.from(new Map(allProducts.filter((p): p is Product => Boolean(p)).map((p) => [p.id, p])).values()));
@@ -157,13 +198,109 @@ export default function PurchasesPage() {
     const items = itemRows.filter((r) => r.productId && r.quantity && r.unitPrice).map((r) => ({ productId: r.productId, quantity: parseInt(r.quantity), unitPrice: parseFloat(r.unitPrice) }));
     if (items.length === 0) { setSaving(false); return; }
     setSaving(true);
-    await fetch("/api/purchases", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, orderDate: new Date().toISOString(), items }) });
-    setSaving(false);
-    setForm({ companyId: "", supplierId: "", notes: "" });
+    try {
+      const payload = { ...form, orderDate: new Date().toISOString(), items };
+      const url = editingId ? `/api/purchases/${editingId}` : "/api/purchases";
+      const method = editingId ? "PUT" : "POST";
+      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) { toastError(apiErrorMessage(data, t)); return; }
+      toastSuccess(editingId ? t("common.updatedSuccessfully") : t("common.addedSuccessfully"));
+    } finally {
+      setSaving(false);
+    }
+    setForm({ companyId: "", supplierId: "", notes: "", status: "" });
     setItemRows([{ productId: "", quantity: "", unitPrice: "" }]);
+    setEditingId(null);
     setShowForm(false);
     fetchData();
   };
+
+  const openEditOrder = (order: PurchaseOrder) => {
+    setEditingId(order.id);
+    setForm({ companyId: order.companyId, supplierId: order.supplierId, notes: order.notes || "", status: order.status });
+    setItemRows(
+      order.items.length > 0
+        ? order.items.map((it) => ({ productId: it.productId, quantity: String(it.quantity), unitPrice: String(it.unitPrice) }))
+        : [{ productId: "", quantity: "", unitPrice: "" }]
+    );
+    setShowForm(true);
+  };
+
+  const updateInterRow = (index: number, field: keyof InterRow, value: string) => {
+    const updated = [...interRows];
+    updated[index] = { ...updated[index], [field]: value };
+    setInterRows(updated);
+  };
+
+  const openEditIc = (ic: InterCompanyInvoice) => {
+    if (!ic.salesOrderId) { toastError("لا يمكن تعديل هذه الفاتورة — لا يوجد أمر بيع مرتبط"); return; }
+    setEditingIc(ic.id);
+    const toCompanyId = ic.toCompany?.id || ic.fromCompany?.id || "";
+    const tier = COMPANY_ORDER_TIERS[toCompanyId] || "sectori";
+    setInterForm({
+      fromCompanyId: ic.fromCompany?.id || "",
+      toCompanyId: ic.toCompany?.id || "",
+      customerId: ic.customer?.id || "",
+      orderType: ic.orderType || "MACHINE_SALE",
+      paymentMethod: ic.paymentMethod || "CREDIT",
+      internalPaymentMethod: ic.internalPaymentMethod === "CASH" ? "CASH" : "CREDIT",
+      paidAmount: String(ic.paidAmount ?? 0),
+      internalPaidAmount: String(ic.internalPaidAmount ?? 0),
+      isTaxInvoice: (ic.taxRate ?? 0) > 0,
+      taxRate: String(ic.taxRate ?? 0),
+      discount: String(ic.discount ?? 0),
+      notes: ic.notes || "",
+    });
+    setInterRows(
+      ic.items.length > 0
+        ? ic.items.map((it) => {
+            const product = products.find((p) => p.id === it.productId);
+            const internalPrice = product ? getProductTierPrice(product, tier) : 0;
+            return {
+              productId: it.productId,
+              quantity: String(it.quantity),
+              internalPrice: String(internalPrice),
+              customerPrice: String(it.unitPrice),
+              costPrice: String(product?.purchasePrice || ""),
+            };
+          })
+        : [{ productId: "", quantity: "", internalPrice: "", customerPrice: "", costPrice: "" }]
+    );
+    setShowIcForm(true);
+  };
+
+  const handleInterSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingIc) return;
+    const items = interRows
+      .filter((r) => r.productId && r.quantity && r.customerPrice)
+      .map((r) => ({
+        productId: r.productId,
+        quantity: parseInt(r.quantity),
+        internalPrice: parseFloat(r.internalPrice) || 0,
+        customerPrice: parseFloat(r.customerPrice) || 0,
+        costPrice: parseFloat(r.costPrice) || 0,
+      }));
+    if (items.length === 0) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/sales/intercompany/${editingIc}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...interForm, discountType: "FIXED", items }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) { toastError(apiErrorMessage(data, t)); return; }
+      toastSuccess(t("common.updatedSuccessfully"));
+      fetchData();
+    } finally {
+      setSaving(false);
+    }
+    setEditingIc(null);
+    setShowIcForm(false);
+  };
+
 
   const handleDelete = async (id: string) => {
     if (!(await confirmAction({ message: t("common.deleteConfirm") }))) return;
@@ -187,8 +324,12 @@ export default function PurchasesPage() {
         <button onClick={() => setShowForm(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"><Plus size={16} />{t("purchases.addOrder")}</button>
       </div>
 
-      <FormModal open={showForm} onClose={() => setShowForm(false)} title={t("purchases.addOrder")}>
+      <FormModal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? "تعديل فاتورة شراء" : t("purchases.addOrder")}>
         <form onSubmit={handleCreate} className="space-y-4">
+          <div className="flex items-center justify-between rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-purple-700">
+            <span className="text-sm font-bold">{editingId ? "تعديل فاتورة شراء" : t("purchases.addOrder")}</span>
+            <span className="text-xs opacity-80">{editingId ? "تعديل" : "إضافة جديدة"}</span>
+          </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-slate-700">{t("companies.selectCompany")}</label>
@@ -219,6 +360,14 @@ export default function PurchasesPage() {
               }}
             />
           </div>
+          {editingId && (
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">{t("common.status")}</label>
+              <select value={form.status || "CONFIRMED"} onChange={(e) => setForm({ ...form, status: e.target.value })} className={inputClass}>
+                {Object.entries(STATUS_LABELS).map(([value, label]) => (<option key={value} value={value}>{label}</option>))}
+              </select>
+            </div>
+          )}
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-slate-700">{t("common.notes")}</label>
             <textarea placeholder={t("common.notes")} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={inputClass} rows={2} />
@@ -323,7 +472,13 @@ export default function PurchasesPage() {
                     <td className="px-4 py-3 text-sm">{order.total.toLocaleString()}</td>
                     <td className="px-4 py-3 text-sm"><DateTimeCell value={order.orderDate || order.createdAt} /></td>
                     <td className="px-4 py-3">
-                      <button onClick={() => window.open(`/api/invoices?type=purchase&id=${order.id}`, "_blank")} className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-2 text-xs font-medium text-green-600 transition hover:bg-green-100" title="طباعة الفاتورة">
+                      <button onClick={() => setViewingOrder(order)} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2 text-xs font-medium text-blue-600 transition hover:bg-blue-100" title={t("common.view")}>
+                        <Eye size={14} />
+                      </button>
+                      <button onClick={() => openEditOrder(order)} className="ms-1 inline-flex items-center gap-1 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-2 text-xs font-medium text-sky-600 transition hover:bg-sky-100" title={t("common.edit")}>
+                        <Pencil size={14} />
+                      </button>
+                      <button onClick={() => window.open(`/api/invoices?type=purchase&id=${order.id}`, "_blank")} className="ms-1 inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-2 text-xs font-medium text-green-600 transition hover:bg-green-100" title="طباعة الفاتورة">
                         <Printer size={14} />
                       </button>
                       <button onClick={() => window.open(`/api/invoices?type=purchase&id=${order.id}&format=receipt`, "_blank")} className="ms-1 inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-xs font-medium text-emerald-600 transition hover:bg-emerald-100" title="طباعة الريسيت">
@@ -373,6 +528,7 @@ export default function PurchasesPage() {
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("purchases.total")}</th>
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("sales.paymentMethod")}</th>
                   <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.date")}</th>
+                  <th className="px-4 py-3 text-start text-sm font-medium text-gray-500"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -391,6 +547,14 @@ export default function PurchasesPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm"><DateTimeCell value={ic.invoiceDate || ic.createdAt} /></td>
+                    <td className="px-4 py-3">
+                      <button onClick={() => setViewingIc(ic)} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2 text-xs font-medium text-blue-600 transition hover:bg-blue-100" title={t("common.view")}>
+                        <Eye size={14} />
+                      </button>
+                      <button onClick={() => openEditIc(ic)} className="ms-1 inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-2 text-xs font-medium text-indigo-600 transition hover:bg-indigo-100" title={t("common.edit")}>
+                        <Pencil size={14} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -401,6 +565,245 @@ export default function PurchasesPage() {
           <Pagination currentPage={icSafePage} totalPages={icTotalPages} onPageChange={setIcPage} totalItems={icFiltered.length} pageSize={IC_PAGE_SIZE} />
         )}
       </div>
+      )}
+
+      {viewingOrder && (
+        <FormModal open={!!viewingOrder} onClose={() => setViewingOrder(null)} title="عرض فاتورة شراء">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-purple-700">
+              <span className="text-sm font-bold">فاتورة شراء</span>
+              <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[viewingOrder.status] || ""}`}>{STATUS_LABELS[viewingOrder.status] || viewingOrder.status}</span>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <p className="text-xs text-gray-500">{t("common.company")}</p>
+                <p className="text-sm font-medium">{viewingOrder.company?.name || companies.find(c => c.id === viewingOrder.companyId)?.name || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">{t("purchases.supplier")}</p>
+                <p className="text-sm font-medium">{viewingOrder.supplier.name}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">{t("purchases.orderNumber")}</p>
+                <p className="text-sm font-medium">{viewingOrder.id.slice(0, 8)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">{t("common.date")}</p>
+                <p className="text-sm font-medium"><DateTimeCell value={viewingOrder.orderDate || viewingOrder.createdAt} /></p>
+              </div>
+            </div>
+            <div className="overflow-hidden rounded-lg border border-gray-200">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 py-2 text-start text-xs font-medium text-gray-500">{t("purchases.product")}</th>
+                    <th className="px-3 py-2 text-start text-xs font-medium text-gray-500">{t("purchases.quantity")}</th>
+                    <th className="px-3 py-2 text-start text-xs font-medium text-gray-500">{t("purchases.unitPrice")}</th>
+                    <th className="px-3 py-2 text-start text-xs font-medium text-gray-500">{t("purchases.lineTotal")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {viewingOrder.items.map((it) => (
+                    <tr key={it.id}>
+                      <td className="px-3 py-2 text-sm">{it.product.name}</td>
+                      <td className="px-3 py-2 text-sm">{it.quantity}</td>
+                      <td className="px-3 py-2 text-sm">{it.unitPrice.toLocaleString()}</td>
+                      <td className="px-3 py-2 text-sm">{(it.quantity * it.unitPrice).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-slate-50">
+                  <tr>
+                    <td colSpan={3} className="px-3 py-2 text-end text-sm font-medium text-slate-700">{t("purchases.total")}</td>
+                    <td className="px-3 py-2 text-sm font-bold text-slate-900">{viewingOrder.total.toLocaleString()}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            {viewingOrder.notes && (
+              <div>
+                <p className="text-xs text-gray-500">{t("common.notes")}</p>
+                <p className="text-sm">{viewingOrder.notes}</p>
+              </div>
+            )}
+            <div className="flex flex-wrap justify-end gap-2">
+              <button onClick={() => window.open(`/api/invoices?type=purchase&id=${viewingOrder.id}`, "_blank")} className="inline-flex items-center gap-1 rounded-lg bg-purple-600 px-3 py-2 text-sm font-semibold text-white hover:bg-purple-700"><Printer size={15} />طباعة</button>
+              <button onClick={() => { const o = viewingOrder; setViewingOrder(null); openEditOrder(o); }} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"><Pencil size={15} />{t("common.edit")}</button>
+            </div>
+          </div>
+        </FormModal>
+      )}
+
+      {viewingIc && (
+        <FormModal open={!!viewingIc} onClose={() => setViewingIc(null)} title="عرض فاتورة داخلية">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-indigo-700">
+              <span className="text-sm font-bold">فاتورة داخلية</span>
+              <span className="text-xs opacity-80">{viewingIc.invoiceNumber}</span>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <p className="text-xs text-gray-500">{t("purchases.sellerCompany")}</p>
+                <p className="text-sm font-medium">{viewingIc.fromCompany?.name || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">{t("purchases.buyerCompany")}</p>
+                <p className="text-sm font-medium">{viewingIc.toCompany?.name || "—"}</p>
+              </div>
+              {viewingIc.customer && (
+                <div>
+                  <p className="text-xs text-gray-500">{t("sales.customer")}</p>
+                  <p className="text-sm font-medium">{viewingIc.customer.name}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-xs text-gray-500">{t("common.date")}</p>
+                <p className="text-sm font-medium"><DateTimeCell value={viewingIc.invoiceDate || viewingIc.createdAt} /></p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">{t("sales.paymentMethod")}</p>
+                <p className="text-sm font-medium">{viewingIc.paymentMethod === "CASH" ? t("sales.cash") : t("sales.credit")}</p>
+              </div>
+            </div>
+            <div className="overflow-hidden rounded-lg border border-gray-200">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 py-2 text-start text-xs font-medium text-gray-500">{t("purchases.product")}</th>
+                    <th className="px-3 py-2 text-start text-xs font-medium text-gray-500">{t("purchases.quantity")}</th>
+                    <th className="px-3 py-2 text-start text-xs font-medium text-gray-500">{t("purchases.unitPrice")}</th>
+                    <th className="px-3 py-2 text-start text-xs font-medium text-gray-500">{t("purchases.lineTotal")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {viewingIc.items && viewingIc.items.map((it) => (
+                    <tr key={it.id}>
+                      <td className="px-3 py-2 text-sm">{it.product?.name || "—"}</td>
+                      <td className="px-3 py-2 text-sm">{it.quantity}</td>
+                      <td className="px-3 py-2 text-sm">{it.unitPrice.toLocaleString()}</td>
+                      <td className="px-3 py-2 text-sm">{(it.quantity * it.unitPrice).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-slate-50">
+                  <tr>
+                    <td colSpan={3} className="px-3 py-2 text-end text-sm font-medium text-slate-700">{t("purchases.total")}</td>
+                    <td className="px-3 py-2 text-sm font-bold text-slate-900">{viewingIc.total.toLocaleString()}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button onClick={() => { setViewingIc(null); openEditIc(viewingIc); }} className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700"><Pencil size={15} />{t("common.edit")}</button>
+            </div>
+          </div>
+        </FormModal>
+      )}
+
+      {showIcForm && editingIc && (
+        <FormModal open={showIcForm} onClose={() => { setShowIcForm(false); setEditingIc(null); }} title="تعديل فاتورة داخلية">
+          <form onSubmit={handleInterSave} className="space-y-4">
+            <div className="flex items-center justify-between rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-indigo-700">
+              <span className="text-sm font-bold">تعديل فاتورة داخلية</span>
+              <span className="text-xs opacity-80">تعديل</span>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">{t("purchases.sellerCompany")}</label>
+                <select value={interForm.fromCompanyId} onChange={(e) => setInterForm({ ...interForm, fromCompanyId: e.target.value })} className={inputClass} required>
+                  <option value="">{t("purchases.sellerCompany")}</option>
+                  {companies.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">{t("purchases.buyerCompany")}</label>
+                <select value={interForm.toCompanyId} onChange={(e) => setInterForm({ ...interForm, toCompanyId: e.target.value })} className={inputClass} required>
+                  <option value="">{t("purchases.buyerCompany")}</option>
+                  {companies.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">{t("sales.customer")}</label>
+                <select value={interForm.customerId} onChange={(e) => setInterForm({ ...interForm, customerId: e.target.value })} className={inputClass} required>
+                  <option value="">{t("sales.customer")}</option>
+                  {customers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">{t("sales.orderType")}</label>
+                <select value={interForm.orderType} onChange={(e) => setInterForm({ ...interForm, orderType: e.target.value })} className={inputClass}>
+                  <option value="MACHINE_SALE">{t("sales.machineSale")}</option>
+                  <option value="SPARE_PART_SALE">{t("sales.sparePartSale")}</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">{t("sales.paymentMethod")}</label>
+                <select value={interForm.paymentMethod} onChange={(e) => setInterForm({ ...interForm, paymentMethod: e.target.value })} className={inputClass}>
+                  <option value="CREDIT">{t("sales.credit")}</option>
+                  <option value="CASH">{t("sales.cash")}</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">{t("purchases.internalPaymentMethod")}</label>
+                <select value={interForm.internalPaymentMethod} onChange={(e) => setInterForm({ ...interForm, internalPaymentMethod: e.target.value })} className={inputClass}>
+                  <option value="CREDIT">{t("sales.credit")}</option>
+                  <option value="CASH">{t("sales.cash")}</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">{t("sales.paidAmount")}</label>
+                <input type="number" value={interForm.paidAmount} onChange={(e) => setInterForm({ ...interForm, paidAmount: e.target.value })} className={inputClass} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">{t("purchases.internalPaidAmount")}</label>
+                <input type="number" value={interForm.internalPaidAmount} onChange={(e) => setInterForm({ ...interForm, internalPaidAmount: e.target.value })} className={inputClass} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" checked={interForm.isTaxInvoice} onChange={(e) => setInterForm({ ...interForm, isTaxInvoice: e.target.checked })} className="h-4 w-4" />
+                فاتورة ضريبية
+              </label>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">{t("sales.taxRate")} (%)</label>
+                <input type="number" value={interForm.taxRate} onChange={(e) => setInterForm({ ...interForm, taxRate: e.target.value })} className={inputClass} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">{t("sales.discount")}</label>
+                <input type="number" value={interForm.discount} onChange={(e) => setInterForm({ ...interForm, discount: e.target.value })} className={inputClass} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium text-slate-700">{t("purchases.items")}</h3>
+                <button type="button" onClick={() => setInterRows([...interRows, { productId: "", quantity: "", internalPrice: "", customerPrice: "", costPrice: "" }])} className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"><Plus size={16} />{t("purchases.addRow")}</button>
+              </div>
+              <div className="space-y-2">
+                {interRows.map((row, idx) => (
+                  <div key={idx} className="grid gap-2 rounded-lg border border-gray-200 bg-slate-50 p-3 sm:grid-cols-[1fr_90px_120px_120px_120px_auto]">
+                    <select value={row.productId} onChange={(e) => updateInterRow(idx, "productId", e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">{t("purchases.selectProduct")}</option>
+                      {products.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
+                    </select>
+                    <input type="number" placeholder={t("purchases.quantity")} value={row.quantity} onChange={(e) => updateInterRow(idx, "quantity", e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <input type="number" placeholder="سعر داخلي" value={row.internalPrice} onChange={(e) => updateInterRow(idx, "internalPrice", e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <input type="number" placeholder={t("purchases.customerPrice")} value={row.customerPrice} onChange={(e) => updateInterRow(idx, "customerPrice", e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <input type="number" placeholder={t("purchases.costPrice")} value={row.costPrice} onChange={(e) => updateInterRow(idx, "costPrice", e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <button type="button" onClick={() => { if (interRows.length > 1) setInterRows(interRows.filter((_, i) => i !== idx)); }} className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 p-2 text-red-600 hover:bg-red-100"><Trash2 size={15} /></button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">{t("common.notes")}</label>
+              <textarea placeholder={t("common.notes")} value={interForm.notes} onChange={(e) => setInterForm({ ...interForm, notes: e.target.value })} className={inputClass} rows={2} />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => { setShowIcForm(false); setEditingIc(null); }} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"><X size={15} />{t("common.cancel")}</button>
+              <SubmitButton loading={saving} label={t("purchases.saveOrder")} />
+            </div>
+          </form>
+        </FormModal>
       )}
     </div>
   );

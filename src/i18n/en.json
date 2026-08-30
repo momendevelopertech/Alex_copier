@@ -163,6 +163,8 @@
     "saving": "Saving...",
     "savedSuccessfully": "Saved successfully",
     "deletedSuccessfully": "Deleted successfully",
+    "addedSuccessfully": "Added successfully",
+    "updatedSuccessfully": "Updated successfully",
     "inactive": "Inactive",
     "phone": "Phone",
     "confirmTitle": "Confirm",
@@ -442,7 +444,14 @@
     "intercompanyHint": "Internal purchase invoices created automatically on internal sale",
     "sellerCompany": "Selling company",
     "buyerCompany": "Buying company",
-    "credit": "On credit"
+    "credit": "On credit",
+    "product": "Product",
+    "lineTotal": "Total",
+    "customerPrice": "Customer price",
+    "costPrice": "Cost price",
+    "internalPaymentMethod": "Internal payment method",
+    "internalPaidAmount": "Internal paid amount",
+    "saveOrder": "Save invoice"
   },
   "sales": {
     "title": "Sales",
@@ -483,7 +492,8 @@
     "toCompany": "Destination company (sells to customer)",
     "interCompanyPayment": "Inter-company payment method",
     "interCompanyPrice": "Inter-company purchase price",
-    "costPrice": "Cost price"
+    "costPrice": "Cost price",
+    "paidAmount": "Paid amount"
   },
   "inventory": {
     "title": "Inventory",

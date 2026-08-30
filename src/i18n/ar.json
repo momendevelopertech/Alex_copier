@@ -178,6 +178,8 @@
     "saving": "جارٍ الحفظ...",
     "savedSuccessfully": "تم الحفظ بنجاح",
     "deletedSuccessfully": "تم الحذف بنجاح",
+    "addedSuccessfully": "تمت الإضافة بنجاح",
+    "updatedSuccessfully": "تم التعديل بنجاح",
     "inactive": "غير نشط",
     "phone": "الهاتف",
     "confirmTitle": "تأكيد",
@@ -435,7 +437,14 @@
     "intercompanyHint": "فواتير شراء داخلية تُنشأ تلقائياً عند البيع الداخلي",
     "sellerCompany": "الشركة البائعة",
     "buyerCompany": "الشركة المشترية",
-    "credit": "آجل"
+    "credit": "آجل",
+    "product": "المنتج",
+    "lineTotal": "الإجمالي",
+    "customerPrice": "سعر بيع العميل",
+    "costPrice": "سعر التكلفة",
+    "internalPaymentMethod": "طريقة السداد الداخلي",
+    "internalPaidAmount": "المبلغ المسدد داخلياً",
+    "saveOrder": "حفظ الفاتورة"
   },
   "sales": {
     "title": "المبيعات",
@@ -477,7 +486,8 @@
     "toCompany": "شركة الوجهة (التي تبيع للعميل)",
     "interCompanyPayment": "طريقة دفع البيع الداخلي",
     "interCompanyPrice": "سعر الشراء الداخلي",
-    "costPrice": "سعر التكلفة"
+    "costPrice": "سعر التكلفة",
+    "paidAmount": "المبلغ المدفوع"
   },
   "inventory": {
     "title": "المخزون",

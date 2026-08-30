@@ -21,7 +21,18 @@ export async function GET() {
 
     const salesOrders = await prisma.salesOrder.findMany({
       where: { id: { in: (await prisma.interCompanyInvoice.findMany({ select: { salesOrderId: true } })).filter(x => x.salesOrderId).map(x => x.salesOrderId!) } },
-      select: { id: true, items: { include: { product: true } } },
+      select: {
+        id: true,
+        orderType: true,
+        paymentMethod: true,
+        paidAmount: true,
+        taxRate: true,
+        discount: true,
+        discountType: true,
+        notes: true,
+        customer: { select: { id: true, name: true } },
+        items: { include: { product: true } },
+      },
     });
 
     const intercompany = await prisma.interCompanyInvoice.findMany({
@@ -35,6 +46,13 @@ export async function GET() {
       return {
         ...inv,
         items: so?.items ?? [],
+        customer: so?.customer ? { id: so.customer.id, name: so.customer.name } : null,
+        orderType: so?.orderType,
+        paymentMethod: so?.paymentMethod,
+        paidAmount: so?.paidAmount,
+        taxRate: so?.taxRate,
+        discount: so?.discount,
+        discountType: so?.discountType,
       };
     }));
 
