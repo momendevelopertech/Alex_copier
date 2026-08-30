@@ -141,11 +141,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       // ══════════ REVERSAL ══════════
       // عكس ديون العميل الأصلية
       if (origDebt > 0 && existingCustomer) {
+        const debtBefore = await tx.customer.findUnique({
+          where: { id: existing.customerId! },
+          select: { totalDebt: true, remainingDebt: true },
+        });
         await tx.customer.update({
           where: { id: existing.customerId! },
           data: {
-            totalDebt: { decrement: origDebt },
-            remainingDebt: { decrement: origDebt },
+            totalDebt: Math.max(0, (debtBefore?.totalDebt ?? 0) - origDebt),
+            remainingDebt: Math.max(0, (debtBefore?.remainingDebt ?? 0) - origDebt),
           },
         });
         await tx.customerLedger.upsert({

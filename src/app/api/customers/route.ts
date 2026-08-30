@@ -59,8 +59,8 @@ export async function POST(request: Request) {
         gpsLng: gpsLng != null ? Number(gpsLng) : undefined,
         tradeRegister: tradeRegister ?? undefined,
         paymentTerms: paymentTerms ?? undefined,
-        totalDebt: totalDebt != null ? Number(totalDebt) : 0,
-        remainingDebt: remainingDebt != null ? Number(remainingDebt) : (totalDebt != null ? Number(totalDebt) : 0),
+        totalDebt: totalDebt != null ? Math.max(0, Number(totalDebt)) : 0,
+        remainingDebt: remainingDebt != null ? Math.max(0, Number(remainingDebt)) : (totalDebt != null ? Math.max(0, Number(totalDebt)) : 0),
       },
       include: {
         locations: true,

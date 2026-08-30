@@ -751,8 +751,8 @@ export default function CustomersPage() {
                     <td className="px-4 py-3 text-sm">{customer.phone || "—"}</td>
                     <td className="px-4 py-3 text-sm font-medium">{customer.totalDebt > 0 ? `${customer.totalDebt.toLocaleString("ar-EG")} ج.م` : "—"}</td>
                     <td className="px-4 py-3 text-sm">
-                      {customer.remainingDebt > 0 ? (
-                        <span className={`font-semibold ${customer.remainingDebt > 0 ? "text-red-600" : "text-green-600"}`}>
+                      {customer.remainingDebt !== 0 ? (
+                        <span className={`font-semibold ${customer.remainingDebt > 0 ? "text-red-600" : "text-orange-600"}`}>
                           {customer.remainingDebt.toLocaleString("ar-EG")} ج.م
                         </span>
                       ) : "—"}

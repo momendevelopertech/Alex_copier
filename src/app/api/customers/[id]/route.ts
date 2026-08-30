@@ -83,8 +83,8 @@ export async function PUT(
     if (gpsLng !== undefined) updateData.gpsLng = gpsLng != null ? Number(gpsLng) : null;
     if (tradeRegister !== undefined) updateData.tradeRegister = tradeRegister;
     if (paymentTerms !== undefined) updateData.paymentTerms = paymentTerms;
-    if (totalDebt !== undefined) updateData.totalDebt = Number(totalDebt);
-    if (remainingDebt !== undefined) updateData.remainingDebt = Number(remainingDebt);
+    if (totalDebt !== undefined) updateData.totalDebt = Math.max(0, Number(totalDebt));
+    if (remainingDebt !== undefined) updateData.remainingDebt = Math.max(0, Number(remainingDebt));
 
     const customer = await prisma.customer.update({
       where: { id },

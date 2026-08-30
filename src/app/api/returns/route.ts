@@ -177,9 +177,13 @@ export async function POST(request: Request) {
         });
 
         // Decrement customer remaining debt (return reduces what customer owes)
+        const debtBefore = await tx.customer.findUnique({
+          where: { id: salesOrder.customerId },
+          select: { remainingDebt: true },
+        });
         await tx.customer.update({
           where: { id: salesOrder.customerId },
-          data: { remainingDebt: { decrement: total } },
+          data: { remainingDebt: Math.max(0, (debtBefore?.remainingDebt ?? 0) - total) },
         });
 
         // Recalculate payment status for the parent order

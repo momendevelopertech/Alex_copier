@@ -86,10 +86,14 @@ export async function POST(
       });
 
       // Update customer remaining debt
+      const debtBefore = await tx.customer.findUnique({
+        where: { id: order.customerId },
+        select: { remainingDebt: true },
+      });
       await tx.customer.update({
         where: { id: order.customerId },
         data: {
-          remainingDebt: { decrement: paymentAmount },
+          remainingDebt: Math.max(0, (debtBefore?.remainingDebt ?? 0) - paymentAmount),
           lastPaymentDate: paymentDateTime,
         },
       });

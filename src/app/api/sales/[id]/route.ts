@@ -159,9 +159,16 @@ export async function PUT(
 
       // 4) Reverse original customer debt
       if (originalDebt > 0) {
+        const debtBefore = await tx.customer.findUnique({
+          where: { id: existing.customerId },
+          select: { totalDebt: true, remainingDebt: true },
+        });
         await tx.customer.update({
           where: { id: existing.customerId },
-          data: { totalDebt: { decrement: originalDebt }, remainingDebt: { decrement: originalDebt } },
+          data: {
+            totalDebt: Math.max(0, (debtBefore?.totalDebt ?? 0) - originalDebt),
+            remainingDebt: Math.max(0, (debtBefore?.remainingDebt ?? 0) - originalDebt),
+          },
         });
         await tx.customerLedger.upsert({
           where: { customerId_companyId: { customerId: existing.customerId, companyId: existing.companyId } },
