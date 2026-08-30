@@ -444,7 +444,8 @@
     "costPrice": "سعر التكلفة",
     "internalPaymentMethod": "طريقة السداد الداخلي",
     "internalPaidAmount": "المبلغ المسدد داخلياً",
-    "saveOrder": "حفظ الفاتورة"
+    "saveOrder": "حفظ الفاتورة",
+    "selectCompany": "اختر الشركة"
   },
   "sales": {
     "title": "المبيعات",

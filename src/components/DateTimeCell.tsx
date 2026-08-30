@@ -19,12 +19,16 @@ export function DateTimeCell({ value, className = "", timeClassName = "text-xs t
   if (Number.isNaN(date.getTime())) {
     return <span className={`whitespace-nowrap ${className}`}>—</span>;
   }
+  // The formatted date/time depends on the local timezone, which differs between
+  // the server (UTC on Vercel) and the user's browser. suppressHydrationWarning
+  // tells React this text may legitimately differ during hydration, avoiding a
+  // hydration mismatch (React error #418).
   const dateStr = date.toLocaleDateString("en-GB", dateFmt);
   const timeStr = date.toLocaleTimeString("en-GB", timeFmt(withSeconds));
   return (
     <span className={`inline-flex flex-col gap-0.5 whitespace-nowrap leading-tight ${className}`}>
-      <span className="font-medium" dir="ltr">{dateStr}</span>
-      <span className={timeClassName} dir="ltr">{timeStr}</span>
+      <span className="font-medium" dir="ltr" suppressHydrationWarning>{dateStr}</span>
+      <span className={timeClassName} dir="ltr" suppressHydrationWarning>{timeStr}</span>
     </span>
   );
 }

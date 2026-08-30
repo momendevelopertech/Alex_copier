@@ -91,7 +91,7 @@ export default function PurchasesPage() {
   const [supplierFilter, setSupplierFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [form, setForm] = useState({ companyId: "", supplierId: "", notes: "", status: "" });
+  const [form, setForm] = useState({ companyId: "", supplierId: "", notes: "", status: "CONFIRMED" });
   const [itemRows, setItemRows] = useState<ItemRow[]>([{ productId: "", quantity: "", unitPrice: "" }]);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
@@ -197,6 +197,8 @@ export default function PurchasesPage() {
     e.preventDefault();
     const items = itemRows.filter((r) => r.productId && r.quantity && r.unitPrice).map((r) => ({ productId: r.productId, quantity: parseInt(r.quantity), unitPrice: parseFloat(r.unitPrice) }));
     if (items.length === 0) { setSaving(false); return; }
+    if (!form.companyId) { toastError(t("purchases.selectCompany")); return; }
+    if (!form.supplierId) { toastError(t("purchases.selectSupplier")); return; }
     setSaving(true);
     try {
       const payload = { ...form, orderDate: new Date().toISOString(), items };
@@ -209,7 +211,7 @@ export default function PurchasesPage() {
     } finally {
       setSaving(false);
     }
-    setForm({ companyId: "", supplierId: "", notes: "", status: "" });
+    setForm({ companyId: "", supplierId: "", notes: "", status: "CONFIRMED" });
     setItemRows([{ productId: "", quantity: "", unitPrice: "" }]);
     setEditingId(null);
     setShowForm(false);
