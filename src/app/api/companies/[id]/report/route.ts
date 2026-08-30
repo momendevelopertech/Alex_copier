@@ -45,8 +45,13 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const fromParam = searchParams.get("from");
     const toParam = searchParams.get("to");
-    const from = fromParam ? new Date(fromParam) : null;
-    const to = toParam ? new Date(toParam) : null;
+    const from = fromParam ? new Date(`${fromParam}T00:00:00.000`) : null;
+    // Make the end date inclusive of the full day — parse the day, then clamp
+    // to its end (23:59:59.999). Without this, any transaction on the `to` day
+    // AFTER local midnight UTC is wrongly excluded from the report.
+    const to = toParam
+      ? new Date(new Date(`${toParam}T00:00:00.000`).getTime() + 86_400_000 - 1)
+      : null;
 
     const dateFilter: DateFilter = from || to
       ? {
