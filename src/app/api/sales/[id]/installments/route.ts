@@ -28,7 +28,7 @@ export async function POST(
 
     if (!Array.isArray(installmentIds) || installmentIds.length === 0) {
       return NextResponse.json(
-        { error: "ي اختيار أقساط للدفع", code: "INSTALLMENT_IDS_REQUIRED" },
+        { error: "اختر أقساطًا للدفع", code: "INSTALLMENT_IDS_REQUIRED" },
         { status: 400 }
       );
     }

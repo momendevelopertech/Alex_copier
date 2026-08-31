@@ -57,9 +57,32 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
+    const allowed = [
+      "currentStatus",
+      "currentOwnerId",
+      "customerLocationId",
+      "meterReading",
+      "notes",
+      "serialNumber",
+      "manufacturer",
+      "model",
+      "paperSize",
+      "isColor",
+      "purchaseDate",
+      "purchasePrice",
+      "salePrice",
+      "saleDate",
+      "productId",
+    ] as const;
+
+    const data: Record<string, unknown> = {};
+    for (const key of allowed) {
+      if (key in body) data[key] = body[key];
+    }
+
     const machine = await prisma.machine.update({
       where: { id },
-      data: body,
+      data,
       include: {
         history: true,
         meterReadings: true,

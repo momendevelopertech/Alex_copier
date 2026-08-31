@@ -72,7 +72,8 @@
       "URGENT_REQUESTS": "طلبات عاجلة/طارئة مفتوحة",
       "UNASSIGNED_REQUESTS": "طلبات لم يُسند لها فني",
       "OVERDUE_INSTALLMENTS": "أقساط متأخرة عن السداد",
-      "CONTRACTS_EXPIRING": "عقود تنتهي خلال 30 يومًا"
+      "CONTRACTS_EXPIRING": "عقود تنتهي خلال 30 يومًا",
+      "LOW_STOCK": "مخزون منخفض"
     }
   },
   "notifications": {

@@ -1,20 +1,39 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mocks = vi.hoisted(() => ({
-  prisma: {
+const mocks = vi.hoisted(() => {
+  const prisma = {
     user: {
       findMany: vi.fn(),
       findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      delete: vi.fn(),
     },
     company: {
       findUnique: vi.fn(),
     },
-  },
-  requireAuth: vi.fn(),
-  requireRole: vi.fn(),
-}));
+    engineer: {
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
+    session: { deleteMany: vi.fn() },
+    notification: { deleteMany: vi.fn() },
+    serviceRequest: { updateMany: vi.fn(), count: vi.fn() },
+    visit: { count: vi.fn() },
+    settlement: { count: vi.fn(), updateMany: vi.fn() },
+    sparePartCustody: { count: vi.fn() },
+    engineerSalary: { count: vi.fn() },
+    warranty: { count: vi.fn(), updateMany: vi.fn() },
+  } as Record<string, any>;
+  prisma.$transaction = vi.fn(async (callback: (tx: typeof prisma) => unknown) => callback(prisma));
+  return {
+    prisma,
+    requireAuth: vi.fn(),
+    requireRole: vi.fn(),
+  };
+});
 
 vi.mock("@/lib/prisma", () => ({ prisma: mocks.prisma }));
 vi.mock("@/lib/auth-helpers", () => ({
@@ -28,7 +47,7 @@ vi.mock("bcryptjs", () => ({
 }));
 
 import { GET, POST } from "@/app/api/users/route";
-import { PUT } from "@/app/api/users/[id]/route";
+import { PUT, DELETE } from "@/app/api/users/[id]/route";
 
 const admin = { id: "admin_1", role: "GENERAL_MANAGER" };
 const accountant = { id: "acc_1", role: "ACCOUNTANT" };
@@ -319,5 +338,44 @@ describe("PUT /api/users/[id] (update account)", () => {
 
     const bad = await callPut(targetId, { isActive: "yes" });
     expect(bad.status).toBe(400);
+  });
+
+  it("blocks editing another GENERAL_MANAGER account", async () => {
+    mocks.prisma.user.findUnique.mockResolvedValue({
+      id: "other_gm", name: "أحمد", email: "gm2@x.com", passwordHash: "h", role: "GENERAL_MANAGER", companyId: null, isActive: true,
+    });
+    const byRole = await callPut("other_gm", { name: "تعديل" });
+    expect(byRole.status).toBe(403);
+    expect(mocks.prisma.user.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("DELETE /api/users/[id] (delete account)", () => {
+  function callDelete(id: string) {
+    return DELETE(new Request(`http://localhost/api/users/${id}`, { method: "DELETE" }), {
+      params: Promise.resolve({ id }),
+    });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.requireRole.mockResolvedValue(admin);
+  });
+
+  it("blocks deleting yourself", async () => {
+    mocks.prisma.user.findUnique.mockResolvedValue({
+      id: admin.id, name: "Admin", email: "a@x.com", passwordHash: "h", role: "GENERAL_MANAGER", companyId: null, isActive: true,
+    });
+    const res = await callDelete(admin.id);
+    expect(res.status).toBe(400);
+  });
+
+  it("blocks deleting another GENERAL_MANAGER", async () => {
+    mocks.prisma.user.findUnique.mockResolvedValue({
+      id: "other_gm", name: "أحمد", email: "gm2@x.com", passwordHash: "h", role: "GENERAL_MANAGER", companyId: null, isActive: true,
+    });
+    const res = await callDelete("other_gm");
+    expect(res.status).toBe(403);
+    expect(mocks.prisma.user.delete).not.toHaveBeenCalled();
   });
 });

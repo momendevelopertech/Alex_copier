@@ -36,6 +36,13 @@ export async function DELETE(
       return NextResponse.json({ error: "لا يمكنك حذف حسابك الشخصي" }, { status: 400 });
     }
 
+    if (target.role === "GENERAL_MANAGER") {
+      return NextResponse.json(
+        { error: "لا يمكن حذف حساب مسؤول آخر" },
+        { status: 403 }
+      );
+    }
+
     if (target.role === "ENGINEER") {
       const engineerId = target.engineer?.id;
       if (engineerId) {
@@ -120,6 +127,13 @@ export async function PUT(
       return NextResponse.json(
         { error: "لا يمكنك تعديل دور أو حالة حسابك الشخصي" },
         { status: 400 }
+      );
+    }
+
+    if (target.role === "GENERAL_MANAGER" && target.id !== admin.id) {
+      return NextResponse.json(
+        { error: "لا يمكن تعديل حساب مسؤول آخر" },
+        { status: 403 }
       );
     }
 

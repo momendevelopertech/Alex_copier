@@ -72,7 +72,8 @@
       "URGENT_REQUESTS": "Open urgent/emergency requests",
       "UNASSIGNED_REQUESTS": "Requests not assigned to a technician",
       "OVERDUE_INSTALLMENTS": "Overdue installments",
-      "CONTRACTS_EXPIRING": "Contracts expiring within 30 days"
+      "CONTRACTS_EXPIRING": "Contracts expiring within 30 days",
+      "LOW_STOCK": "Low stock"
     }
   },
   "notifications": {
@@ -617,6 +618,10 @@
     "language": "Language",
     "company": "Company",
     "users": "Users",
+    "general": "General",
+    "profile": "Profile",
+    "notifications": "Notifications",
+    "security": "Security",
     "usersSearchPlaceholder": "Search by name, email, or role...",
     "roleFilter": "Role",
     "addUser": "Add User",
