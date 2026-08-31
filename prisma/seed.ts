@@ -374,9 +374,9 @@ async function main() {
   // -------------------------------------------
   console.log('?? Creating warehouses...');
 
-  const wh1 = await prisma.warehouse.create({ data: { id: 'wh-1', name: 'مستودع الإسكندرية - وسط البلد', companyId: company1.id } });
-  const wh2 = await prisma.warehouse.create({ data: { id: 'wh-2', name: 'مستودع الإسكندرية - سيدي جابر', companyId: company2.id } });
-  const wh3 = await prisma.warehouse.create({ data: { id: 'wh-3', name: 'ورشة العمل', companyId: company3.id } });
+  const wh1 = await prisma.warehouse.create({ data: { id: 'wh-1', name: company1.name, companyId: company1.id } });
+  const wh2 = await prisma.warehouse.create({ data: { id: 'wh-2', name: company2.name, companyId: company2.id } });
+  const wh3 = await prisma.warehouse.create({ data: { id: 'wh-3', name: company3.name, companyId: company3.id } });
 
   // -------------------------------------------
   // MACHINES (25)
