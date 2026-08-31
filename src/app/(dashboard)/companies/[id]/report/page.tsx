@@ -5,7 +5,7 @@ import { useI18n } from "@/i18n/context";
 import { useToast } from "@/components/UIProvider";
 import PrinterLoader from "@/components/PrinterLoader";
 import { DateTimeCell } from "@/components/DateTimeCell";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, ArrowDownRight, ArrowUpRight, Printer } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 
 interface ReportData {
@@ -112,6 +112,16 @@ const moneyFormatter = new Intl.NumberFormat("ar-EG", {
   maximumFractionDigits: 0,
 });
 
+type LedgerEntry = {
+  id: string;
+  kind: "SALE" | "PURCHASE" | "EXPENSE" | "SETTLEMENT" | "SALE_RETURN" | "PURCHASE_RETURN";
+  direction: "IN" | "OUT";
+  date: string;
+  label: string;
+  detail: string;
+  amount: number;
+};
+
 const STATUS_BADGE: Record<string, string> = {
   INITIAL: "bg-yellow-100 text-yellow-700",
   VERIFIED: "bg-green-100 text-green-700",
@@ -186,7 +196,7 @@ const SubtotalRow = ({ label, value, colSpan, color }: { label: string; value: n
 );
 
 export default function CompanyReportPage() {
-  const { dir } = useI18n();
+  const { dir, t } = useI18n();
   const { success: toastSuccess, error: toastError } = useToast();
   const params = useParams();
   const router = useRouter();
@@ -201,6 +211,7 @@ export default function CompanyReportPage() {
   const [report, setReport] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<"ledger" | "details">("ledger");
 
   const toggleOrder = (orderId: string) => {
     setExpandedOrders((prev) => {
@@ -257,6 +268,74 @@ export default function CompanyReportPage() {
   const expenseItems = useMemo(() => report?.expenses?.items ?? [], [report]);
   const settlementItems = useMemo(() => report?.settlements?.items ?? [], [report]);
   const returnItems = useMemo(() => report?.returns?.items ?? [], [report]);
+
+  const ledger = useMemo<LedgerEntry[]>(() => {
+    if (!report) return [];
+    const rows: LedgerEntry[] = [];
+
+    for (const o of report.sales.orders ?? []) {
+      rows.push({
+        id: `sale-${o.id}`,
+        kind: "SALE",
+        direction: "IN",
+        date: o.createdAt || o.orderDate,
+        label: t("navigation.sales"),
+        detail: o.customer?.name || o.id.slice(0, 8),
+        amount: o.total || 0,
+      });
+    }
+    for (const o of report.purchases.orders ?? []) {
+      rows.push({
+        id: `purchase-${o.id}`,
+        kind: "PURCHASE",
+        direction: "OUT",
+        date: o.createdAt || o.orderDate,
+        label: t("navigation.purchases"),
+        detail: o.supplier?.name || o.id.slice(0, 8),
+        amount: o.total || 0,
+      });
+    }
+    for (const e of report.expenses.items ?? []) {
+      rows.push({
+        id: `expense-${e.id}`,
+        kind: "EXPENSE",
+        direction: "OUT",
+        date: e.date,
+        label: t("finance.expenses"),
+        detail: [e.category, e.description].filter(Boolean).join(" — "),
+        amount: e.amount || 0,
+      });
+    }
+    for (const s of report.settlements.items ?? []) {
+      rows.push({
+        id: `settlement-${s.id}`,
+        kind: "SETTLEMENT",
+        direction: "IN",
+        date: s.createdAt,
+        label: t("navigation.settlements"),
+        detail: s.status === "VERIFIED"
+          ? `${s.collector?.name || "—"} · ${t("settlements.verified")}`
+          : s.collector?.name || "—",
+        amount: s.amount || 0,
+      });
+    }
+    for (const r of report.returns.items ?? []) {
+      const saleReturn = r.type === "SALE_RETURN";
+      rows.push({
+        id: `return-${r.id}`,
+        kind: saleReturn ? "SALE_RETURN" : "PURCHASE_RETURN",
+        direction: saleReturn ? "OUT" : "IN",
+        date: r.createdAt,
+        label: saleReturn ? t("reports.salesReturn") : t("reports.purchaseReturn"),
+        detail: r.customer?.name || r.supplier?.name || r.reason || "—",
+        amount: r.total || 0,
+      });
+    }
+
+    return rows.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    );
+  }, [report, t]);
 
   return (
     <>
@@ -329,11 +408,31 @@ export default function CompanyReportPage() {
           </button>
         </div>
 
+        <div className="no-print flex gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm" role="tablist">
+          {([
+            { id: "ledger", label: t("reports.activityLedger") },
+            { id: "details", label: t("reports.detailedReport") },
+          ] as const).map((tb) => (
+            <button
+              key={tb.id}
+              role="tab"
+              aria-selected={activeTab === tb.id}
+              onClick={() => setActiveTab(tb.id)}
+              className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${activeTab === tb.id ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"}`}
+            >
+              {tb.label}
+            </button>
+          ))}
+        </div>
+
         {loading ? (
           <div className="flex min-h-[240px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
             <PrinterLoader size="md" label="جاري تحميل التقرير..." />
           </div>
         ) : report ? (
+          activeTab === "ledger" ? (
+            <LedgerTable ledger={ledger} t={t} />
+          ) : (
           <>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm border-r-4 border-green-500">
@@ -744,6 +843,7 @@ export default function CompanyReportPage() {
               </div>
             </div>
           </>
+          )
         ) : (
           <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
             <p className="text-gray-400">لا توجد بيانات</p>
@@ -751,5 +851,107 @@ export default function CompanyReportPage() {
         )}
       </div>
     </>
+  );
+}
+
+const LEDGER_BADGE: Record<LedgerEntry["kind"], { cls: string; labelKey: string }> = {
+  SALE: { cls: "bg-green-100 text-green-700", labelKey: "navigation.sales" },
+  PURCHASE: { cls: "bg-blue-100 text-blue-700", labelKey: "navigation.purchases" },
+  EXPENSE: { cls: "bg-orange-100 text-orange-700", labelKey: "finance.expenses" },
+  SETTLEMENT: { cls: "bg-purple-100 text-purple-700", labelKey: "navigation.settlements" },
+  SALE_RETURN: { cls: "bg-red-100 text-red-700", labelKey: "reports.salesReturn" },
+  PURCHASE_RETURN: { cls: "bg-emerald-100 text-emerald-700", labelKey: "reports.purchaseReturn" },
+};
+
+function LedgerTable({ ledger, t }: { ledger: LedgerEntry[]; t: (key: string) => string }) {
+  const totalIn = ledger.filter((r) => r.direction === "IN").reduce((s, r) => s + r.amount, 0);
+  const totalOut = ledger.filter((r) => r.direction === "OUT").reduce((s, r) => s + r.amount, 0);
+  const net = totalIn - totalOut;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-2xl border border-green-200 bg-green-50 p-5 shadow-sm">
+          <div className="flex items-center gap-2">
+            <ArrowDownRight className="text-green-600" size={18} />
+            <p className="text-sm font-medium text-green-700">{t("reports.totalIn")}</p>
+          </div>
+          <p className="mt-2 text-2xl font-bold text-green-700">{moneyFormatter.format(totalIn)}</p>
+        </div>
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-5 shadow-sm">
+          <div className="flex items-center gap-2">
+            <ArrowUpRight className="text-red-600" size={18} />
+            <p className="text-sm font-medium text-red-700">{t("reports.totalOut")}</p>
+          </div>
+          <p className="mt-2 text-2xl font-bold text-red-700">{moneyFormatter.format(totalOut)}</p>
+        </div>
+        <div className={`rounded-2xl border p-5 shadow-sm ${net >= 0 ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}>
+          <p className={`text-sm font-medium ${net >= 0 ? "text-emerald-700" : "text-red-700"}`}>{t("reports.netFlow")}</p>
+          <p className={`mt-2 text-2xl font-bold ${net >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+            {moneyFormatter.format(net)}
+          </p>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-3">
+          <h2 className="text-lg font-bold text-slate-900">{t("reports.activityLedger")}</h2>
+          <p className="text-sm text-gray-500">
+            {t("pagination.showing")} {ledger.length} {t("pagination.of")}
+          </p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px]">
+            <thead>
+              <tr className="bg-slate-50">
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("common.date")}</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("reports.type")}</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("reports.description")}</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("reports.in")}</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">{t("reports.out")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ledger.map((row) => {
+                const badge = LEDGER_BADGE[row.kind];
+                return (
+                  <tr key={row.id} className="border-t border-gray-100 hover:bg-slate-50/60">
+                    <td className="px-4 py-3 text-sm whitespace-nowrap">
+                      <DateTimeCell value={row.date} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.cls}`}>
+                        {t(badge.labelKey)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-700">{row.detail}</td>
+                    <td className="px-4 py-3 text-sm font-bold text-green-700">
+                      {row.direction === "IN" ? moneyFormatter.format(row.amount) : ""}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-bold text-red-700">
+                      {row.direction === "OUT" ? moneyFormatter.format(row.amount) : ""}
+                    </td>
+                  </tr>
+                );
+              })}
+              {ledger.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-400">لا توجد بيانات</td>
+                </tr>
+              )}
+            </tbody>
+            {ledger.length > 0 && (
+              <tfoot>
+                <tr className="border-t-2 border-slate-300 bg-slate-50 font-bold">
+                  <td colSpan={3} className="px-4 py-3 text-sm text-right">الإجمالي</td>
+                  <td className="px-4 py-3 text-sm text-left text-green-700">{moneyFormatter.format(totalIn)}</td>
+                  <td className="px-4 py-3 text-sm text-left text-red-700">{moneyFormatter.format(totalOut)}</td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/context";
 import PrinterLoader from "@/components/PrinterLoader";
+import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import { apiErrorMessage } from "@/lib/api-client";
 import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import { useToast, useConfirm } from "@/components/UIProvider";
-import { Pencil, Plus, Printer, Save, Trash2 } from "lucide-react";
+import { FileText, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import FormModal from "@/components/FormModal";
 import SubmitButton from "@/components/SubmitButton";
 
@@ -22,6 +23,9 @@ interface CompanyData {
   email?: string | null;
   totalSales: number;
   totalPurchases: number;
+  totalExpenses: number;
+  salesReturns: number;
+  purchaseReturns: number;
   totalSettlements: number;
   netProfit: number;
   counts: {
@@ -52,7 +56,6 @@ export default function CompaniesPage() {
 
   const [companies, setCompanies] = useState<CompanyData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -83,10 +86,13 @@ export default function CompaniesPage() {
 
   const totalSales = companies.reduce((s, c) => s + c.totalSales, 0);
   const totalPurchases = companies.reduce((s, c) => s + c.totalPurchases, 0);
-  const totalSettlements = companies.reduce((s, c) => s + c.totalSettlements, 0);
+  const totalExpenses = companies.reduce((s, c) => s + (c.totalExpenses || 0), 0);
   const totalNetProfit = companies.reduce((s, c) => s + c.netProfit, 0);
 
-  const selected = companies.find((c) => c.id === selectedId);
+  const filtered = companies.filter((c) =>
+    matchesQuery(c.name, search) ||
+    (Boolean(c.nameAr) && matchesQuery(c.nameAr || "", search))
+  );
 
   const openCreate = () => {
     setForm(emptyForm);
@@ -143,7 +149,6 @@ export default function CompaniesPage() {
       toastError(apiErrorMessage(data, t));
       return;
     }
-    setSelectedId(null);
     fetchCompanies();
     toastSuccess(t("common.deletedSuccessfully"));
   };
@@ -224,136 +229,151 @@ export default function CompaniesPage() {
         </form>
       </FormModal>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm border-r-4 border-blue-500">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-sm text-gray-500">{t("companies.allCompanies")}</p>
           <p className="text-3xl font-bold mt-1">{companies.length}</p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm border-r-4 border-green-500">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-sm text-gray-500">{t("companies.totalRevenue")}</p>
-          <p className="text-3xl font-bold mt-1 text-green-600">{totalSales.toLocaleString("ar-EG")} ج.م</p>
+          <p className="text-3xl font-bold mt-1 text-green-600">
+            {totalSales.toLocaleString("ar-EG")} <span className="text-base font-medium text-gray-400">ج.م</span>
+          </p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm border-r-4 border-red-500">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-sm text-gray-500">{t("companies.totalExpenses")}</p>
-          <p className="text-3xl font-bold mt-1 text-red-600">{totalPurchases.toLocaleString("ar-EG")} ج.م</p>
+          <p className="text-3xl font-bold mt-1 text-red-600">
+            {(totalPurchases + totalExpenses).toLocaleString("ar-EG")} <span className="text-base font-medium text-gray-400">ج.م</span>
+          </p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm border-r-4 border-purple-500">
-          <p className="text-sm text-gray-500">{t("companies.netProfit")}</p>
-          <p className={`text-3xl font-bold mt-1 ${totalNetProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
-            {totalNetProfit.toLocaleString("ar-EG")} ج.م
+        <div className="rounded-2xl border border-emerald-600 bg-emerald-50/60 p-5 shadow-sm">
+          <p className="text-sm font-medium text-emerald-700">{t("companies.netProfit")}</p>
+          <p className={`text-3xl font-bold mt-1 ${totalNetProfit >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+            {totalNetProfit.toLocaleString("ar-EG")} <span className="text-base font-medium text-gray-400">ج.م</span>
           </p>
         </div>
       </div>
 
-      <div className="mb-5"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t("common.search")} ${t("common.company")}...`} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 md:max-w-md" /></div>
-
-      {companies.length > 0 && (
-        <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-          {companies.map((company) => {
-            const active = selectedId === company.id;
-            return (
-              <button
-                key={company.id}
-                onClick={() => setSelectedId(active ? null : company.id)}
-                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition ${
-                  active ? "bg-indigo-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                <span className="text-base">{COMPANY_ICONS[company.name] || "🏢"}</span>
-                {company.nameAr || company.name}
-              </button>
-            );
-          })}
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="w-full sm:max-w-md">
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder={`${t("common.search")} ${t("common.company")}...`}
+          />
         </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {companies.filter(company => [company.name, company.nameAr].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())).map((company) => (
-          <div
-            key={company.id}
-            onClick={() => setSelectedId(selectedId === company.id ? null : company.id)}
-            className={`rounded-2xl border border-slate-200 bg-white shadow-sm p-6 cursor-pointer transition-all hover:shadow-lg ${
-              selectedId === company.id ? "ring-2 ring-blue-500" : ""
-            }`}
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-3xl">{COMPANY_ICONS[company.name] || "🏢"}</span>
-              <div>
-                <h2 className="font-bold text-lg">{company.name}</h2>
-                {company.nameAr && <p className="text-sm text-gray-400">{company.nameAr}</p>}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="bg-green-50 rounded-lg p-3">
-                <p className="text-xs text-gray-500">{t("companies.totalRevenue")}</p>
-                <p className="font-bold text-green-700">{company.totalSales.toLocaleString("ar-EG")}</p>
-              </div>
-              <div className="bg-red-50 rounded-lg p-3">
-                <p className="text-xs text-gray-500">{t("companies.totalExpenses")}</p>
-                <p className="font-bold text-red-700">{company.totalPurchases.toLocaleString("ar-EG")}</p>
-              </div>
-              <div className={`rounded-lg p-3 ${company.netProfit >= 0 ? "bg-blue-50" : "bg-orange-50"}`}>
-                <p className="text-xs text-gray-500">{t("companies.netProfit")}</p>
-                <p className={`font-bold ${company.netProfit >= 0 ? "text-blue-700" : "text-orange-700"}`}>
-                  {company.netProfit.toLocaleString("ar-EG")}
-                </p>
-              </div>
-              <div className="bg-purple-50 rounded-lg p-3">
-                <p className="text-xs text-gray-500">التسويات</p>
-                <p className="font-bold text-purple-700">{company.totalSettlements}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-center text-xs">
-              <div className="bg-gray-50 rounded-lg py-2">
-                <p className="font-bold text-lg">{company.counts.salesOrders}</p>
-                <p className="text-gray-500">{t("navigation.sales")}</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg py-2">
-                <p className="font-bold text-lg">{company.counts.purchaseOrders}</p>
-                <p className="text-gray-500">{t("navigation.purchases")}</p>
-              </div>
-            </div>
-          </div>
-        ))}
+        <p className="text-sm text-gray-500">
+          {t("pagination.showing")} {filtered.length} {t("pagination.of")} {companies.length}
+        </p>
       </div>
 
-      {selected && (
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold">{selected.name} — تفاصيل</h2>
-            <div className="flex items-center gap-3">
-              <button onClick={() => openEdit(selected)} className="text-blue-600 hover:text-blue-800 text-sm">
-                <Pencil size={14} className="inline-block me-1" />{t("common.edit")}
-              </button>
-              <button onClick={() => router.push(`/companies/${selected.id}/report`)} className="text-green-600 hover:text-green-800 text-sm">
-                <Printer size={14} className="inline-block me-1" />التقرير المالي
-              </button>
-              <button onClick={() => handleDelete(selected.id)} className="text-red-600 hover:text-red-800 text-sm">
-                <Trash2 size={14} className="inline-block me-1" />{t("common.delete")}
-              </button>
-              <button onClick={() => setSelectedId(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="border rounded-lg p-4">
-              <h3 className="font-bold mb-2">المبيعات</h3>
-              <p className="text-2xl font-bold text-green-600">{selected.totalSales.toLocaleString("ar-EG")} ج.م</p>
-              <p className="text-sm text-gray-500">{selected.counts.salesOrders} فاتورة</p>
-            </div>
-            <div className="border rounded-lg p-4">
-              <h3 className="font-bold mb-2">المشتريات</h3>
-              <p className="text-2xl font-bold text-red-600">{selected.totalPurchases.toLocaleString("ar-EG")} ج.م</p>
-              <p className="text-sm text-gray-500">{selected.counts.purchaseOrders} فاتورة</p>
-            </div>
-            <div className="border rounded-lg p-4">
-              <h3 className="font-bold mb-2">صافي الربح</h3>
-              <p className={`text-2xl font-bold ${selected.netProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
-                {selected.netProfit.toLocaleString("ar-EG")} ج.م
-              </p>
-            </div>
-          </div>
+      {filtered.length === 0 ? (
+        <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <p className="text-sm text-gray-400">{t("common.noData")}</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filtered.map((company) => {
+            const totalCost = company.totalPurchases + (company.totalExpenses || 0);
+            const returnsNet = (company.purchaseReturns || 0) - (company.salesReturns || 0);
+            return (
+              <div
+                key={company.id}
+                className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg"
+              >
+                <div className="border-b border-slate-100 p-5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-2xl">
+                        {COMPANY_ICONS[company.name] || "🏢"}
+                      </span>
+                      <div>
+                        <h2 className="font-bold text-lg leading-tight text-slate-900">{company.name}</h2>
+                        {company.nameAr && <p className="text-sm text-gray-400">{company.nameAr}</p>}
+                      </div>
+                    </div>
+                    <div className="flex flex-none items-center gap-1">
+                      <button
+                        onClick={() => openEdit(company)}
+                        title={t("common.edit")}
+                        aria-label={t("common.edit")}
+                        className="rounded-lg p-2 text-gray-400 transition hover:bg-blue-50 hover:text-blue-600"
+                      >
+                        <Pencil size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(company.id)}
+                        title={t("common.delete")}
+                        aria-label={t("common.delete")}
+                        className="rounded-lg p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-5">
+                  <p className="mb-3 text-xs font-semibold tracking-wide text-gray-400 uppercase">
+                    {t("companies.netProfit")}
+                  </p>
+                  <div className="space-y-2 border-b border-slate-100 pb-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">{t("companies.totalRevenue")}</span>
+                      <span className="font-bold text-green-600">+{company.totalSales.toLocaleString("ar-EG")}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">{t("companies.totalExpenses")}</span>
+                      <span className="font-bold text-red-600">−{totalCost.toLocaleString("ar-EG")}</span>
+                    </div>
+                    {returnsNet !== 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500">{t("companies.netReturns")}</span>
+                        <span className={`font-bold ${returnsNet >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          {returnsNet > 0 ? "+" : "−"}{Math.abs(returnsNet).toLocaleString("ar-EG")}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600">
+                      {t("companies.totalRevenue")} − {t("companies.totalExpenses")}
+                    </span>
+                    <span className={`text-xl font-bold ${company.netProfit >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                      {company.netProfit.toLocaleString("ar-EG")} ج.م
+                    </span>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-100 bg-slate-50/60 px-5 py-3">
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                    <div>
+                      <p className="font-bold text-base text-slate-800">{company.counts.salesOrders}</p>
+                      <p className="text-gray-500">{t("navigation.sales")}</p>
+                    </div>
+                    <div>
+                      <p className="font-bold text-base text-slate-800">{company.counts.purchaseOrders}</p>
+                      <p className="text-gray-500">{t("navigation.purchases")}</p>
+                    </div>
+                    <div>
+                      <p className="font-bold text-base text-slate-800">{company.totalSettlements}</p>
+                      <p className="text-gray-500">{t("companies.settlements")}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-100 p-3">
+                  <button
+                    onClick={() => router.push(`/companies/${company.id}/report`)}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
+                  >
+                    <FileText size={16} />
+                    {t("reports.financialReport")}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

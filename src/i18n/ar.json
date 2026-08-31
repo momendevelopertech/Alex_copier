@@ -591,6 +591,16 @@
     "type": "النوع",
     "value": "القيمة",
     "estimatedProfit": "الربح المقدر",
+    "activityLedger": "كشف النشاط (صادر ووارد)",
+    "detailedReport": "التقرير التفصيلي",
+    "totalIn": "إجمالي الوارد",
+    "totalOut": "إجمالي الصادر",
+    "netFlow": "صافي التدفق",
+    "description": "البيان",
+    "in": "وارد",
+    "out": "صادر",
+    "salesReturn": "مرتجع مبيعات",
+    "purchaseReturn": "مرتجع مشتريات",
     "comingSoon": "قريباً..."
   },
   "users": {
@@ -670,6 +680,10 @@
     "tradeName": "الاسم التجاري",
     "taxNumber": "الرقم الضريبي",
     "tradeRegister": "السجل التجاري",
+    "revenue": "الإيرادات",
+    "expenses": "المصروفات",
+    "settlements": "التسويات",
+    "netReturns": "صافي المرتجعات",
     "deleteConfirm": "هل أنت متأكد من حذف هذه الشركة؟"
   },
   "warehouses": {

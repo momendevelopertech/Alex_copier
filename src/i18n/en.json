@@ -597,6 +597,16 @@
     "type": "Type",
     "value": "Value",
     "estimatedProfit": "Estimated Profit",
+    "activityLedger": "Activity ledger (In / Out)",
+    "detailedReport": "Detailed report",
+    "totalIn": "Total In",
+    "totalOut": "Total Out",
+    "netFlow": "Net Flow",
+    "description": "Description",
+    "in": "In",
+    "out": "Out",
+    "salesReturn": "Sales return",
+    "purchaseReturn": "Purchase return",
     "comingSoon": "Coming soon..."
   },
   "users": {
@@ -665,6 +675,10 @@
     "tradeName": "Trade name",
     "taxNumber": "Tax number",
     "tradeRegister": "Commercial register",
+    "revenue": "Revenue",
+    "expenses": "Expenses",
+    "settlements": "Settlements",
+    "netReturns": "Net returns",
     "deleteConfirm": "Are you sure you want to delete this company?"
   },
   "warehouses": {
