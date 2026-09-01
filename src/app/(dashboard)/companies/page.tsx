@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useI18n } from "@/i18n/context";
 import PrinterLoader from "@/components/PrinterLoader";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import { apiErrorMessage } from "@/lib/api-client";
 import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import { useToast, useConfirm } from "@/components/UIProvider";
-import { FileText, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { FileText, Pencil, Plus, Save, Trash2, Eraser } from "lucide-react";
 import FormModal from "@/components/FormModal";
 import SubmitButton from "@/components/SubmitButton";
 
@@ -53,6 +54,8 @@ const emptyForm = {
 export default function CompaniesPage() {
   const { t, dir } = useI18n();
   const router = useRouter();
+  const { data: session } = useSession();
+  const isGeneralManager = (session?.user as { role?: string } | undefined)?.role === "GENERAL_MANAGER";
 
   const [companies, setCompanies] = useState<CompanyData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,6 +65,7 @@ export default function CompaniesPage() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [resettingId, setResettingId] = useState<string | null>(null);
   const { success: toastSuccess, error: toastError } = useToast();
   const confirmAction = useConfirm();
 
@@ -151,6 +155,32 @@ export default function CompaniesPage() {
     }
     fetchCompanies();
     toastSuccess(t("common.deletedSuccessfully"));
+  };
+
+  const handleReset = async (company: CompanyData) => {
+    if (resettingId) return;
+    if (
+      !(await confirmAction({
+        title: t("companies.resetData.confirmTitle"),
+        message: `${company.name}\n${t("companies.resetData.confirmMessage")}`,
+      }))
+    )
+      return;
+    setResettingId(company.id);
+    try {
+      const res = await fetch(`/api/companies/${company.id}/reset-transactions`, { method: "POST" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        toastError(apiErrorMessage(data, t, "companies.resetData.failed"));
+        return;
+      }
+      fetchCompanies();
+      toastSuccess(t("companies.resetData.success"));
+    } catch {
+      toastError(t("companies.resetData.failed"));
+    } finally {
+      setResettingId(null);
+    }
   };
 
   if (loading) {
@@ -301,6 +331,23 @@ export default function CompaniesPage() {
                       >
                         <Pencil size={18} />
                       </button>
+                      {isGeneralManager && (
+                      <button
+                        onClick={() => handleReset(company)}
+                        title={t("companies.resetData.action")}
+                        aria-label={t("companies.resetData.action")}
+                        disabled={resettingId === company.id}
+                        className={`rounded-lg p-2 text-gray-400 transition hover:bg-amber-50 hover:text-amber-600 ${
+                          resettingId === company.id ? "cursor-wait opacity-60" : ""
+                        }`}
+                      >
+                        {resettingId === company.id ? (
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden="true" />
+                        ) : (
+                          <Eraser size={18} />
+                        )}
+                      </button>
+                      )}
                       <button
                         onClick={() => handleDelete(company.id)}
                         title={t("common.delete")}

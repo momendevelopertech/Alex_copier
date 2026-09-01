@@ -696,7 +696,15 @@
     "expenses": "Expenses",
     "settlements": "Settlements",
     "netReturns": "Net returns",
-    "deleteConfirm": "Are you sure you want to delete this company?"
+    "deleteConfirm": "Are you sure you want to delete this company?",
+    "resetData": {
+      "action": "Clear company transactions",
+      "confirmTitle": "Clear this company's transactions?",
+      "confirmMessage": "This permanently deletes:\n• Sales orders, items and installments\n• Purchase orders and invoices\n• Settlements\n• Expenses\n• Returns",
+      "success": "Company transactions cleared successfully",
+      "failed": "Failed to clear company data",
+      "empty": "This company has no transactions"
+    }
   },
   "warehouses": {
     "title": "Warehouses",
