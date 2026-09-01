@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { useI18n } from "@/i18n/context";
 import PrinterLoader from "@/components/PrinterLoader";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
@@ -54,8 +53,6 @@ const emptyForm = {
 export default function CompaniesPage() {
   const { t, dir } = useI18n();
   const router = useRouter();
-  const { data: session } = useSession();
-  const isGeneralManager = (session?.user as { role?: string } | undefined)?.role === "GENERAL_MANAGER";
 
   const [companies, setCompanies] = useState<CompanyData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -331,23 +328,6 @@ export default function CompaniesPage() {
                       >
                         <Pencil size={18} />
                       </button>
-                      {isGeneralManager && (
-                      <button
-                        onClick={() => handleReset(company)}
-                        title={t("companies.resetData.action")}
-                        aria-label={t("companies.resetData.action")}
-                        disabled={resettingId === company.id}
-                        className={`rounded-lg p-2 text-gray-400 transition hover:bg-amber-50 hover:text-amber-600 ${
-                          resettingId === company.id ? "cursor-wait opacity-60" : ""
-                        }`}
-                      >
-                        {resettingId === company.id ? (
-                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden="true" />
-                        ) : (
-                          <Eraser size={18} />
-                        )}
-                      </button>
-                      )}
                       <button
                         onClick={() => handleDelete(company.id)}
                         title={t("common.delete")}
@@ -409,13 +389,27 @@ export default function CompaniesPage() {
                   </div>
                 </div>
 
-                <div className="border-t border-slate-100 p-3">
+                <div className="border-t border-slate-100 p-3 space-y-2">
                   <button
                     onClick={() => router.push(`/companies/${company.id}/report`)}
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
                   >
                     <FileText size={16} />
                     {t("reports.financialReport")}
+                  </button>
+                  <button
+                    onClick={() => handleReset(company)}
+                    disabled={resettingId === company.id}
+                    className={`flex w-full items-center justify-center gap-2 rounded-xl border-2 border-amber-500 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 ${
+                      resettingId === company.id ? "cursor-wait opacity-60" : ""
+                    }`}
+                  >
+                    {resettingId === company.id ? (
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden="true" />
+                    ) : (
+                      <Eraser size={16} className="shrink-0" />
+                    )}
+                    {t("companies.resetData.action")}
                   </button>
                 </div>
               </div>
