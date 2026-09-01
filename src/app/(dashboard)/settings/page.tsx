@@ -8,7 +8,7 @@ import FilterSelect from "@/components/FilterSelect";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useConfirm } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
-import { Plus, Pencil, Power, Eye, EyeOff, X, Trash2, Save } from "lucide-react";
+import { Plus, Pencil, Power, Eye, EyeOff, X, Trash2, Save, AlertTriangle } from "lucide-react";
 import SubmitButton from "@/components/SubmitButton";
 import { DateTimeCell } from "@/components/DateTimeCell";
 
@@ -56,12 +56,16 @@ export default function SettingsPage() {
   const [roleFilter, setRoleFilter] = useState("");
   const [banner, setBanner] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const [modalOpen, setModalOpen] = useState(false);
+const [modalOpen, setModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetText, setResetText] = useState("");
+  const [resetSaving, setResetSaving] = useState(false);
 
   const fetchUsers = async () => {
     try {
@@ -205,10 +209,31 @@ export default function SettingsPage() {
         return;
       }
 
-      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+setUsers((prev) => prev.filter((u) => u.id !== user.id));
       setBanner({ type: "success", text: t("common.deletedSuccessfully") });
     } catch {
       setBanner({ type: "error", text: t("settings.actionFailed") });
+    }
+  };
+
+  const handleReset = async () => {
+    if (resetSaving) return;
+    if (resetText.trim().toUpperCase() !== "RESET") return;
+    setResetSaving(true);
+    try {
+      const res = await fetch("/api/dev/reset-transactions", { method: "POST" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setBanner({ type: "error", text: apiErrorMessage(data, t, "settings.resetData.failed") });
+        return;
+      }
+      setResetOpen(false);
+      setResetText("");
+      setBanner({ type: "success", text: t("settings.resetData.success") });
+    } catch {
+      setBanner({ type: "error", text: t("settings.resetData.failed") });
+    } finally {
+      setResetSaving(false);
     }
   };
 
@@ -360,9 +385,83 @@ export default function SettingsPage() {
                   </tbody>
                 </table>
               </div>
-            )}
+)}
+          </div>
+
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="p-5 sm:p-6 border-b bg-red-50/50">
+            <h2 className="text-base font-bold text-red-700 flex items-center gap-2">
+              <AlertTriangle size={18} className="shrink-0" />
+              {t("settings.resetData.title")}
+            </h2>
+            <p className="mt-1 text-sm text-gray-600 whitespace-pre-line">{t("settings.resetData.description")}</p>
+            <button
+              onClick={() => setResetOpen(true)}
+              className="mt-4 inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+            >
+              <Trash2 size={18} className="shrink-0" />
+              {t("settings.resetData.button")}
+            </button>
           </div>
         </div>
+        </div>
+
+      {resetOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4 cursor-pointer"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => { if (e.target === e.currentTarget) setResetOpen(false); }}
+        >
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleReset(); }}
+            className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white p-5 sm:p-6 shadow-xl cursor-default"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
+                <AlertTriangle size={20} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg font-bold text-gray-900">{t("settings.resetData.confirmTitle")}</h3>
+                <p className="mt-1 text-sm leading-6 text-gray-600 whitespace-pre-line">{t("settings.resetData.confirmMessage")}</p>
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <label htmlFor="reset-confirm" className="mb-1 block text-sm font-medium text-red-700">
+                {t("settings.resetData.typeConfirm")}
+              </label>
+              <input
+                id="reset-confirm"
+                type="text"
+                dir="ltr"
+                autoComplete="off"
+                placeholder={t("settings.resetData.placeholder")}
+                value={resetText}
+                onChange={(e) => setResetText(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-red-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => { setResetOpen(false); setResetText(""); }}
+                className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              >
+                {t("common.cancel")}
+              </button>
+              <SubmitButton
+                loading={resetSaving}
+                label={t("settings.resetData.button")}
+                loadingLabel={t("settings.resetData.running")}
+                disabled={resetText.trim().toUpperCase() !== "RESET"}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              ><Trash2 size={16} /></SubmitButton>
+            </div>
+          </form>
+        </div>
+      )}
 
       {modalOpen && (
         <div

@@ -648,7 +648,19 @@
     "statusChanged": "Account status changed successfully",
     "actionFailed": "Something went wrong, please try again",
     "you": "You",
-    "passwordMin": "At least 6 characters"
+    "passwordMin": "At least 6 characters",
+    "resetData": {
+      "title": "Reset test data",
+      "description": "Delete all sales, purchases, settlements, expenses and returns (for all companies) with their linked records: order items, installments and purchase invoices. Used to zero the financial report and start a fresh test.",
+      "button": "Delete all transactions",
+      "confirmTitle": "Delete all transactions?",
+      "confirmMessage": "This permanently deletes, for all companies:\n• Sales orders, items and installments\n• Purchase orders and invoices\n• Settlements\n• Expenses\n• Returns",
+      "typeConfirm": "Type RESET to confirm",
+      "placeholder": "RESET",
+      "success": "All transactions deleted successfully",
+      "failed": "Failed to clear the data, please try again",
+      "running": "Deleting transactions..."
+    }
   },
   "roles": {
     "GENERAL_MANAGER": "General Manager",
