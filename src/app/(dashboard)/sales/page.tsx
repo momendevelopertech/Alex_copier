@@ -147,7 +147,7 @@ export default function SalesPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingOrder, setViewingOrder] = useState<SalesOrder | null>(null);
-  const [form, setForm] = useState({ companyId: "", customerId: "", engineerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", isTaxInvoice: false, discount: "", discountType: "FIXED", taxRate: "0", notes: "" });
+  const [form, setForm] = useState({ companyId: "", customerId: "", engineerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", isTaxInvoice: false, discount: "", discountType: "FIXED", taxRate: "0", notes: "", paidAmount: "" });
   const [itemRows, setItemRows] = useState<ItemRow[]>([{ productId: "", quantity: "", unitPrice: "", discount: "", priceTier: "newCustomer" }]);
   const [showInterForm, setShowInterForm] = useState(false);
   const [interForm, setInterForm] = useState({ fromCompanyId: "", toCompanyId: "", customerId: "", orderType: "SPARE_PART_SALE", paymentMethod: "CREDIT", internalPaymentMethod: "CREDIT", paidAmount: "", internalPaidAmount: "", isTaxInvoice: false, taxRate: "0", discount: "", notes: "" });
@@ -321,6 +321,7 @@ export default function SalesPage() {
       discountType: order.discountType,
       taxRate: String(order.taxRate),
       notes: order.notes || "",
+      paidAmount: String(order.paidAmount ?? ""),
     });
     setItemRows(
       order.items.length > 0
@@ -386,6 +387,7 @@ export default function SalesPage() {
       engineerId: form.engineerId || undefined,
       discount: parseFloat(form.discount) || 0,
       taxRate: safeTaxRate,
+      paidAmount: form.paymentMethod === "CASH" ? 0 : (parseFloat(form.paidAmount) || 0),
       orderDate: new Date().toISOString(),
       items,
     };
@@ -397,7 +399,7 @@ export default function SalesPage() {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) { toastError(apiErrorMessage(data, t)); setSaving(false); return; }
-    setForm({ companyId: "", customerId: "", engineerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", isTaxInvoice: false, discount: "", discountType: "FIXED", taxRate: "0", notes: "" });
+    setForm({ companyId: "", customerId: "", engineerId: "", orderType: "MACHINE_SALE", paymentMethod: "CASH", isTaxInvoice: false, discount: "", discountType: "FIXED", taxRate: "0", notes: "", paidAmount: "" });
     setItemRows([{ productId: "", quantity: "", unitPrice: "", discount: "", priceTier: "newCustomer" }]);
     setTradeInProduct({ name: "", brand: "", condition: "", value: "", serialNumber: "" });
     setEditingId(null);
@@ -558,6 +560,9 @@ export default function SalesPage() {
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">المهندس (اختياري)</label><select value={form.engineerId} onChange={(e) => setForm({ ...form, engineerId: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="">المهندس (اختياري)</option>{engineers.map((engineer) => (<option key={engineer.id} value={engineer.id}>{engineer.name}</option>))}</select></div>
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">نوع الطلب</label><select value={form.orderType} onChange={(e) => setForm({ ...form, orderType: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="MACHINE_SALE">{ORDER_TYPE_LABELS.MACHINE_SALE}</option><option value="SPARE_PART_SALE">{ORDER_TYPE_LABELS.SPARE_PART_SALE}</option></select></div>
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">طريقة الدفع</label><select value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="CASH">{PAYMENT_METHOD_LABELS.CASH}</option><option value="CREDIT">{PAYMENT_METHOD_LABELS.CREDIT}</option><option value="INSTALLMENT">{PAYMENT_METHOD_LABELS.INSTALLMENT}</option><option value="MIXED">{PAYMENT_METHOD_LABELS.MIXED}</option></select></div>
+            {form.paymentMethod !== "CASH" && (
+              <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">المبلغ المدفوع مقدماً (ج.م) <span className="text-xs text-gray-400">— اختياري للدفع الجزئي</span></label><input type="number" min="0" step="0.01" placeholder="0.00" value={form.paidAmount} onChange={(e) => setForm({ ...form, paidAmount: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+            )}
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">الضريبة</label><div className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2.5"><input id="isTaxInvoice" type="checkbox" checked={form.isTaxInvoice} onChange={(e) => setForm({ ...form, isTaxInvoice: e.target.checked, taxRate: e.target.checked ? "14" : "0" })} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" /><label htmlFor="isTaxInvoice" className="text-sm font-medium text-slate-700">فاتورة ضريبية</label>{form.isTaxInvoice && <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">14%</span>}</div></div>
             {form.isTaxInvoice && <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("sales.taxRate")}</label><input type="number" min="0" step="0.01" placeholder={t("sales.taxRate")} value={form.taxRate} onChange={(e) => setForm({ ...form, taxRate: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>}
           </div>

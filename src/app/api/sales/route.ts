@@ -86,6 +86,12 @@ export async function POST(request: Request) {
     const taxable = subtotal - orderDiscount;
     const total = Math.round((taxable + taxable * Math.max(0, resolvedTaxRate) / 100) * 100) / 100;
 
+    // Partial upfront payment is only allowed for non-CASH orders and must not
+    // exceed the order total.
+    const initialPaidAmount = paymentMethod === "CASH"
+      ? total
+      : Math.min(Math.max(0, Number(raw.paidAmount) || 0), total);
+
     const [company, customer] = await Promise.all([
       prisma.company.findUnique({ where: { id: companyId }, select: { id: true } }),
       prisma.customer.findUnique({ where: { id: customerId }, select: { id: true } }),
@@ -156,8 +162,8 @@ export async function POST(request: Request) {
           taxRate: resolvedTaxRate,
           isTaxInvoice,
           total,
-          paidAmount: paymentMethod === "CASH" ? total : 0,
-          paymentStatus: paymentMethod === "CASH" ? "PAID" : "PENDING",
+          paidAmount: paymentMethod === "CASH" ? total : initialPaidAmount,
+          paymentStatus: paymentMethod === "CASH" ? "PAID" : initialPaidAmount >= total ? "PAID" : initialPaidAmount > 0 ? "PARTIAL" : "PENDING",
           tradeInTotal: 0,
           orderDate: new Date(raw.orderDate),
           ...(installmentData && { installments: installmentData }),
@@ -165,20 +171,24 @@ export async function POST(request: Request) {
       });
 
       // For CREDIT/INSTALLMENT/MIXED orders, increment customer debt
+      // Only count the unpaid portion as debt (total - initialPaidAmount)
       if (paymentMethod !== "CASH") {
-        await tx.customer.update({
-          where: { id: customerId },
-          data: {
-            totalDebt: { increment: total },
-            remainingDebt: { increment: total },
-          },
-        });
+        const unpaidPortion = total - initialPaidAmount;
+        if (unpaidPortion > 0) {
+          await tx.customer.update({
+            where: { id: customerId },
+            data: {
+              totalDebt: { increment: unpaidPortion },
+              remainingDebt: { increment: unpaidPortion },
+            },
+          });
 
-        await tx.customerLedger.upsert({
-          where: { customerId_companyId: { customerId, companyId } },
-          update: { balance: { increment: total } },
-          create: { customerId, companyId, balance: total },
-        });
+          await tx.customerLedger.upsert({
+            where: { customerId_companyId: { customerId, companyId } },
+            update: { balance: { increment: unpaidPortion } },
+            create: { customerId, companyId, balance: unpaidPortion },
+          });
+        }
       }
 
       let tradeInTotal = 0;
@@ -265,6 +275,19 @@ export async function POST(request: Request) {
         await tx.salesOrder.update({
           where: { id: order.id },
           data: { tradeInTotal },
+        });
+      }
+
+      // Record initial payment as a CustomerPayment if partially paid upfront
+      if (initialPaidAmount > 0 && paymentMethod !== "CASH") {
+        await tx.customerPayment.create({
+          data: {
+            customerId,
+            companyId,
+            amount: initialPaidAmount,
+            paymentDate: new Date(raw.orderDate),
+            notes: `دفع مبدئي مع فاتورة بيع ${order.id}`,
+          },
         });
       }
 

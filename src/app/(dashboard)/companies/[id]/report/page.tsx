@@ -97,6 +97,15 @@ interface ReportData {
     expenses: number;
     cashForPurchases: number;
   };
+  customerDebt: {
+    total: number;
+    details: Array<{
+      customerId: string;
+      customerName: string;
+      phone: string | null;
+      balance: number;
+    }>;
+  };
   monthlyData: Array<{
     month: string;
     sales: number;
@@ -556,6 +565,38 @@ export default function CompanyReportPage() {
                 </div>
               </div>
             </div>
+
+            {report.customerDebt && report.customerDebt.total > 0 && (
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="border-b border-slate-200 bg-slate-50 px-5 py-3 flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-slate-900">المبالغ المستحقة من العملاء</h2>
+                  <span className="text-sm font-bold text-amber-600">{moneyFormatter.format(report.customerDebt.total)}</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[500px]">
+                    <thead>
+                      <tr className="bg-slate-50">
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">العميل</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">الهاتف</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">المبلغ المستحق</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {report.customerDebt.details.map((row) => (
+                        <tr key={row.customerId} className="border-t border-gray-100 hover:bg-slate-50/50">
+                          <td className="px-4 py-3 text-sm font-medium">{row.customerName}</td>
+                          <td className="px-4 py-3 text-sm" dir="ltr">{row.phone || "—"}</td>
+                          <td className="px-4 py-3 text-sm font-bold text-amber-600">{moneyFormatter.format(row.balance)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <SubtotalRow label="اجمالي المستحق من العملاء" value={report.customerDebt.total} colSpan={2} color="text-amber-600" />
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            )}
 
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-200 px-5 py-3">

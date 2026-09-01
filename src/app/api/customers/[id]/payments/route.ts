@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
+import { recalculatePaymentStatus } from "@/lib/payment-status";
 
 export async function GET(
   request: Request,
@@ -19,6 +20,51 @@ export async function GET(
   } catch {
     return NextResponse.json({ error: "Failed to fetch payments" }, { status: 500 });
   }
+}
+
+/**
+ * Auto-distribute a payment amount across outstanding (unpaid) sales orders
+ * using FIFO by orderDate. Updates each order's paidAmount and paymentStatus.
+ * Returns the total amount actually applied to orders.
+ */
+async function distributeToOrders(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  customerId: string,
+  companyId: string | null,
+  paymentAmount: number,
+): Promise<number> {
+  const where: Record<string, unknown> = {
+    customerId,
+    paymentMethod: { not: "CASH" },
+    paymentStatus: { notIn: ["PAID"] },
+  };
+  if (companyId) where.companyId = companyId;
+
+  const unpaidOrders = await tx.salesOrder.findMany({
+    where,
+    select: { id: true, total: true, paidAmount: true },
+    orderBy: { orderDate: "asc" },
+  });
+
+  let remaining = paymentAmount;
+
+  for (const order of unpaidOrders) {
+    if (remaining <= 0) break;
+    const outstanding = order.total - order.paidAmount;
+    if (outstanding <= 0) continue;
+
+    const applied = Math.min(remaining, outstanding);
+    remaining -= applied;
+
+    await tx.salesOrder.update({
+      where: { id: order.id },
+      data: { paidAmount: { increment: applied } },
+    });
+
+    await recalculatePaymentStatus(tx, order.id);
+  }
+
+  return paymentAmount - remaining;
 }
 
 export async function POST(
@@ -58,8 +104,33 @@ export async function POST(
     const newRemaining = Math.max(0, customer.remainingDebt - paymentAmount);
     const payDate = paymentDate ? new Date(paymentDate) : new Date();
 
-    const [payment] = await prisma.$transaction([
-      prisma.customerPayment.create({
+    const payment = await prisma.$transaction(async (tx) => {
+      // 1. Update customer remaining debt
+      await tx.customer.update({
+        where: { id },
+        data: {
+          remainingDebt: newRemaining,
+          lastPaymentDate: payDate,
+        },
+      });
+
+      // 2. Update customer ledger for the company
+      if (companyId) {
+        await tx.customerLedger.upsert({
+          where: { customerId_companyId: { customerId: id, companyId } },
+          update: { balance: { decrement: paymentAmount } },
+          create: { customerId: id, companyId, balance: -paymentAmount },
+        });
+      }
+
+      // 3. Auto-distribute payment across outstanding orders
+      const distributed = await distributeToOrders(
+        tx, id, companyId || null, paymentAmount,
+      );
+
+      // 4. Record the payment — the amount is the full paymentAmount regardless
+      //    of distribution. The SalesOrder.paidAmount tracks per-order allocation.
+      const record = await tx.customerPayment.create({
         data: {
           customerId: id,
           companyId: companyId || null,
@@ -67,24 +138,13 @@ export async function POST(
           paymentDate: payDate,
           notes: notes || null,
         },
-      }),
-      prisma.customer.update({
-        where: { id },
-        data: {
-          remainingDebt: newRemaining,
-          lastPaymentDate: payDate,
-        },
-      }),
-      ...(companyId
-        ? [
-            prisma.customerLedger.upsert({
-              where: { customerId_companyId: { customerId: id, companyId } },
-              update: { balance: { decrement: paymentAmount } },
-              create: { customerId: id, companyId, balance: -paymentAmount },
-            }),
-          ]
-        : []),
-    ]);
+      });
+
+      // Expose how much was actually distributed to orders for transparency
+      (record as Record<string, unknown>)._distributedToOrders = distributed < paymentAmount;
+
+      return record;
+    });
 
     return NextResponse.json(payment, { status: 201 });
   } catch (error) {

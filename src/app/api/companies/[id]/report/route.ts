@@ -71,7 +71,7 @@ export async function GET(
         }
       : {};
 
-    const [salesOrders, purchaseOrders, expenses, settlements, returnTransactions] =
+    const [salesOrders, purchaseOrders, expenses, settlements, returnTransactions, customerLedgers] =
       await Promise.all([
         prisma.salesOrder.findMany({
           where: { companyId: id, ...orderDateFilter },
@@ -105,6 +105,11 @@ export async function GET(
           where: { companyId: id, ...dateFilter },
           include: { product: true, customer: true, supplier: true },
           orderBy: { createdAt: "desc" },
+        }),
+        prisma.customerLedger.findMany({
+          where: { companyId: id, balance: { gt: 0 } },
+          include: { customer: { select: { id: true, name: true, phone: true } } },
+          orderBy: { balance: "desc" },
         }),
       ]);
 
@@ -172,6 +177,17 @@ export async function GET(
       .filter((s) => s.status === "INITIAL")
       .reduce((sum, s) => sum + (s.amount || 0), 0);
     const settlementsCount = settlements.length;
+
+    // ─────────────────────────────────────────────────────────
+    // CUSTOMER DEBT (المبالغ المستحقة من العملاء)
+    // ─────────────────────────────────────────────────────────
+    const totalCustomerDebt = customerLedgers.reduce((sum, l) => sum + (l.balance || 0), 0);
+    const customerDebtDetails = customerLedgers.map((l) => ({
+      customerId: l.customerId,
+      customerName: l.customer?.name || "—",
+      phone: l.customer?.phone || null,
+      balance: l.balance,
+    }));
 
     // ─────────────────────────────────────────────────────────
     // INCOME STATEMENT (قائمة الدخل)
@@ -248,6 +264,10 @@ export async function GET(
         pending: totalSettlementsPending,
         count: settlementsCount,
         items: settlements,
+      },
+      customerDebt: {
+        total: totalCustomerDebt,
+        details: customerDebtDetails,
       },
       incomeStatement: {
         salesRevenue: totalSales,

@@ -116,13 +116,19 @@ export async function PUT(
     const taxable = subtotal - orderDiscount;
     const total = Math.round((taxable + taxable * Math.max(0, resolvedTaxRate) / 100) * 100) / 100;
 
+    // User-provided paid amount for non-CASH orders (partial upfront payment)
+    const initialPaidAmount = paymentMethod === "CASH"
+      ? total
+      : Math.min(Math.max(0, Number(raw.paidAmount) || 0), total);
+
     const warehouse = await prisma.warehouse.findFirst({
       where: { companyId, isMain: true },
       select: { id: true },
     });
 
     // Original debt contribution (reverse) — matches the POST forward logic
-    const originalDebt = existing.paymentMethod !== "CASH" ? existing.total : 0;
+    const originalDebt =
+      existing.paymentMethod !== "CASH" ? Math.max(0, existing.total - existing.paidAmount) : 0;
 
     const updated = await prisma.$transaction(async (tx) => {
       // 1) Reverse stock from the ORIGINAL order using recorded movements
@@ -221,23 +227,26 @@ export async function PUT(
           taxRate: resolvedTaxRate,
           isTaxInvoice,
           total,
-          paidAmount: paymentMethod === "CASH" ? total : 0,
+          paidAmount: initialPaidAmount,
           tradeInTotal: 0,
           ...(installmentData && { installments: installmentData }),
         },
       });
 
-      // 7) Apply new customer debt
+      // 7) Apply new customer debt (only the unpaid portion)
       if (paymentMethod !== "CASH") {
-        await tx.customer.update({
-          where: { id: customerId },
-          data: { totalDebt: { increment: total }, remainingDebt: { increment: total } },
-        });
-        await tx.customerLedger.upsert({
-          where: { customerId_companyId: { customerId, companyId } },
-          update: { balance: { increment: total } },
-          create: { customerId, companyId, balance: total },
-        });
+        const newDebt = Math.max(0, total - initialPaidAmount);
+        if (newDebt > 0) {
+          await tx.customer.update({
+            where: { id: customerId },
+            data: { totalDebt: { increment: newDebt }, remainingDebt: { increment: newDebt } },
+          });
+          await tx.customerLedger.upsert({
+            where: { customerId_companyId: { customerId, companyId } },
+            update: { balance: { increment: newDebt } },
+            create: { customerId, companyId, balance: newDebt },
+          });
+        }
       }
 
       // 8) Create new items + trade-in
