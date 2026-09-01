@@ -99,8 +99,11 @@ describe("customer payment auto-distribution", () => {
     expect(ledgerCall.update.balance.decrement).toBe(600);
   });
 
-  it("does not touch orders of another company when company is selected", async () => {
-    mocks.tx.salesOrder.findMany.mockResolvedValue([]);
+  it("distributes across all customer orders regardless of selected company", async () => {
+    mocks.tx.salesOrder.findMany.mockResolvedValue([
+      { id: "o1", total: 800, paidAmount: 0, companyId: "co1" },
+      { id: "o2", total: 200, paidAmount: 0, companyId: "co1" },
+    ]);
     const res = await POST(
       jsonRequest("http://localhost/api/customers/c1/payments", "POST", {
         amount: 300, companyId: "co2",
@@ -108,7 +111,24 @@ describe("customer payment auto-distribution", () => {
       { params: Promise.resolve({ id: "c1" }) },
     );
     expect(res.status).toBe(201);
-    expect(mocks.tx.salesOrder.update).not.toHaveBeenCalled();
+    // Even though a different company was selected, the payment still hits the
+    // customer's outstanding orders so the owning company's report stays live.
+    expect(mocks.tx.salesOrder.update).toHaveBeenCalledTimes(1);
+  });
+
+  it("attributes the payment to the first order's company when none selected", async () => {
+    mocks.tx.salesOrder.findMany.mockResolvedValue([
+      { id: "o1", total: 800, paidAmount: 0, companyId: "co9" },
+    ]);
+    const res = await POST(
+      jsonRequest("http://localhost/api/customers/c1/payments", "POST", {
+        amount: 300,
+      }),
+      { params: Promise.resolve({ id: "c1" }) },
+    );
+    expect(res.status).toBe(201);
+    const createCall = mocks.tx.customerPayment.create.mock.calls[0][0];
+    expect(createCall.data.companyId).toBe("co9");
   });
 
   it("clamps customer remainingDebt to zero on overpayment", async () => {

@@ -23,30 +23,32 @@ export async function GET(
 }
 
 /**
- * Auto-distribute a payment amount across outstanding (unpaid) sales orders
- * using FIFO by orderDate. Updates each order's paidAmount and paymentStatus.
- * Returns the total amount actually applied to orders.
+ * Auto-distribute a payment amount across all of the customer's outstanding
+ * (unpaid, non-cash) sales orders using FIFO by orderDate, regardless of the
+ * company selected in the UI. This guarantees the payment always reduces the
+ * customer's actual debt on the orders, so the owning company's financial
+ * report reflects it immediately. Returns the primary company the payment
+ * landed on (first order that absorbed it, or the provided company).
  */
 async function distributeToOrders(
   tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
   customerId: string,
-  companyId: string | null,
+  preferredCompanyId: string | null,
   paymentAmount: number,
-): Promise<number> {
-  const where: Record<string, unknown> = {
-    customerId,
-    paymentMethod: { not: "CASH" },
-    paymentStatus: { notIn: ["PAID"] },
-  };
-  if (companyId) where.companyId = companyId;
-
+): Promise<{ applied: number; primaryCompanyId: string | null }> {
   const unpaidOrders = await tx.salesOrder.findMany({
-    where,
-    select: { id: true, total: true, paidAmount: true },
-    orderBy: { orderDate: "asc" },
+    where: {
+      customerId,
+      paymentMethod: { not: "CASH" },
+      paymentStatus: { notIn: ["PAID"] },
+      status: { notIn: ["DRAFT", "CANCELLED"] },
+    },
+    select: { id: true, total: true, paidAmount: true, companyId: true },
+    orderBy: { orderDate: "asc", createdAt: "asc" },
   });
 
   let remaining = paymentAmount;
+  let primaryCompanyId: string | null = preferredCompanyId;
 
   for (const order of unpaidOrders) {
     if (remaining <= 0) break;
@@ -62,9 +64,13 @@ async function distributeToOrders(
     });
 
     await recalculatePaymentStatus(tx, order.id);
+
+    // Pick the company of the first order that absorbed the payment when the
+    // user did not pick one, so the payment record can be attributed.
+    if (!primaryCompanyId) primaryCompanyId = order.companyId;
   }
 
-  return paymentAmount - remaining;
+  return { applied: paymentAmount - remaining, primaryCompanyId };
 }
 
 export async function POST(
@@ -105,7 +111,17 @@ export async function POST(
     const payDate = paymentDate ? new Date(paymentDate) : new Date();
 
     const payment = await prisma.$transaction(async (tx) => {
-      // 1. Update customer remaining debt
+      // 1. Auto-distribute the payment across the customer's outstanding orders
+      //    (FIFO by date). This updates each order's paidAmount + paymentStatus
+      //    so every owning company's financial report reflects it immediately.
+      const { applied, primaryCompanyId } = await distributeToOrders(
+        tx, id, companyId || null, paymentAmount,
+      );
+      // The company the payment is attributed to: the user's selection if given,
+      // otherwise the first order that absorbed the payment.
+      const resolvedCompanyId = companyId || primaryCompanyId;
+
+      // 2. Update customer remaining debt
       await tx.customer.update({
         where: { id },
         data: {
@@ -114,34 +130,29 @@ export async function POST(
         },
       });
 
-      // 2. Update customer ledger for the company
-      if (companyId) {
+      // 3. Update customer ledger for the resolved company
+      if (resolvedCompanyId) {
         await tx.customerLedger.upsert({
-          where: { customerId_companyId: { customerId: id, companyId } },
+          where: { customerId_companyId: { customerId: id, companyId: resolvedCompanyId } },
           update: { balance: { decrement: paymentAmount } },
-          create: { customerId: id, companyId, balance: -paymentAmount },
+          create: { customerId: id, companyId: resolvedCompanyId, balance: -paymentAmount },
         });
       }
 
-      // 3. Auto-distribute payment across outstanding orders
-      const distributed = await distributeToOrders(
-        tx, id, companyId || null, paymentAmount,
-      );
-
-      // 4. Record the payment — the amount is the full paymentAmount regardless
-      //    of distribution. The SalesOrder.paidAmount tracks per-order allocation.
+      // 4. Record the payment attributed to the resolved company.
       const record = await tx.customerPayment.create({
         data: {
           customerId: id,
-          companyId: companyId || null,
+          companyId: resolvedCompanyId || null,
           amount: paymentAmount,
           paymentDate: payDate,
           notes: notes || null,
         },
       });
 
-      // Expose how much was actually distributed to orders for transparency
-      (record as Record<string, unknown>)._distributedToOrders = distributed < paymentAmount;
+      // Expose how much was actually applied to orders for transparency
+      (record as Record<string, unknown>)._distributedToOrders =
+        applied < paymentAmount - 0.001;
 
       return record;
     });

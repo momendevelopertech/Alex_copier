@@ -71,10 +71,10 @@ export async function GET(
         }
       : {};
 
-    const [salesOrders, purchaseOrders, expenses, settlements, returnTransactions, customerLedgers] =
+    const [salesOrders, purchaseOrders, expenses, settlements, returnTransactions] =
       await Promise.all([
         prisma.salesOrder.findMany({
-          where: { companyId: id, ...orderDateFilter },
+          where: { companyId: id, status: { notIn: ["DRAFT", "CANCELLED"] }, ...orderDateFilter },
           include: {
             items: { include: { product: true } },
             customer: true,
@@ -106,11 +106,6 @@ export async function GET(
           include: { product: true, customer: true, supplier: true },
           orderBy: { createdAt: "desc" },
         }),
-        prisma.customerLedger.findMany({
-          where: { companyId: id, balance: { gt: 0 } },
-          include: { customer: { select: { id: true, name: true, phone: true } } },
-          orderBy: { balance: "desc" },
-        }),
       ]);
 
     // ─────────────────────────────────────────────────────────
@@ -128,12 +123,75 @@ export async function GET(
       salesByPaymentMethod[order.paymentMethod] =
         (salesByPaymentMethod[order.paymentMethod] || 0) + (order.total || 0);
     }
-    // Cash actually received from sales (paid portion). For cash orders the
-    // full total counts; otherwise the recorded paid amount.
-    const cashFromSales = salesOrders.reduce(
-      (sum, o) => sum + (o.paymentMethod === "CASH" ? o.total : o.paidAmount || 0),
-      0
+
+    // ─────────────────────────────────────────────────────────
+    // LIVE PAID / DEBT
+    // The authoritative source of "how much of company X's credit was paid" is
+    // each SalesOrder.paidAmount, because orders are definitively company-linked
+    // and every customer payment (from the customer page or per-invoice) updates
+    // the matching order's paidAmount. Reading this live makes the report always
+    // reflect the real money received as soon as a payment lands.
+    // ─────────────────────────────────────────────────────────
+    const creditOrders = salesOrders.filter((o) => o.paymentMethod !== "CASH");
+
+    // Live-enrich each order's paid amount + payment status from paidAmount.
+    const liveSalesOrders = salesOrders.map((o) =>
+      o.paymentMethod === "CASH"
+        ? { ...o, paidAmount: o.total, paymentStatus: "PAID" }
+        : {
+            ...o,
+            paidAmount: o.paidAmount || 0,
+            paymentStatus:
+              (o.paidAmount || 0) >= (o.total || 0) && (o.total || 0) > 0
+                ? "PAID"
+                : (o.paidAmount || 0) > 0
+                  ? "PARTIAL"
+                  : "PENDING",
+          },
     );
+
+    // Cash actually received from sales (paid portion). For cash orders the
+    // full total counts; for non-cash orders the live paidAmount.
+    const cashFromSales =
+      salesOrders.reduce(
+        (sum, o) => sum + (o.paymentMethod === "CASH" ? o.total : o.paidAmount || 0),
+        0,
+      );
+
+    // ─────────────────────────────────────────────────────────
+    // CUSTOMER DEBT (المبالغ المستحقة من العملاء) — live
+    // outstanding = credit sales − paidAmount, per customer, from orders
+    // (which are the source of truth and always company-scoped).
+    // ─────────────────────────────────────────────────────────
+    const totalCustomerDebt = creditOrders.reduce(
+      (sum, o) => sum + Math.max(0, (o.total || 0) - (o.paidAmount || 0)),
+      0,
+    );
+
+    // Per-customer outstanding balance (sum of unpaid portions of credit orders)
+    const creditByCustomer = new Map<string, { name: string; phone: string | null; balance: number }>();
+    for (const order of creditOrders) {
+      if (!order.customer) continue;
+      const outstanding = Math.max(0, (order.total || 0) - (order.paidAmount || 0));
+      if (outstanding <= 0) continue;
+      const entry = creditByCustomer.get(order.customerId) ?? {
+        name: order.customer.name || "—",
+        phone: (order.customer as unknown as { phone?: string | null })?.phone ?? null,
+        balance: 0,
+      };
+      entry.balance += outstanding;
+      creditByCustomer.set(order.customerId, entry);
+    }
+    // Include customers who have an outstanding balance (> 0)
+    const customerDebtDetails = [...creditByCustomer.entries()]
+      .map(([customerId, info]) => ({
+        customerId,
+        customerName: info.name,
+        phone: info.phone,
+        balance: info.balance,
+      }))
+      .filter((d) => d.balance > 0)
+      .sort((a, b) => b.balance - a.balance);
 
     // ─────────────────────────────────────────────────────────
     // PURCHASES
@@ -177,17 +235,6 @@ export async function GET(
       .filter((s) => s.status === "INITIAL")
       .reduce((sum, s) => sum + (s.amount || 0), 0);
     const settlementsCount = settlements.length;
-
-    // ─────────────────────────────────────────────────────────
-    // CUSTOMER DEBT (المبالغ المستحقة من العملاء)
-    // ─────────────────────────────────────────────────────────
-    const totalCustomerDebt = customerLedgers.reduce((sum, l) => sum + (l.balance || 0), 0);
-    const customerDebtDetails = customerLedgers.map((l) => ({
-      customerId: l.customerId,
-      customerName: l.customer?.name || "—",
-      phone: l.customer?.phone || null,
-      balance: l.balance,
-    }));
 
     // ─────────────────────────────────────────────────────────
     // INCOME STATEMENT (قائمة الدخل)
@@ -241,7 +288,7 @@ export async function GET(
         total: totalSales,
         count: totalSalesCount,
         byPaymentMethod: salesByPaymentMethod,
-        orders: salesOrders,
+        orders: liveSalesOrders,
       },
       purchases: {
         total: totalPurchases,
