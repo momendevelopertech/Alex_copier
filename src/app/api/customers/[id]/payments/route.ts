@@ -41,7 +41,6 @@ async function distributeToOrders(
       customerId,
       paymentMethod: { not: "CASH" },
       paymentStatus: { notIn: ["PAID"] },
-      status: { notIn: ["DRAFT", "CANCELLED"] },
     },
     select: { id: true, total: true, paidAmount: true, companyId: true },
     orderBy: { orderDate: "asc", createdAt: "asc" },

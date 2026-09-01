@@ -74,7 +74,7 @@ export async function GET(
     const [salesOrders, purchaseOrders, expenses, settlements, returnTransactions] =
       await Promise.all([
         prisma.salesOrder.findMany({
-          where: { companyId: id, status: { notIn: ["DRAFT", "CANCELLED"] }, ...orderDateFilter },
+          where: { companyId: id, ...orderDateFilter },
           include: {
             items: { include: { product: true } },
             customer: true,

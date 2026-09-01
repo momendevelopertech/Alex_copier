@@ -127,8 +127,10 @@ describe("GET /api/companies/[id]/report", () => {
     expect(body.cashPosition.cashFromSales).toBe(0);
   });
 
-  it("excludes DRAFT and CANCELLED orders from sales and customerDebt", async () => {
-    mocks.db.salesOrder.findMany.mockResolvedValue([]);
+  it("counts all sales orders for a company regardless of their status (DRAFT is the normal state of a sale)", async () => {
+    mocks.db.salesOrder.findMany.mockResolvedValue([
+      creditOrder("o1", "custA", 5000, 5000, "2026-08-10T10:00:00.000Z"),
+    ]);
     Object.assign(mocks.db, {
       purchaseOrder: emptyCollections().purchaseOrder,
       expense: emptyCollections().expense,
@@ -140,11 +142,13 @@ describe("GET /api/companies/[id]/report", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
 
-    // The query must have filtered DRAFT/CANCELLED out server-side.
+    // The query must NOT filter by order status, otherwise newly created sales
+    // (which stay DRAFT) would vanish from the report while still counted on
+    // the company card.
     const where = mocks.db.salesOrder.findMany.mock.calls[0][0].where;
-    expect(where.status).toEqual({ notIn: ["DRAFT", "CANCELLED"] });
+    expect(where.status).toBeUndefined();
 
-    expect(body.sales.total).toBe(0);
+    expect(body.sales.total).toBe(5000);
     expect(body.customerDebt.total).toBe(0);
   });
 });

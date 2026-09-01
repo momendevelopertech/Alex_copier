@@ -41,7 +41,7 @@ async function main() {
       id: true,
       name: true,
       orders: {
-        where: { paymentMethod: { not: "CASH" }, status: { notIn: ["DRAFT", "CANCELLED"] } },
+        where: { paymentMethod: { not: "CASH" } },
         select: { id: true, total: true, paidAmount: true, paymentMethod: true },
         orderBy: [{ orderDate: "asc" }, { createdAt: "asc" }],
       },
