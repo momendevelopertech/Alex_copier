@@ -19,7 +19,7 @@ export default function FormModal({ open, onClose, title, children, wide }: Form
       onClick={onClose}
     >
       <div
-        className={`w-full ${wide ? "max-w-3xl" : "max-w-md"} rounded-t-2xl sm:rounded-2xl bg-white p-5 sm:p-6 shadow-xl max-h-[92vh] overflow-y-auto`}
+        className={`w-full ${wide ? "max-w-3xl" : "max-w-lg"} rounded-t-2xl sm:rounded-2xl bg-white p-5 sm:p-6 shadow-xl max-h-[92vh] overflow-y-auto`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
