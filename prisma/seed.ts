@@ -17,6 +17,8 @@ async function main() {
   await prisma.$executeRawUnsafe('TRUNCATE TABLE "EngineerSalary" CASCADE');
   await prisma.$executeRawUnsafe('TRUNCATE TABLE "Warranty" CASCADE');
   await prisma.$executeRawUnsafe('TRUNCATE TABLE "Expense" CASCADE');
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "ExpenseCategory" CASCADE');
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "SalesCategory" CASCADE');
   await prisma.$executeRawUnsafe('TRUNCATE TABLE "ApprovalLog" CASCADE');
   await prisma.$executeRawUnsafe('TRUNCATE TABLE "Settlement" CASCADE');
   await prisma.$executeRawUnsafe('TRUNCATE TABLE "Visit" CASCADE');
@@ -97,6 +99,48 @@ async function main() {
       email: 'info@sectory.com',
     },
   });
+
+  // -------------------------------------------
+  // EXPENSE & SALES CATEGORIES
+  // -------------------------------------------
+  console.log('📂 Creating expense & sales categories...');
+
+  const expenseCategoryData = [
+    { id: 'expcat-1', name: 'إيجار', companyId: company1.id },
+    { id: 'expcat-2', name: 'كهرباء ومياه', companyId: company1.id },
+    { id: 'expcat-3', name: 'رواتب', companyId: company1.id },
+    { id: 'expcat-4', name: 'نقل وشحن', companyId: company1.id },
+    { id: 'expcat-5', name: 'صيانة', companyId: company1.id },
+    { id: 'expcat-6', name: 'مشتريات مكتبية', companyId: company1.id },
+    { id: 'expcat-7', name: 'دعاية وإعلان', companyId: company1.id },
+    { id: 'expcat-8', name: 'إيجار', companyId: company2.id },
+    { id: 'expcat-9', name: 'كهرباء ومياه', companyId: company2.id },
+    { id: 'expcat-10', name: 'رواتب', companyId: company2.id },
+    { id: 'expcat-11', name: 'نقل وشحن', companyId: company2.id },
+    { id: 'expcat-12', name: 'إيجار', companyId: company3.id },
+    { id: 'expcat-13', name: 'كهرباء ومياه', companyId: company3.id },
+    { id: 'expcat-14', name: 'مشتريات مكتبية', companyId: company3.id },
+  ];
+
+  for (const c of expenseCategoryData) {
+    await prisma.expenseCategory.create({ data: c });
+  }
+
+  const salesCategoryData = [
+    { id: 'salcat-1', name: 'آلات جديدة', companyId: company1.id },
+    { id: 'salcat-2', name: 'آلات مستعملة', companyId: company1.id },
+    { id: 'salcat-3', name: 'قطع غيار', companyId: company1.id },
+    { id: 'salcat-4', name: 'مستهلكات', companyId: company1.id },
+    { id: 'salcat-5', name: 'عقود صيانة', companyId: company1.id },
+    { id: 'salcat-6', name: 'قطع غيار', companyId: company2.id },
+    { id: 'salcat-7', name: 'مستهلكات', companyId: company2.id },
+    { id: 'salcat-8', name: 'آلات جديدة', companyId: company3.id },
+    { id: 'salcat-9', name: 'آلات مستعملة', companyId: company3.id },
+  ];
+
+  for (const c of salesCategoryData) {
+    await prisma.salesCategory.create({ data: c });
+  }
 
   // -------------------------------------------
   // USERS
@@ -947,14 +991,14 @@ async function main() {
   console.log('?? Creating expenses...');
 
   const expensesData = [
-    { companyId: company1.id, category: 'RENT', description: 'إيجار المكتب - يونيو 2024', amount: 15000, paidBy: user1.id, date: new Date('2024-06-01') },
-    { companyId: company1.id, category: 'UTILITIES', description: 'فواتير الكهرباء والمياه - يونيو', amount: 3500, paidBy: user3.id, date: new Date('2024-06-05') },
-    { companyId: company1.id, category: 'TRANSPORT', description: 'مصاريف النقل للعملاء', amount: 2800, paidBy: user4.id, date: new Date('2024-06-10') },
-    { companyId: company1.id, category: 'MAINTENANCE', description: 'صيانة الورشةworkshop', amount: 4500, paidBy: user5.id, date: new Date('2024-06-12') },
-    { companyId: company1.id, category: 'SALARY', description: 'رواتب الموظفين - يونيو', amount: 85000, paidBy: user1.id, date: new Date('2024-06-28') },
-    { companyId: company2.id, category: 'RENT', description: 'إيجار المكتب - يونيو 2024', amount: 8000, paidBy: user2.id, date: new Date('2024-06-01') },
-    { companyId: company2.id, category: 'UTILITIES', description: 'فواتير الكهرباء - يونيو', amount: 2000, paidBy: user2.id, date: new Date('2024-06-05') },
-    { companyId: company1.id, category: 'OFFICE', description: 'مشتريات مكتبية', amount: 1200, paidBy: user3.id, date: new Date('2024-06-15') },
+    { companyId: company1.id, categoryId: 'expcat-1', category: 'RENT', description: 'إيجار المكتب - يونيو 2024', amount: 15000, paidBy: user1.id, date: new Date('2024-06-01') },
+    { companyId: company1.id, categoryId: 'expcat-2', category: 'UTILITIES', description: 'فواتير الكهرباء والمياه - يونيو', amount: 3500, paidBy: user3.id, date: new Date('2024-06-05') },
+    { companyId: company1.id, categoryId: 'expcat-4', category: 'TRANSPORT', description: 'مصاريف النقل للعملاء', amount: 2800, paidBy: user4.id, date: new Date('2024-06-10') },
+    { companyId: company1.id, categoryId: 'expcat-5', category: 'MAINTENANCE', description: 'صيانة الورشةworkshop', amount: 4500, paidBy: user5.id, date: new Date('2024-06-12') },
+    { companyId: company1.id, categoryId: 'expcat-3', category: 'SALARY', description: 'رواتب الموظفين - يونيو', amount: 85000, paidBy: user1.id, date: new Date('2024-06-28') },
+    { companyId: company2.id, categoryId: 'expcat-8', category: 'RENT', description: 'إيجار المكتب - يونيو 2024', amount: 8000, paidBy: user2.id, date: new Date('2024-06-01') },
+    { companyId: company2.id, categoryId: 'expcat-9', category: 'UTILITIES', description: 'فواتير الكهرباء - يونيو', amount: 2000, paidBy: user2.id, date: new Date('2024-06-05') },
+    { companyId: company1.id, categoryId: 'expcat-6', category: 'OFFICE', description: 'مشتريات مكتبية', amount: 1200, paidBy: user3.id, date: new Date('2024-06-15') },
   ];
 
   for (const e of expensesData) {
@@ -1133,6 +1177,8 @@ async function main() {
   console.log('  - 20 visits');
   console.log('  - 30 settlements (10 per company)');
   console.log('  - 8 expenses');
+  console.log('  - 14 expense categories');
+  console.log('  - 9 sales categories');
   console.log('  - 10 warranties');
   console.log('  - 6 engineer salaries');
   console.log('  - 24 accounts');
