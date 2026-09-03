@@ -24,6 +24,10 @@ export interface CustomerStatement {
   closingBalance: number;
 }
 
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
 /**
  * Build a full chronological statement for a customer by merging every
  * financial movement: sales invoices, payments, sale returns, and settlements.
@@ -35,7 +39,7 @@ export interface CustomerStatement {
 export async function buildCustomerStatement(customerId: string): Promise<CustomerStatement | null> {
   const customer = await prisma.customer.findUnique({
     where: { id: customerId },
-    select: { id: true, name: true, companyName: true, phone: true },
+    select: { id: true, name: true, companyName: true, phone: true, remainingDebt: true },
   });
   if (!customer) return null;
 
@@ -140,15 +144,26 @@ export async function buildCustomerStatement(customerId: string): Promise<Custom
   // Sort chronologically; ties broken by created time.
   drafts.sort((a, b) => a.sort - b.sort || a.date.localeCompare(b.date));
 
-  const rows: StatementRow[] = [];
-  let balance = 0;
   let totalBilled = 0;
   let totalPaid = 0;
   for (const d of drafts) {
+    totalBilled += Math.max(0, d.amount);
+    totalPaid += Math.max(0, -d.amount);
+  }
+
+  // The authoritative outstanding debt lives on the Customer record. The raw
+  // movements (orders/payments/returns/settlements) are built up independently
+  // and may carry historical drift, so we seed an opening balance that makes
+  // the running balance reconcile EXACTLY to remainingDebt:
+  //   openingBalance + Σ signed movements = remainingDebt
+  const ledgerMovement = drafts.reduce((sum, d) => sum + d.amount, 0);
+  const openingBalance = round2(customer.remainingDebt - ledgerMovement);
+
+  const rows: StatementRow[] = [];
+  let balance = openingBalance;
+  for (const d of drafts) {
     balance += d.amount;
     d.balance = round2(balance);
-    if (d.amount > 0) totalBilled += d.amount;
-    else totalPaid += -d.amount;
     rows.push({ ...d, amount: round2(d.amount) });
   }
 
@@ -158,13 +173,9 @@ export async function buildCustomerStatement(customerId: string): Promise<Custom
     companyName: customer.companyName,
     phone: customer.phone,
     rows,
-    openingBalance: 0,
+    openingBalance,
     totalBilled: round2(totalBilled),
     totalPaid: round2(totalPaid),
     closingBalance: round2(balance),
   };
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
 }

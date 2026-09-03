@@ -162,6 +162,17 @@ export default function StatementPage({ params }: { params: Promise<{ token: str
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
+                      <tr className="bg-slate-50">
+                        <td className="px-4 py-2.5 whitespace-nowrap text-gray-600">—</td>
+                        <td className="px-4 py-2.5">
+                          <span className="inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                            {t("statement.openingBalance")}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 font-medium text-blue-700">{money(data.openingBalance)}</td>
+                        <td className="px-4 py-2.5 font-medium text-green-700">—</td>
+                        <td className="px-4 py-2.5 text-end font-semibold text-slate-800">{money(data.openingBalance)}</td>
+                      </tr>
                       {data.rows.map((row) => {
                         const debit = row.amount > 0 ? money(row.amount) : "";
                         const credit = row.amount < 0 ? money(-row.amount) : "";
