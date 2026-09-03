@@ -93,12 +93,12 @@ export async function buildCustomerStatement(customerId: string): Promise<Custom
     drafts.push({
       id: o.id,
       type: "SALE",
-      date: (o.orderDate ?? o.createdAt).toISOString(),
+      date: o.createdAt.toISOString(),
       ref: o.id,
       description: o.notes ? `${o.notes}${statusNote}` : statusNote.trim() || o.notes,
       amount: o.total,
       balance: 0,
-      sort: o.orderDate?.getTime() ?? o.createdAt.getTime(),
+      sort: o.createdAt.getTime(),
       finalized: o.status !== "DRAFT",
     });
   }
@@ -106,12 +106,12 @@ export async function buildCustomerStatement(customerId: string): Promise<Custom
     drafts.push({
       id: p.id,
       type: "PAYMENT",
-      date: (p.paymentDate ?? p.createdAt).toISOString(),
+      date: p.createdAt.toISOString(),
       ref: p.notes,
       description: p.notes,
       amount: -p.amount,
       balance: 0,
-      sort: p.paymentDate?.getTime() ?? p.createdAt.getTime(),
+      sort: p.createdAt.getTime(),
       finalized: true,
     });
   }
