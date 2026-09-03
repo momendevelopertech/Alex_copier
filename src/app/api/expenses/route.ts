@@ -11,6 +11,7 @@ export async function GET() {
       include: {
         company: true,
         payer: { select: { id: true, name: true } },
+        expenseCategory: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -30,6 +31,7 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const companyId = typeof body.companyId === "string" ? body.companyId : "";
+    const categoryId = typeof body.categoryId === "string" ? body.categoryId : null;
     const category = typeof body.category === "string" ? body.category.trim() : "";
     const description = typeof body.description === "string" ? body.description.trim() : "";
     const amount = Number(body.amount);
@@ -43,9 +45,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "الشركة غير موجودة", code: "COMPANY_NOT_FOUND" }, { status: 400 });
     }
 
+    if (categoryId) {
+      const cat = await prisma.expenseCategory.findUnique({ where: { id: categoryId }, select: { id: true } });
+      if (!cat) {
+        return NextResponse.json({ error: "الفئة غير موجودة", code: "CATEGORY_NOT_FOUND" }, { status: 400 });
+      }
+    }
+
     const expense = await prisma.expense.create({
       data: {
         companyId,
+        categoryId: categoryId || null,
         category,
         description,
         amount,
@@ -54,6 +64,7 @@ export async function POST(request: Request) {
       include: {
         company: true,
         payer: { select: { id: true, name: true } },
+        expenseCategory: { select: { id: true, name: true } },
       },
     });
     return NextResponse.json(expense, { status: 201 });

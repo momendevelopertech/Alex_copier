@@ -17,6 +17,7 @@ export async function GET(
       include: {
         customer: true,
         company: true,
+        salesCategory: true,
         items: {
           include: { product: true, tradeInProduct: true },
         },
@@ -219,6 +220,7 @@ export async function PUT(
           companyId,
           customerId,
           engineerId,
+          categoryId: typeof raw.categoryId === "string" && raw.categoryId ? raw.categoryId : null,
           orderType,
           paymentMethod,
           notes,

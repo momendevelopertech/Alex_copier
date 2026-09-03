@@ -76,6 +76,12 @@ export async function PUT(
     if ("status" in body) data.status = body.status;
     if ("reason" in body && !body.status) data.reason = body.reason;
     if (body.status === "VERIFIED") data.verifiedBy = actor.id;
+    if ("direction" in body) {
+      if (body.direction !== "ADDITION" && body.direction !== "SUBTRACTION") {
+        return NextResponse.json({ error: "اتجاه غير صالح", code: "INVALID_DIRECTION" }, { status: 400 });
+      }
+      data.direction = body.direction;
+    }
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: "لا توجد بيانات للتحديث", code: "NO_CHANGES" }, { status: 400 });

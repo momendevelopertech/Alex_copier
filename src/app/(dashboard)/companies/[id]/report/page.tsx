@@ -62,6 +62,7 @@ interface ReportData {
       createdAt: string;
       amount: number;
       status: string;
+      direction?: string;
       collector?: { name: string };
     }>;
   };
@@ -818,7 +819,7 @@ export default function CompanyReportPage() {
                       <tr key={row.id} className="border-t border-gray-100 hover:bg-slate-50/50">
                         <td className="px-4 py-3 text-sm"><DateTimeCell value={row.createdAt} /></td>
                         <td className="px-4 py-3 text-sm font-medium">{row.id.slice(0, 8)}</td>
-                        <td className="px-4 py-3 text-sm font-bold text-purple-700">{moneyFormatter.format(row.amount)}</td>
+                        <td className={`px-4 py-3 text-sm font-bold ${row.direction === "SUBTRACTION" ? "text-red-600" : "text-purple-700"}`}>{row.direction === "SUBTRACTION" ? "−" : "+"}{moneyFormatter.format(row.amount)}</td>
                         <td className="px-4 py-3 text-sm">{row.collector?.name || "—"}</td>
                         <td className="px-4 py-3 text-sm">{statusBadge(row.status)}</td>
                       </tr>

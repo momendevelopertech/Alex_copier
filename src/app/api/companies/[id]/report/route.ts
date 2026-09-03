@@ -227,13 +227,17 @@ export async function GET(
 
     // ─────────────────────────────────────────────────────────
     // SETTLEMENTS
+    // ADDITION = money coming in (positive), SUBTRACTION = money going out (negative)
     // ─────────────────────────────────────────────────────────
+    const settlementSignedValue = (s: { amount: number; direction?: string }) =>
+      s.direction === "SUBTRACTION" ? -(s.amount || 0) : (s.amount || 0);
+
     const totalSettlements = settlements
       .filter((s) => s.status === "VERIFIED")
-      .reduce((sum, s) => sum + (s.amount || 0), 0);
+      .reduce((sum, s) => sum + settlementSignedValue(s), 0);
     const totalSettlementsPending = settlements
       .filter((s) => s.status === "INITIAL")
-      .reduce((sum, s) => sum + (s.amount || 0), 0);
+      .reduce((sum, s) => sum + settlementSignedValue(s), 0);
     const settlementsCount = settlements.length;
 
     // ─────────────────────────────────────────────────────────
@@ -276,7 +280,7 @@ export async function GET(
     for (const order of salesOrders) bucket(monthKey(new Date(order.orderDate))).sales += order.total || 0;
     for (const order of purchaseOrders) bucket(monthKey(new Date(order.orderDate))).purchases += order.total || 0;
     for (const expense of expenses) bucket(monthKey(new Date(expense.date))).expenses += expense.amount || 0;
-    for (const settlement of settlements) bucket(monthKey(new Date(settlement.createdAt))).settlements += settlement.amount || 0;
+    for (const settlement of settlements) bucket(monthKey(new Date(settlement.createdAt))).settlements += settlementSignedValue(settlement);
 
     const monthlyData = Object.values(monthlyDataMap).sort((a, b) => a.month.localeCompare(b.month));
 

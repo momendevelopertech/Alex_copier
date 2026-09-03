@@ -492,7 +492,15 @@
     "interCompanyPayment": "طريقة دفع البيع الداخلي",
     "interCompanyPrice": "سعر الشراء الداخلي",
     "costPrice": "سعر التكلفة",
-    "paidAmount": "المبلغ المدفوع"
+    "paidAmount": "المبلغ المدفوع",
+    "category": "الفئة",
+    "noCategory": "بدون فئة",
+    "salesCategories": "فئات المبيعات",
+    "addCategory": "إضافة فئة",
+    "editCategory": "تعديل الفئة",
+    "categoryName": "اسم الفئة",
+    "searchCategoryPlaceholder": "ابحث باسم الفئة...",
+    "deleteCategoryConfirm": "هل أنت متأكد من حذف هذه الفئة؟"
   },
   "inventory": {
     "title": "المخزون",
@@ -538,7 +546,14 @@
     "category": "الفئة",
     "paidBy": "الدافع",
     "searchPlaceholder": "ابحث بالفئة أو الوصف أو الشركة...",
-    "categoryFilter": "الفئة"
+    "categoryFilter": "الفئة",
+    "expenseCategories": "فئات المصروفات",
+    "addCategory": "إضافة فئة",
+    "editCategory": "تعديل الفئة",
+    "categoryName": "اسم الفئة",
+    "selectCategory": "اختر الفئة",
+    "searchCategoryPlaceholder": "ابحث باسم الفئة...",
+    "deleteCategoryConfirm": "هل أنت متأكد من حذف هذه الفئة؟"
   },
   "settlements": {
     "title": "التسويات",
@@ -561,7 +576,10 @@
     "mixed": "مختلط",
     "by": "بواسطة",
     "searchPlaceholder": "ابحث برقم التسوية أو السبب أو المحصل...",
-    "companyFilter": "الشركة"
+    "companyFilter": "الشركة",
+    "direction": "الاتجاه",
+    "directionAddition": "إضافة (+)",
+    "directionSubtraction": "طرح (−)"
   },
   "reports": {
     "title": "التقارير",

@@ -498,7 +498,15 @@
     "interCompanyPayment": "Inter-company payment method",
     "interCompanyPrice": "Inter-company purchase price",
     "costPrice": "Cost price",
-    "paidAmount": "Paid amount"
+    "paidAmount": "Paid amount",
+    "category": "Category",
+    "noCategory": "No Category",
+    "salesCategories": "Sales Categories",
+    "addCategory": "Add Category",
+    "editCategory": "Edit Category",
+    "categoryName": "Category Name",
+    "searchCategoryPlaceholder": "Search category name...",
+    "deleteCategoryConfirm": "Are you sure you want to delete this category?"
   },
   "inventory": {
     "title": "Inventory",
@@ -544,7 +552,14 @@
     "category": "Category",
     "paidBy": "Paid By",
     "searchPlaceholder": "Search by category, description, or company...",
-    "categoryFilter": "Category"
+    "categoryFilter": "Category",
+    "expenseCategories": "Expense Categories",
+    "addCategory": "Add Category",
+    "editCategory": "Edit Category",
+    "categoryName": "Category Name",
+    "selectCategory": "Select Category",
+    "searchCategoryPlaceholder": "Search category name...",
+    "deleteCategoryConfirm": "Are you sure you want to delete this category?"
   },
   "settlements": {
     "title": "Settlements",
@@ -567,7 +582,10 @@
     "mixed": "Mixed",
     "by": "by",
     "searchPlaceholder": "Search by settlement no., reason, or collector...",
-    "companyFilter": "Company"
+    "companyFilter": "Company",
+    "direction": "Direction",
+    "directionAddition": "Addition (+)",
+    "directionSubtraction": "Subtraction (−)"
   },
   "reports": {
     "title": "Reports",

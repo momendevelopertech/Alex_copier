@@ -151,6 +151,7 @@ export async function POST(request: Request) {
         data: {
           companyId: toCompanyId,
           customerId,
+          categoryId: typeof body.categoryId === "string" && body.categoryId ? body.categoryId : null,
           orderType,
           paymentMethod,
           notes,

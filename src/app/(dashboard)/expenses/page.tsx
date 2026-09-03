@@ -7,7 +7,7 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
-import { Eye, Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { Eye, Pencil, Plus, Save, Tags, Trash2, X } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 import { AddFormBoundary } from "@/hooks/useAutoAddForm";
@@ -16,22 +16,27 @@ import SubmitButton from "@/components/SubmitButton";
 import { DateTimeCell } from "@/components/DateTimeCell";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
+import { useRouter } from "next/navigation";
 
 interface Company { id: string; name: string; }
+interface Category { id: string; name: string; }
 interface Expense {
-  id: string; companyId: string; category: string; description: string; amount: number;
+  id: string; companyId: string; categoryId: string | null; category: string; description: string; amount: number;
   paidBy: string; date: string; createdAt: string; company: Company;
   payer?: { id: string; name?: string | null };
+  expenseCategory?: { id: string; name: string } | null;
 }
 
 const payerName = (expense: Expense) => expense.payer?.name || expense.paidBy;
 
 export default function FinancePage() {
   const { t, dir } = useI18n();
+  const router = useRouter();
   const confirmAction = useConfirm();
   const { success: toastSuccess, error: toastError } = useToast();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -44,17 +49,18 @@ export default function FinancePage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
-  const [form, setForm] = useState({ companyId: "", category: "", description: "", amount: "" });
+  const [form, setForm] = useState({ companyId: "", categoryId: "", category: "", description: "", amount: "" });
   const PAGE_SIZE = 15;
 
   const fetchData = async () => {
     try {
-      const [eRes, cRes] = await Promise.all([fetch("/api/expenses"), fetch("/api/companies")]);
+      const [eRes, cRes, catRes] = await Promise.all([fetch("/api/expenses"), fetch("/api/companies"), fetch("/api/expense-categories")]);
       if (eRes.status === 401 || cRes.status === 401) {
         signOut({ callbackUrl: "/login" });
         return;
       }
-      setExpenses(await eRes.json()); setCompanies(await cRes.json());
+      const cats = await catRes.json().catch(() => []);
+      setExpenses(await eRes.json()); setCompanies(await cRes.json()); setCategories(Array.isArray(cats) ? cats : []);
     } finally {
       setLoading(false);
     }
@@ -70,17 +76,18 @@ export default function FinancePage() {
 
   const filtered = expenses.filter(expense =>
     (!companyFilter || expense.companyId === companyFilter) &&
-    (!categoryFilter || expense.category === categoryFilter) &&
+    (!categoryFilter || (expense.expenseCategory?.id || expense.categoryId) === categoryFilter) &&
     inDateRange(expense.date || expense.createdAt, dateFrom, dateTo) &&
     (matchesQuery(expense.category, search) ||
       matchesQuery(expense.description, search) ||
       matchesQuery(expense.company?.name, search))
   );
-  const categories = Array.from(new Set(expenses.map((e) => e.category).filter(Boolean)));
   const hasActiveFilters = companyFilter !== "" || categoryFilter !== "" || dateFrom !== "" || dateTo !== "" || search !== "";
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const categoryOptions = categories.map((cat) => ({ value: cat.id, label: cat.name }));
 
   const exportExpenses = () => ({
     headers: [
@@ -94,7 +101,7 @@ export default function FinancePage() {
     rows: filtered.map((expense) => [
       new Date(expense.date || expense.createdAt).toISOString().slice(0, 10),
       expense.company?.name || "",
-      expense.category,
+      expense.expenseCategory?.name || expense.category,
       expense.description,
       String(expense.amount),
       payerName(expense),
@@ -102,7 +109,7 @@ export default function FinancePage() {
   });
 
   const openCreate = () => {
-    setForm({ companyId: "", category: "", description: "", amount: "" });
+    setForm({ companyId: "", categoryId: "", category: "", description: "", amount: "" });
     setEditingId(null);
     setFormError("");
     setShowForm(true);
@@ -112,13 +119,19 @@ export default function FinancePage() {
     setSelected(null);
     setForm({
       companyId: expense.companyId,
-      category: expense.category,
+      categoryId: expense.expenseCategory?.id || expense.categoryId || "",
+      category: expense.expenseCategory?.name || expense.category,
       description: expense.description,
       amount: String(expense.amount),
     });
     setEditingId(expense.id);
     setFormError("");
     setShowForm(true);
+  };
+
+  const selectCategory = (categoryId: string) => {
+    const cat = categories.find((c) => c.id === categoryId);
+    setForm((f) => ({ ...f, categoryId, category: cat?.name || "" }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -128,7 +141,7 @@ export default function FinancePage() {
     const res = await fetch(editingId ? `/api/expenses/${editingId}` : "/api/expenses", {
       method: editingId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, amount: parseFloat(form.amount) || 0 }),
+      body: JSON.stringify({ ...form, categoryId: form.categoryId || null, category: form.category || (categories.find((c) => c.id === form.categoryId)?.name || ""), amount: parseFloat(form.amount) || 0 }),
     });
     setSaving(false);
     if (res.status === 401) {
@@ -140,7 +153,7 @@ export default function FinancePage() {
       setFormError(apiErrorMessage(data, t));
       return;
     }
-    setForm({ companyId: "", category: "", description: "", amount: "" });
+    setForm({ companyId: "", categoryId: "", category: "", description: "", amount: "" });
     setEditingId(null);
     setShowForm(false);
     toastSuccess(t("common.savedSuccessfully"));
@@ -176,7 +189,10 @@ export default function FinancePage() {
               <span className="ms-2 text-sm font-medium text-gray-400">({filtered.length})</span>
             </h1>
           </div>
-          <button onClick={openCreate} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"><Plus size={16} />{t("finance.newExpense")}</button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={openCreate} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"><Plus size={16} />{t("finance.newExpense")}</button>
+            <button onClick={() => router.push("/expenses/categories")} className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-sm font-semibold text-orange-700 transition hover:bg-orange-100"><Tags size={16} />{t("finance.expenseCategories")}</button>
+          </div>
         </div>
 
         {formError && (
@@ -190,7 +206,7 @@ export default function FinancePage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("finance.selectCompany")}</label><select value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required><option value="">{t("finance.selectCompany")}</option>{companies.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("finance.category")}</label><input type="text" placeholder={t("finance.category")} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required /></div>
+              <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("finance.category")}</label><select value={form.categoryId} onChange={(e) => selectCategory(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required><option value="">{t("finance.selectCategory")}</option>{categoryOptions.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}</select></div>
               <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("common.amount")}</label><input type="number" placeholder={t("common.amount")} value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" required min="0" step="0.01" /></div>
             </div>
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("common.description")}</label><textarea placeholder={t("common.description")} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" rows={2} required /></div>
@@ -207,7 +223,7 @@ export default function FinancePage() {
               <div className="mb-4 grid grid-cols-1 gap-3 text-sm text-slate-700 md:grid-cols-2 xl:grid-cols-3">
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("common.date")}</span><span className="mt-1 block font-medium text-slate-800"><DateTimeCell value={selected.date || selected.createdAt} /></span></div>
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("common.company")}</span><span className="mt-1 block font-medium text-slate-800">{selected.company?.name || "—"}</span></div>
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("finance.category")}</span><span className="mt-1 block font-medium text-slate-800">{selected.category}</span></div>
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("finance.category")}</span><span className="mt-1 block font-medium text-slate-800">{selected.expenseCategory?.name || selected.category}</span></div>
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("common.amount")}</span><span className="mt-1 block font-bold text-slate-800">{selected.amount.toLocaleString()}</span></div>
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("finance.paidBy")}</span><span className="mt-1 block font-medium text-slate-800">{payerName(selected)}</span></div>
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 md:col-span-2 xl:col-span-3"><span className="block text-xs text-gray-500">{t("common.description")}</span><span className="mt-1 block font-medium text-slate-800">{selected.description}</span></div>
@@ -229,7 +245,7 @@ export default function FinancePage() {
           <div className="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
             <div className="w-full md:w-80 md:flex-none"><SearchInput value={search} onChange={setSearch} placeholder={t("finance.searchPlaceholder")} /></div>
             <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} — ${t("common.all")}`} className="md:w-40" />
-            <FilterSelect value={categoryFilter} onChange={(v) => { setCategoryFilter(v); setPage(1); }} options={categories.map((cat) => ({ value: cat, label: cat }))} allLabel={`${t("finance.categoryFilter")} — ${t("common.all")}`} className="md:w-44" />
+            <FilterSelect value={categoryFilter} onChange={(v) => { setCategoryFilter(v); setPage(1); }} options={categoryOptions} allLabel={`${t("finance.categoryFilter")} — ${t("common.all")}`} className="md:w-44" />
             <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={(v) => { setDateFrom(v); setPage(1); }} onToChange={(v) => { setDateTo(v); setPage(1); }} />
             {hasActiveFilters && (
               <button onClick={() => { setSearch(""); setCompanyFilter(""); setCategoryFilter(""); setDateFrom(""); setDateTo(""); }} className="text-sm text-gray-500 hover:text-gray-700 underline">
@@ -270,7 +286,7 @@ export default function FinancePage() {
                   {paged.map((expense) => (
                     <tr key={expense.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm"><DateTimeCell value={expense.date || expense.createdAt} /></td>
-                      <td className="px-4 py-3 text-sm">{expense.category}</td>
+                      <td className="px-4 py-3 text-sm">{expense.expenseCategory?.name || expense.category}</td>
                       <td className="px-4 py-3 text-sm">{expense.description}</td>
                       <td className="px-4 py-3 text-sm">{expense.company?.name || "—"}</td>
                       <td className="px-4 py-3 text-sm">{expense.amount.toLocaleString()}</td>

@@ -142,6 +142,8 @@ model Company {
   interCompanySales     InterCompanyInvoice[] @relation("InterCompanySales")
   interCompanyPurchases InterCompanyInvoice[] @relation("InterCompanyPurchases")
   expenses              Expense[]
+  expenseCategories     ExpenseCategory[]
+  salesCategories       SalesCategory[]
   settlements           Settlement[]
   accounts              Account[]
   journalEntries        JournalEntry[]
@@ -736,11 +738,25 @@ enum BillingCycle {
   YEARLY
 }
 
+model SalesCategory {
+  id        String   @id @default(cuid())
+  name      String
+  companyId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  orders  SalesOrder[]
+
+  @@unique([companyId, name])
+}
+
 model SalesOrder {
   id            String           @id @default(cuid())
   companyId     String
   customerId    String
   engineerId    String?
+  categoryId    String?
   orderType     OrderType
   status        SalesOrderStatus @default(DRAFT)
   total         Float            @default(0)
@@ -760,6 +776,7 @@ model SalesOrder {
   company      Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
   customer     Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
   engineer     Engineer?           @relation(fields: [engineerId], references: [id])
+  salesCategory SalesCategory?     @relation(fields: [categoryId], references: [id])
   items        SalesOrderItem[]
   installments Installment[]
   returns      ReturnTransaction[]
@@ -946,6 +963,11 @@ enum SettlementStatus {
   VERIFIED
 }
 
+enum SettlementDirection {
+  ADDITION
+  SUBTRACTION
+}
+
 model Account {
   id          String      @id @default(cuid())
   code        String
@@ -989,19 +1011,20 @@ model JournalEntryItem {
 }
 
 model Settlement {
-  id               String           @id @default(cuid())
-  settlementNumber String           @unique
+  id               String             @id @default(cuid())
+  settlementNumber String             @unique
   companyId        String
   customerId       String?
   engineerId       String?
   amount           Float
   paymentMethod    PaymentMethod
   reason           String
-  status           SettlementStatus @default(INITIAL)
+  direction        SettlementDirection @default(ADDITION)
+  status           SettlementStatus   @default(INITIAL)
   collectedBy      String
   verifiedBy       String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 
   company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   customer  Customer? @relation(fields: [customerId], references: [id])
@@ -1023,9 +1046,23 @@ model ApprovalLog {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model ExpenseCategory {
+  id        String   @id @default(cuid())
+  name      String
+  companyId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  expenses Expense[]
+
+  @@unique([companyId, name])
+}
+
 model Expense {
   id          String   @id @default(cuid())
   companyId   String
+  categoryId  String?
   category    String
   description String
   amount      Float
@@ -1036,8 +1073,9 @@ model Expense {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  payer   User    @relation(fields: [paidBy], references: [id])
+  company  Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  payer    User             @relation(fields: [paidBy], references: [id])
+  expenseCategory ExpenseCategory? @relation(fields: [categoryId], references: [id])
 }
 
 // ═══════════════════════════════════════════════════════════

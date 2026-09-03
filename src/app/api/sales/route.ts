@@ -15,6 +15,7 @@ export async function GET() {
           customer: true,
           company: true,
           engineer: true,
+          salesCategory: { select: { id: true, name: true } },
           items: {
             include: { product: true, tradeInProduct: true },
           },
@@ -154,6 +155,7 @@ export async function POST(request: Request) {
           companyId,
           customerId,
           engineerId,
+          categoryId: typeof raw.categoryId === "string" && raw.categoryId ? raw.categoryId : null,
           orderType,
           paymentMethod,
           notes,

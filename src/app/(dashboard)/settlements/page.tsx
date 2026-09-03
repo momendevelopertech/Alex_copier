@@ -25,13 +25,14 @@ interface Engineer { id: string; name: string; }
 interface User { id: string; name: string; }
 interface Settlement {
   id: string; settlementNumber: string; companyId: string; customerId: string | null; engineerId: string | null;
-  amount: number; paymentMethod: string; reason: string; status: string; collectedBy: string;
+  amount: number; paymentMethod: string; reason: string; status: string; collectedBy: string; direction?: string;
   verifiedBy: string | null; createdAt: string; company: Company; customer: Customer | null;
   engineer: Engineer | null; collector: User; verifier: User | null;
 }
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = { CASH: "نقدي", CREDIT: "آجل", INSTALLMENT: "أقساط", MIXED: "مختلط" };
 const STATUS_LABELS: Record<string, string> = { INITIAL: "أولي", VERIFIED: "تم التحقق" };
+const DIRECTION_LABELS: Record<string, string> = { ADDITION: "إضافة (+)", SUBTRACTION: "طرح (−)" };
 
 const CAN_VERIFY_ROLES = ["GENERAL_MANAGER", "ACCOUNTANT", "COMPANY_MANAGER"];
 
@@ -56,7 +57,7 @@ export default function SettlementsPage() {
   const [companyFilter, setCompanyFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [form, setForm] = useState({ companyId: "", customerId: "", engineerId: "", amount: "", paymentMethod: "CASH", reason: "" });
+  const [form, setForm] = useState({ companyId: "", customerId: "", engineerId: "", amount: "", paymentMethod: "CASH", reason: "", direction: "ADDITION" });
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
 
@@ -84,7 +85,7 @@ export default function SettlementsPage() {
       body: JSON.stringify({ ...form, amount: parseFloat(form.amount) || 0, customerId: form.customerId || undefined, engineerId: form.engineerId || undefined, collectedBy: "" }),
     });
     setSaving(false);
-    setForm({ companyId: "", customerId: "", engineerId: "", amount: "", paymentMethod: "CASH", reason: "" });
+    setForm({ companyId: "", customerId: "", engineerId: "", amount: "", paymentMethod: "CASH", reason: "", direction: "ADDITION" });
     setShowForm(false); fetchData();
   };
 
@@ -127,6 +128,7 @@ export default function SettlementsPage() {
     headers: [
       t("settlements.number"),
       t("common.company"),
+      t("settlements.direction"),
       t("settlements.amount"),
       t("settlements.paymentMethod"),
       t("settlements.reason"),
@@ -137,6 +139,7 @@ export default function SettlementsPage() {
     rows: filtered.map((s) => [
       s.settlementNumber,
       s.company.name,
+      s.direction === "SUBTRACTION" ? "طرح" : "إضافة",
       String(s.amount),
       PAYMENT_METHOD_LABELS[s.paymentMethod] || s.paymentMethod,
       s.reason,
@@ -212,6 +215,13 @@ export default function SettlementsPage() {
             </select>
           </div>
           <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t("settlements.direction")}</label>
+            <select value={form.direction} onChange={(e) => setForm({ ...form, direction: e.target.value })} className={INPUT}>
+              <option value="ADDITION">{t("settlements.directionAddition")}</option>
+              <option value="SUBTRACTION">{t("settlements.directionSubtraction")}</option>
+            </select>
+          </div>
+          <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">{t("settlements.reason")}</label>
             <input type="text" placeholder={t("settlements.reason")} value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className={INPUT} required />
           </div>
@@ -260,6 +270,7 @@ export default function SettlementsPage() {
                   <tr>
                     <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("settlements.number")}</th>
                     <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("common.company")}</th>
+                    <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("settlements.direction")}</th>
                     <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("settlements.amount")}</th>
                     <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("settlements.paymentMethod")}</th>
                     <th className="px-4 py-3 text-start text-sm font-medium text-gray-500">{t("settlements.reason")}</th>
@@ -274,7 +285,14 @@ export default function SettlementsPage() {
                     <tr key={s.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium">{s.settlementNumber}</td>
                       <td className="px-4 py-3 text-sm">{s.company.name}</td>
-                      <td className="px-4 py-3 text-sm">{s.amount.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${s.direction === "SUBTRACTION" ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
+                          {t(s.direction === "SUBTRACTION" ? "settlements.directionSubtraction" : "settlements.directionAddition")}
+                        </span>
+                      </td>
+                      <td className={`px-4 py-3 text-sm font-medium ${s.direction === "SUBTRACTION" ? "text-red-600" : "text-slate-900"}`}>
+                        {s.direction === "SUBTRACTION" ? "−" : "+"}{s.amount.toLocaleString()}
+                      </td>
                       <td className="px-4 py-3 text-sm">{PAYMENT_METHOD_LABELS[s.paymentMethod] || s.paymentMethod}</td>
                       <td className="px-4 py-3 text-sm">{s.reason}</td>
                       <td className="px-4 py-3">

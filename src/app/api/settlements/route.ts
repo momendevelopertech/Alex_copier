@@ -46,6 +46,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "طريقة الدفع غير صالحة", code: "PAYMENT_METHOD_INVALID" }, { status: 400 });
     }
 
+    const direction = body.direction === "SUBTRACTION" ? "SUBTRACTION" : "ADDITION";
+    if (body.direction && !["ADDITION", "SUBTRACTION"].includes(body.direction)) {
+      return NextResponse.json({ error: "اتجاه التسوية غير صالح", code: "DIRECTION_INVALID" }, { status: 400 });
+    }
+
     // The collector is whoever is creating the record unless stated otherwise.
     const collectedBy: string =
       typeof body.collectedBy === "string" && body.collectedBy !== "" ? body.collectedBy : actor.id;
@@ -81,6 +86,7 @@ export async function POST(request: Request) {
         amount,
         paymentMethod: body.paymentMethod,
         reason: body.reason,
+        direction,
         status: "INITIAL",
         collectedBy,
         settlementNumber,
