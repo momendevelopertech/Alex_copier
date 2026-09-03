@@ -43,7 +43,7 @@ async function distributeToOrders(
       paymentStatus: { notIn: ["PAID"] },
     },
     select: { id: true, total: true, paidAmount: true, companyId: true },
-    orderBy: { orderDate: "asc", createdAt: "asc" },
+    orderBy: [{ orderDate: "asc" }, { createdAt: "asc" }],
   });
 
   let remaining = paymentAmount;

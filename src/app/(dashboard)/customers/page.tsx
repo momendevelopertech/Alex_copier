@@ -87,7 +87,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export default function CustomersPage() {
-  const { t, dir, locale } = useI18n();
+  const { t, dir } = useI18n();
   const confirmAction = useConfirm();
   const { success: toastSuccess, error: toastError } = useToast();
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -346,6 +346,40 @@ export default function CustomersPage() {
     setShowPaymentModal(true);
   };
 
+  const getStatementToken = async (customer: Customer): Promise<string | null> => {
+    try {
+      const res = await fetch(`/api/customers/${customer.id}/statement-token`, { method: "POST" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.token) {
+        toastError(apiErrorMessage(data, t));
+        return null;
+      }
+      return data.token as string;
+    } catch {
+      toastError(t("common.error"));
+      return null;
+    }
+  };
+
+  const openStatement = async (customer: Customer) => {
+    const token = await getStatementToken(customer);
+    if (!token) return;
+    const origin = window.location.origin;
+    window.open(`${origin}/s/${encodeURIComponent(token)}`, "_blank", "noopener,noreferrer");
+  };
+
+  const copyStatementLink = async (customer: Customer) => {
+    const token = await getStatementToken(customer);
+    if (!token) return;
+    const url = `${window.location.origin}/s/${encodeURIComponent(token)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toastSuccess(t("statement.linkCopied"));
+    } catch {
+      toastError(t("common.error"));
+    }
+  };
+
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!paymentCustomer) return;
@@ -520,11 +554,19 @@ export default function CustomersPage() {
             <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-bold text-amber-800">حساب العميل</h3>
-                {selected.remainingDebt > 0 && (
-                  <button onClick={() => openPaymentModal(selected)} className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-green-700">
-                    تسجيل دفعة
+                <div className="flex gap-2">
+                  {selected.remainingDebt > 0 && (
+                    <button onClick={() => openPaymentModal(selected)} className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-green-700">
+                      تسجيل دفعة
+                    </button>
+                  )}
+                  <button onClick={() => openStatement(selected)} className="inline-flex items-center gap-1 rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-sky-700" title={t("statement.openStatement")}>
+                    {t("statement.openStatement")}
                   </button>
-                )}
+                  <button onClick={() => copyStatementLink(selected)} className="inline-flex items-center gap-1 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 transition hover:bg-sky-100" title={t("statement.copyLink")}>
+                    {t("statement.copyLink")}
+                  </button>
+                </div>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 mb-3">
                 <div className="rounded-lg bg-white p-3 border border-amber-200">
@@ -765,6 +807,9 @@ export default function CustomersPage() {
                             دفع
                           </button>
                         )}
+                        <button onClick={() => openStatement(customer)} className="inline-flex items-center gap-1 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1.5 text-xs font-medium text-sky-700 transition hover:bg-sky-100" title={t("statement.openStatement")}>
+                          كشف حساب
+                        </button>
                         <button onClick={() => openDetails(customer.id)} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-100">
                           {t("common.view")}
                         </button>

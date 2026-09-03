@@ -172,6 +172,7 @@ model Customer {
   totalDebt       Float        @default(0)
   remainingDebt   Float        @default(0)
   lastPaymentDate DateTime?
+  statementToken  String?      @unique
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
+import { generateStatementToken } from "@/lib/statement-token";
 
 export async function GET() {
   try {
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
     const customer = await prisma.customer.create({
       data: {
         name: name.trim(),
+        statementToken: generateStatementToken(),
         phone: phone ?? undefined,
         email: email ?? undefined,
         address: address ?? undefined,
