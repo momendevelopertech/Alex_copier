@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Fragment, useEffect, useState } from "react";
 import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import { useI18n } from "@/i18n/context";
@@ -7,7 +8,7 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import FilterSelect from "@/components/FilterSelect";
 import DateRangeFilter, { inDateRange } from "@/components/DateRangeFilter";
-import { ArrowLeftRight, Eye, FileText, Pencil, Plus, Printer, RotateCcw, Save, Trash2, X } from "lucide-react";
+import { ArrowLeftRight, Eye, FileText, Pencil, Plus, Printer, RotateCcw, Save, Tags, Trash2, X } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
 import { useConfirm, useToast } from "@/components/UIProvider";
@@ -504,6 +505,7 @@ export default function SalesPage() {
           <button onClick={() => { setFormMode("regular"); setShowForm(true); }} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"><Plus size={16} />{t("sales.addOrder")}</button>
           <button onClick={() => { setFormMode("tradeIn"); setShowForm(true); }} className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-600"><RotateCcw size={16} />إضافة فاتورة استبدال</button>
           <button onClick={() => setShowInterForm(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"><ArrowLeftRight size={16} />{t("sales.interCompanySale")}</button>
+          <Link href="/sales/categories" className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"><Tags size={16} />{t("sales.salesCategories")}</Link>
         </div>
       </div>
 
