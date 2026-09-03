@@ -63,10 +63,18 @@ export default function StatementPage({ params }: { params: Promise<{ token: str
     };
   }, [params]);
 
-  const fmt = useCallback(
+  const formatDate = useCallback(
     (value: string) => {
       const d = new Date(value);
-      return `${d.toLocaleDateString(locale === "ar" ? "ar-EG" : "en-GB")} ${d.toLocaleTimeString(locale === "ar" ? "ar-EG" : "en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+      return d.toLocaleDateString(locale === "ar" ? "ar-EG" : "en-GB");
+    },
+    [locale],
+  );
+
+  const formatTime = useCallback(
+    (value: string) => {
+      const d = new Date(value);
+      return d.toLocaleTimeString(locale === "ar" ? "ar-EG" : "en-GB", { hour: "2-digit", minute: "2-digit" });
     },
     [locale],
   );
@@ -141,7 +149,7 @@ export default function StatementPage({ params }: { params: Promise<{ token: str
               <Stat label={t("statement.totalBilled")} value={money(data.totalBilled)} tone="text-blue-700" />
               <Stat label={t("statement.totalPaid")} value={money(data.totalPaid)} tone="text-green-700" />
               <Stat label={t("statement.currentDebt")} value={money(data.closingBalance)} tone={data.closingBalance > 0 ? "text-red-600" : "text-green-600"} />
-              <Stat label={t("statement.lastUpdate")} value={fmt(new Date().toISOString())} tone="text-gray-700" />
+              <Stat label={t("statement.lastUpdate")} value={formatDate(new Date().toISOString())} tone="text-gray-700" />
             </div>
 
             {data.rows.length === 0 ? (
@@ -178,7 +186,10 @@ export default function StatementPage({ params }: { params: Promise<{ token: str
                         const credit = row.amount < 0 ? money(-row.amount) : "";
                         return (
                           <tr key={row.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-2.5 whitespace-nowrap text-gray-600">{fmt(row.date)}</td>
+                            <td className="px-4 py-2.5 whitespace-nowrap text-gray-600">
+                              <div>{formatDate(row.date)}</div>
+                              <div className="text-xs text-gray-400">{formatTime(row.date)}</div>
+                            </td>
                             <td className="px-4 py-2.5">
                               <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${TYPE_BADGES[row.type]}`}>
                                 {typeLabel(row.type) || (row.amount > 0 ? t("statement.settlementOut") : t("statement.settlementIn"))}

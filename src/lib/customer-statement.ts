@@ -19,8 +19,8 @@ export interface CustomerStatement {
   phone: string | null;
   rows: StatementRow[];
   openingBalance: number;
-  totalBilled: number; // positive sum (invoices + money paid out)
-  totalPaid: number; // positive sum (payments + returns + collections)
+  totalBilled: number; // total debt (customer.totalDebt) — total billed to the customer
+  totalPaid: number; // total paid toward the debt (totalDebt - remainingDebt)
   closingBalance: number;
 }
 
@@ -39,13 +39,13 @@ function round2(n: number): number {
 export async function buildCustomerStatement(customerId: string): Promise<CustomerStatement | null> {
   const customer = await prisma.customer.findUnique({
     where: { id: customerId },
-    select: { id: true, name: true, companyName: true, phone: true, remainingDebt: true },
+    select: { id: true, name: true, companyName: true, phone: true, totalDebt: true, remainingDebt: true },
   });
   if (!customer) return null;
 
   const [salesOrders, payments, returns, settlements] = await Promise.all([
     prisma.salesOrder.findMany({
-      where: { customerId, status: { not: "DRAFT" } },
+      where: { customerId },
       select: {
         id: true,
         total: true,
@@ -67,7 +67,7 @@ export async function buildCustomerStatement(customerId: string): Promise<Custom
       orderBy: { createdAt: "asc" },
     }),
     prisma.settlement.findMany({
-      where: { customerId, status: "VERIFIED" },
+      where: { customerId },
       select: {
         id: true,
         amount: true,
@@ -83,23 +83,25 @@ export async function buildCustomerStatement(customerId: string): Promise<Custom
 
   interface Draft extends StatementRow {
     sort: number;
+    finalized: boolean;
   }
 
   const drafts: Draft[] = [];
 
   for (const o of salesOrders) {
+    const statusNote = o.status === "DRAFT" ? " (مسودة)" : "";
     drafts.push({
       id: o.id,
       type: "SALE",
       date: (o.orderDate ?? o.createdAt).toISOString(),
       ref: o.id,
-      description: o.notes,
+      description: o.notes ? `${o.notes}${statusNote}` : statusNote.trim() || o.notes,
       amount: o.total,
       balance: 0,
       sort: o.orderDate?.getTime() ?? o.createdAt.getTime(),
+      finalized: o.status !== "DRAFT",
     });
   }
-
   for (const p of payments) {
     drafts.push({
       id: p.id,
@@ -110,6 +112,7 @@ export async function buildCustomerStatement(customerId: string): Promise<Custom
       amount: -p.amount,
       balance: 0,
       sort: p.paymentDate?.getTime() ?? p.createdAt.getTime(),
+      finalized: true,
     });
   }
 
@@ -123,48 +126,60 @@ export async function buildCustomerStatement(customerId: string): Promise<Custom
       amount: -r.total,
       balance: 0,
       sort: r.createdAt.getTime(),
+      finalized: true,
     });
   }
 
   for (const s of settlements) {
     // ADDITION = money collected from the customer (reduces debt),
     // SUBTRACTION = money given to the customer (increases debt).
+    const statusNote = s.status === "INITIAL" ? " (غير معتمدة)" : "";
     drafts.push({
       id: s.id,
       type: "SETTLEMENT",
       date: s.createdAt.toISOString(),
       ref: s.settlementNumber,
-      description: s.reason,
+      description: s.reason ? `${s.reason}${statusNote}` : statusNote.trim() || s.reason,
       amount: s.direction === "SUBTRACTION" ? s.amount : -s.amount,
       balance: 0,
       sort: s.createdAt.getTime(),
+      finalized: s.status === "VERIFIED",
     });
   }
 
   // Sort chronologically; ties broken by created time.
   drafts.sort((a, b) => a.sort - b.sort || a.date.localeCompare(b.date));
 
-  let totalBilled = 0;
-  let totalPaid = 0;
-  for (const d of drafts) {
-    totalBilled += Math.max(0, d.amount);
-    totalPaid += Math.max(0, -d.amount);
-  }
-
-  // The authoritative outstanding debt lives on the Customer record. The raw
-  // movements (orders/payments/returns/settlements) are built up independently
-  // and may carry historical drift, so we seed an opening balance that makes
-  // the running balance reconcile EXACTLY to remainingDebt:
-  //   openingBalance + Σ signed movements = remainingDebt
-  const ledgerMovement = drafts.reduce((sum, d) => sum + d.amount, 0);
-  const openingBalance = round2(customer.remainingDebt - ledgerMovement);
+  // The authoritative debt figures live on the Customer record. The raw
+  // movements are built up independently and may carry historical drift, so we
+  // seed an opening balance that makes the running balance reconcile EXACTLY to
+  // remainingDebt:
+  //   openingBalance + Σ finalized movements = remainingDebt
+  //
+  // Non-finalized rows (DRAFT invoices, INITIAL settlements) are shown for full
+  // visibility but do not move the balance since they are not confirmed.
+  //
+  // Summary stats are anchored to the authoritative values too so they stay
+  // consistent with the dashboard and each other (billed - paid = remaining).
+  const finalizedMovement = drafts
+    .filter((d) => d.finalized)
+    .reduce((sum, d) => sum + d.amount, 0);
+  const openingBalance = round2(customer.remainingDebt - finalizedMovement);
 
   const rows: StatementRow[] = [];
   let balance = openingBalance;
   for (const d of drafts) {
-    balance += d.amount;
+    if (d.finalized) balance += d.amount;
     d.balance = round2(balance);
-    rows.push({ ...d, amount: round2(d.amount) });
+    rows.push({
+      id: d.id,
+      type: d.type,
+      date: d.date,
+      ref: d.ref,
+      description: d.description,
+      amount: round2(d.amount),
+      balance: d.balance,
+    });
   }
 
   return {
@@ -174,8 +189,8 @@ export async function buildCustomerStatement(customerId: string): Promise<Custom
     phone: customer.phone,
     rows,
     openingBalance,
-    totalBilled: round2(totalBilled),
-    totalPaid: round2(totalPaid),
+    totalBilled: round2(customer.totalDebt),
+    totalPaid: round2(Math.max(0, customer.totalDebt - customer.remainingDebt)),
     closingBalance: round2(balance),
   };
 }
