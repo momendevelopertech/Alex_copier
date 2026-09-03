@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
-import { recalculatePaymentStatus } from "@/lib/payment-status";
+import { getEffectiveTotal, recalculatePaymentStatus } from "@/lib/payment-status";
 
 export async function GET(
   request: Request,
@@ -51,7 +51,8 @@ async function distributeToOrders(
 
   for (const order of unpaidOrders) {
     if (remaining <= 0) break;
-    const outstanding = order.total - order.paidAmount;
+    const effectiveTotal = await getEffectiveTotal(tx, order.id, order.total);
+    const outstanding = effectiveTotal - order.paidAmount;
     if (outstanding <= 0) continue;
 
     const applied = Math.min(remaining, outstanding);

@@ -41,7 +41,7 @@ export async function buildCustomerStatement(customerId: string): Promise<Custom
 
   const [salesOrders, payments, returns, settlements] = await Promise.all([
     prisma.salesOrder.findMany({
-      where: { customerId },
+      where: { customerId, status: { not: "DRAFT" } },
       select: {
         id: true,
         total: true,
@@ -63,7 +63,7 @@ export async function buildCustomerStatement(customerId: string): Promise<Custom
       orderBy: { createdAt: "asc" },
     }),
     prisma.settlement.findMany({
-      where: { customerId },
+      where: { customerId, status: "VERIFIED" },
       select: {
         id: true,
         amount: true,
