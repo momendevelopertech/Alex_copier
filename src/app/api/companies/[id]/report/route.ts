@@ -243,9 +243,15 @@ export async function GET(
     // ─────────────────────────────────────────────────────────
     // INCOME STATEMENT (قائمة الدخل)
     // revenue − cost of purchases − expenses − sales returns + purchase returns
+    // + net settlements (signed: ADDITION increases profit, SUBTRACTION reduces it)
     // ─────────────────────────────────────────────────────────
     const netProfit =
-      totalSales - totalPurchases - totalExpenses - salesReturns + purchaseReturns;
+      totalSales -
+      totalPurchases -
+      totalExpenses -
+      salesReturns +
+      purchaseReturns +
+      totalSettlements;
 
     // ─────────────────────────────────────────────────────────
     // CASH POSITION (الموقف النقدي)

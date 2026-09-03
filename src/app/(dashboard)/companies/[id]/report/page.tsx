@@ -317,10 +317,11 @@ export default function CompanyReportPage() {
       });
     }
     for (const s of report.settlements.items ?? []) {
+      const outgoing = s.direction === "SUBTRACTION";
       rows.push({
         id: `settlement-${s.id}`,
         kind: "SETTLEMENT",
-        direction: "IN",
+        direction: outgoing ? "OUT" : "IN",
         date: s.createdAt,
         label: t("navigation.settlements"),
         detail: s.status === "VERIFIED"
@@ -504,6 +505,12 @@ export default function CompanyReportPage() {
                       <tr className="border-b border-gray-100">
                         <td className="px-5 py-3 text-sm text-gray-600">مرتجعات المشتريات</td>
                         <td className="px-5 py-3 text-sm font-bold text-green-700 text-left">{moneyFormatter.format(report.incomeStatement.purchaseReturns)}</td>
+                      </tr>
+                    )}
+                    {report.incomeStatement.settlementsCollected !== 0 && (
+                      <tr className="border-b border-gray-100">
+                        <td className="px-5 py-3 text-sm text-gray-600">التسويات (صافي)</td>
+                        <td className={`px-5 py-3 text-sm font-bold text-left ${report.incomeStatement.settlementsCollected >= 0 ? "text-green-700" : "text-red-600"}`}>{moneyFormatter.format(report.incomeStatement.settlementsCollected)}</td>
                       </tr>
                     )}
                     <tr className="border-b border-gray-100">
