@@ -216,8 +216,11 @@
     "warehouse": "Warehouse",
     "type": "Type",
     "selectSalesOrder": "Select Sales Order",
+    "selectPurchaseOrder": "Select Purchase Order",
     "selectProduct": "Select Product from Order",
     "saleDetails": "Original Sale Details",
+    "purchaseDetails": "Original Purchase Details",
+    "orderRef": "Invoice Number",
     "availableForReturn": "Available for Return",
     "reasonPlaceholder": "Return reason or inspection notes..."
   },

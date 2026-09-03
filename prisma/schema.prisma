@@ -561,6 +561,8 @@ model ReturnTransaction {
   type             ReturnType
   salesOrderId     String?
   salesOrderItemId String?
+  purchaseOrderId  String?
+  purchaseOrderItemId String?
   priceTier        String?
   warehouseId      String?
   customerId       String?
@@ -574,13 +576,15 @@ model ReturnTransaction {
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
-  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  salesOrder     SalesOrder?     @relation(fields: [salesOrderId], references: [id])
-  salesOrderItem SalesOrderItem? @relation(fields: [salesOrderItemId], references: [id])
-  warehouse      Warehouse?      @relation(fields: [warehouseId], references: [id])
-  customer       Customer?       @relation(fields: [customerId], references: [id])
-  supplier       Supplier?       @relation(fields: [supplierId], references: [id])
-  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  company            Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  salesOrder         SalesOrder?        @relation(fields: [salesOrderId], references: [id])
+  salesOrderItem     SalesOrderItem?    @relation(fields: [salesOrderItemId], references: [id])
+  purchaseOrder      PurchaseOrder?     @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderItem  PurchaseOrderItem? @relation(fields: [purchaseOrderItemId], references: [id])
+  warehouse          Warehouse?         @relation(fields: [warehouseId], references: [id])
+  customer           Customer?          @relation(fields: [customerId], references: [id])
+  supplier           Supplier?          @relation(fields: [supplierId], references: [id])
+  product            Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model SparePartCustody {
@@ -626,6 +630,7 @@ model PurchaseOrder {
   supplier Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   items    PurchaseOrderItem[]
   invoices PurchaseInvoice[]
+  returns  ReturnTransaction[]
 }
 
 model PurchaseOrderItem {
@@ -639,6 +644,7 @@ model PurchaseOrderItem {
 
   purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   product       Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  returns       ReturnTransaction[]
 }
 
 model PurchaseInvoice {

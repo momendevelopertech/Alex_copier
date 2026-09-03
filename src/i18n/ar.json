@@ -209,8 +209,11 @@
     "warehouse": "المستودع",
     "type": "النوع",
     "selectSalesOrder": "اختيار فاتورة البيع",
+    "selectPurchaseOrder": "اختيار فاتورة الشراء",
     "selectProduct": "اختيار المنتج من الفاتورة",
     "saleDetails": "تفاصيل فاتورة البيع الأصلية",
+    "purchaseDetails": "تفاصيل فاتورة الشراء الأصلية",
+    "orderRef": "رقم الفاتورة",
     "availableForReturn": "المتبقي للمرتجع",
     "reasonPlaceholder": "سبب المرتجع أو ملاحظات الفحص..."
   },

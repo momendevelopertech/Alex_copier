@@ -180,6 +180,7 @@ export async function GET(request: Request) {
           warehouse: true,
           salesOrder: true,
           salesOrderItem: true,
+          purchaseOrder: { select: { id: true } },
         },
       });
       if (!ret) {
@@ -214,6 +215,7 @@ export async function GET(request: Request) {
           { label: "المستودع", value: ret.warehouse?.name || "—" },
           { label: "الحالة", value: ret.status },
           ...(ret.salesOrder ? [{ label: "فاتورة البيع", value: ret.salesOrder.id.slice(0, 8) }] : []),
+          ...(ret.purchaseOrder ? [{ label: "فاتورة الشراء", value: ret.purchaseOrder.id.slice(0, 8) }] : []),
         ],
       };
     }

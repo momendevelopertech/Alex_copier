@@ -501,12 +501,6 @@ export default function CompanyReportPage() {
                         <td className="px-5 py-3 text-sm font-bold text-red-700 text-left">{moneyFormatter.format(-report.incomeStatement.salesReturns)}</td>
                       </tr>
                     )}
-                    {report.incomeStatement.purchaseReturns > 0 && (
-                      <tr className="border-b border-gray-100">
-                        <td className="px-5 py-3 text-sm text-gray-600">مرتجعات المشتريات</td>
-                        <td className="px-5 py-3 text-sm font-bold text-green-700 text-left">{moneyFormatter.format(report.incomeStatement.purchaseReturns)}</td>
-                      </tr>
-                    )}
                     {report.incomeStatement.settlementsCollected !== 0 && (
                       <tr className="border-b border-gray-100">
                         <td className="px-5 py-3 text-sm text-gray-600">التسويات (صافي)</td>

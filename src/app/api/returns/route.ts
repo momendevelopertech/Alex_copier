@@ -20,6 +20,8 @@ export async function GET() {
         warehouse: true,
         salesOrder: { select: { id: true } },
         salesOrderItem: { select: { id: true, unitPrice: true, quantity: true } },
+        purchaseOrder: { select: { id: true } },
+        purchaseOrderItem: { select: { id: true, unitPrice: true, quantity: true } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -207,7 +209,159 @@ export async function POST(request: Request) {
       return NextResponse.json(full, { status: 201 });
     }
 
-    return NextResponse.json({ error: "مرتجع المشتريات غير مدعوم بعد", code: "NOT_IMPLEMENTED" }, { status: 501 });
+    if (type === "PURCHASE_RETURN") {
+      const { purchaseOrderId, purchaseOrderItemId } = body;
+      if (!purchaseOrderId || !purchaseOrderItemId) {
+        return NextResponse.json(
+          { error: "اختيار فاتورة الشراء والمنتج مطلوب", code: "PURCHASE_ORDER_REQUIRED" },
+          { status: 400 }
+        );
+      }
+
+      const normalizedQty = Number(quantity);
+      if (!Number.isInteger(normalizedQty) || normalizedQty <= 0) {
+        return NextResponse.json(
+          { error: "الكمية يجب أن تكون عددًا صحيحًا أكبر من صفر", code: "INVALID_QUANTITY" },
+          { status: 400 }
+        );
+      }
+
+      const purchaseOrder = await prisma.purchaseOrder.findUnique({
+        where: { id: purchaseOrderId },
+        include: {
+          items: { include: { product: true } },
+          company: { select: { id: true, name: true, nameAr: true } },
+          supplier: { select: { id: true, name: true } },
+        },
+      });
+
+      if (!purchaseOrder) {
+        return NextResponse.json(
+          { error: "فاتورة الشراء غير موجودة", code: "PURCHASE_ORDER_NOT_FOUND" },
+          { status: 404 }
+        );
+      }
+
+      const purchaseItem = purchaseOrder.items.find((i) => i.id === purchaseOrderItemId);
+      if (!purchaseItem) {
+        return NextResponse.json(
+          { error: "المنتج غير موجود في فاتورة الشراء", code: "PURCHASE_ITEM_NOT_FOUND" },
+          { status: 404 }
+        );
+      }
+
+      const existingReturns = await prisma.returnTransaction.findMany({
+        where: {
+          purchaseOrderId,
+          purchaseOrderItemId,
+          status: { not: "REJECTED" },
+        },
+      });
+      const totalReturned = existingReturns.reduce((sum, r) => sum + r.quantity, 0);
+      const availableToReturn = purchaseItem.quantity - totalReturned;
+
+      if (normalizedQty > availableToReturn) {
+        return NextResponse.json(
+          {
+            error: `الكمية المطلوبة (${normalizedQty}) تتجاوز الكمية المتاحة للمرتجع (${availableToReturn})`,
+            code: "EXCEEDED_RETURNABLE_QUANTITY",
+          },
+          { status: 400 }
+        );
+      }
+
+      const warehouse = await prisma.warehouse.findFirst({
+        where: { companyId: purchaseOrder.companyId, isMain: true },
+        select: { id: true },
+      });
+
+      if (!warehouse) {
+        return NextResponse.json(
+          { error: "لا يوجد مستودع رئيسي للشركة", code: "NO_WAREHOUSE" },
+          { status: 400 }
+        );
+      }
+
+      const unitPrice = purchaseItem.unitPrice;
+      const total = Number((normalizedQty * unitPrice).toFixed(2));
+
+      const returnRecord = await prisma.$transaction(async (tx) => {
+        const created = await tx.returnTransaction.create({
+          data: {
+            companyId: purchaseOrder.companyId,
+            type: "PURCHASE_RETURN",
+            purchaseOrderId,
+            purchaseOrderItemId,
+            priceTier: null,
+            warehouseId: warehouse.id,
+            supplierId: purchaseOrder.supplierId,
+            productId: purchaseItem.productId,
+            quantity: normalizedQty,
+            unitPrice,
+            total,
+            reason: reason || null,
+            status: "APPROVED",
+          },
+        });
+
+        // Goods go back out of the warehouse to the supplier.
+        await tx.warehouseInventory.upsert({
+          where: { warehouseId_productId: { warehouseId: warehouse.id, productId: purchaseItem.productId } },
+          update: { quantity: { decrement: normalizedQty } },
+          create: { warehouseId: warehouse.id, productId: purchaseItem.productId, quantity: 0 },
+        });
+
+        await tx.stockMovement.create({
+          data: {
+            warehouseId: warehouse.id,
+            productId: purchaseItem.productId,
+            quantity: normalizedQty,
+            movementType: "PURCHASE_RETURN_OUT",
+            referenceId: created.id,
+            notes: `مرتجع مشتريات — فاتورة ${purchaseOrder.id} — ${purchaseItem.product?.name || ""}`,
+          },
+        });
+
+        // Money comes back to the company: an ADDITION settlement (refund).
+        await tx.settlement.create({
+          data: {
+            companyId: purchaseOrder.companyId,
+            amount: total,
+            paymentMethod: "CASH",
+            reason: `مرتجع مشتريات — ${purchaseOrder.id}`,
+            direction: "ADDITION",
+            status: "VERIFIED",
+            collectedBy: actor.id,
+            settlementNumber: `STL-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          },
+        });
+
+        // Reduce the purchase order total to reflect the returned value.
+        const newTotal = Math.max(0, Number(((purchaseOrder.total || 0) - total).toFixed(2)));
+        await tx.purchaseOrder.update({
+          where: { id: purchaseOrderId },
+          data: { total: newTotal },
+        });
+
+        return created;
+      });
+
+      const full = await prisma.returnTransaction.findUnique({
+        where: { id: returnRecord.id },
+        include: {
+          company: true,
+          supplier: true,
+          product: true,
+          warehouse: true,
+          purchaseOrder: { select: { id: true } },
+          purchaseOrderItem: { select: { id: true, unitPrice: true, quantity: true } },
+        },
+      });
+
+      return NextResponse.json(full, { status: 201 });
+    }
+
+    return NextResponse.json({ error: "نوع المرتجع غير صالح", code: "INVALID_RETURN_TYPE" }, { status: 400 });
   } catch (error) {
     return NextResponse.json({ error: "Failed to create return transaction" }, { status: traceError("[returns:POST] create failed", error) });
   }

@@ -240,18 +240,31 @@ export async function GET(
       .reduce((sum, s) => sum + settlementSignedValue(s), 0);
     const settlementsCount = settlements.length;
 
+    // Purchase-return refunds are auto-recorded as ADDITION settlements so the
+    // cash comes back to the company (Settlements module + cash position). But a
+    // refund of goods you bought is profit-neutral — the money-back cancels the
+    // purchase cost, it is NOT extra income. So exclude those refund settlements
+    // from the profit figure to avoid double-counting.
+    const purchaseReturnSettlementTotal = settlements
+      .filter((s) => s.status === "VERIFIED" && s.reason?.includes("مرتجع مشتريات"))
+      .reduce((sum, s) => sum + settlementSignedValue(s), 0);
+    const totalSettlementsForProfit = totalSettlements - purchaseReturnSettlementTotal;
+
     // ─────────────────────────────────────────────────────────
     // INCOME STATEMENT (قائمة الدخل)
-    // revenue − cost of purchases − expenses − sales returns + purchase returns
-    // + net settlements (signed: ADDITION increases profit, SUBTRACTION reduces it)
+    // revenue − cost of purchases − expenses − sales returns
+    // + net settlements for profit (signed: ADDITION increases profit, SUBTRACTION reduces it)
+    //
+    // Purchase returns are NOT added separately here: returning goods reduces the
+    // purchase order total (which lowers purchases cost) and refunds cash via the
+    // settlement — the two cancel, keeping the purchase return profit-neutral.
     // ─────────────────────────────────────────────────────────
     const netProfit =
       totalSales -
       totalPurchases -
       totalExpenses -
       salesReturns +
-      purchaseReturns +
-      totalSettlements;
+      totalSettlementsForProfit;
 
     // ─────────────────────────────────────────────────────────
     // CASH POSITION (الموقف النقدي)
@@ -332,7 +345,7 @@ export async function GET(
         salesReturns,
         purchaseReturns,
         expenses: totalExpenses,
-        settlementsCollected: totalSettlements,
+        settlementsCollected: totalSettlementsForProfit,
         netProfit,
       },
       cashPosition: {

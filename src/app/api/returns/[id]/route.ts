@@ -19,6 +19,8 @@ export async function GET(
         warehouse: true,
         salesOrder: { select: { id: true } },
         salesOrderItem: { select: { id: true, unitPrice: true, quantity: true, discount: true } },
+        purchaseOrder: { select: { id: true } },
+        purchaseOrderItem: { select: { id: true, unitPrice: true, quantity: true } },
       },
     });
 
@@ -59,17 +61,20 @@ export async function PUT(
       if (status === "REJECTED" && existing.status === "APPROVED") {
         await prisma.$transaction(async (tx) => {
           if (existing.warehouseId) {
+            // Sale returns added stock on approval -> removing them takes it back out.
+            // Purchase returns removed stock on approval -> rejecting restores it.
+            const delta = existing.type === "PURCHASE_RETURN" ? existing.quantity : -existing.quantity;
             await tx.warehouseInventory.upsert({
               where: { warehouseId_productId: { warehouseId: existing.warehouseId, productId: existing.productId } },
-              update: { quantity: { decrement: existing.quantity } },
-              create: { warehouseId: existing.warehouseId, productId: existing.productId, quantity: 0 },
+              update: { quantity: { increment: delta } },
+              create: { warehouseId: existing.warehouseId, productId: existing.productId, quantity: Math.max(0, delta) },
             });
 
             await tx.stockMovement.create({
               data: {
                 warehouseId: existing.warehouseId,
                 productId: existing.productId,
-                quantity: existing.quantity,
+                quantity: Math.abs(delta),
                 movementType: "ADJUSTMENT",
                 referenceId: id,
                 notes: `إلغاء مرتجع — ${id}`,
@@ -82,6 +87,28 @@ export async function PUT(
               where: { customerId_companyId: { customerId: existing.customerId, companyId: existing.companyId } },
               update: { balance: { increment: existing.total } },
               create: { customerId: existing.customerId, companyId: existing.companyId, balance: existing.total },
+            });
+          }
+
+          // Reverse the auto ADDITION settlement created for a purchase return and
+          // restore the purchase order total.
+          if (existing.type === "PURCHASE_RETURN" && existing.purchaseOrderId && existing.companyId) {
+            const purchasedNote = `مرتجع مشتريات — ${existing.purchaseOrderId}`;
+            await tx.settlement.deleteMany({
+              where: {
+                companyId: existing.companyId,
+                direction: "ADDITION",
+                reason: { contains: purchasedNote },
+              },
+            });
+            const po = await tx.purchaseOrder.findUnique({
+              where: { id: existing.purchaseOrderId },
+              select: { total: true },
+            });
+            const restored = Number(((po?.total || 0) + existing.total).toFixed(2));
+            await tx.purchaseOrder.update({
+              where: { id: existing.purchaseOrderId },
+              data: { total: restored },
             });
           }
         });
@@ -116,6 +143,52 @@ export async function PUT(
                 where: { customerId_companyId: { customerId: existing.customerId, companyId: existing.companyId } },
                 update: { balance: { decrement: existing.total } },
                 create: { customerId: existing.customerId, companyId: existing.companyId, balance: -existing.total },
+              });
+            }
+          });
+        }
+
+        if (warehouse && existing.type === "PURCHASE_RETURN") {
+          await prisma.$transaction(async (tx) => {
+            await tx.warehouseInventory.upsert({
+              where: { warehouseId_productId: { warehouseId: warehouse.id, productId: existing.productId } },
+              update: { quantity: { decrement: existing.quantity } },
+              create: { warehouseId: warehouse.id, productId: existing.productId, quantity: 0 },
+            });
+
+            await tx.stockMovement.create({
+              data: {
+                warehouseId: warehouse.id,
+                productId: existing.productId,
+                quantity: existing.quantity,
+                movementType: "PURCHASE_RETURN_OUT",
+                referenceId: id,
+                notes: `مرتجع مشتريات — ${id}`,
+              },
+            });
+
+            await tx.settlement.create({
+              data: {
+                companyId: existing.companyId,
+                amount: existing.total,
+                paymentMethod: "CASH",
+                reason: `مرتجع مشتريات — ${id}`,
+                direction: "ADDITION",
+                status: "VERIFIED",
+                collectedBy: actor.id,
+                settlementNumber: `STL-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              },
+            });
+
+            if (existing.purchaseOrderId) {
+              const po = await tx.purchaseOrder.findUnique({
+                where: { id: existing.purchaseOrderId },
+                select: { total: true },
+              });
+              const reduced = Math.max(0, Number(((po?.total || 0) - existing.total).toFixed(2)));
+              await tx.purchaseOrder.update({
+                where: { id: existing.purchaseOrderId },
+                data: { total: reduced },
               });
             }
           });
@@ -173,17 +246,20 @@ export async function DELETE(
     if (existing.status === "APPROVED" || existing.status === "COMPLETED") {
       await prisma.$transaction(async (tx) => {
         if (existing.warehouseId) {
+          // Sale returns added stock -> removing takes it out; purchase returns removed
+          // stock -> deleting restores it.
+          const delta = existing.type === "PURCHASE_RETURN" ? existing.quantity : -existing.quantity;
           await tx.warehouseInventory.upsert({
             where: { warehouseId_productId: { warehouseId: existing.warehouseId, productId: existing.productId } },
-            update: { quantity: { decrement: existing.quantity } },
-            create: { warehouseId: existing.warehouseId, productId: existing.productId, quantity: 0 },
+            update: { quantity: { increment: delta } },
+            create: { warehouseId: existing.warehouseId, productId: existing.productId, quantity: Math.max(0, delta) },
           });
 
           await tx.stockMovement.create({
             data: {
               warehouseId: existing.warehouseId,
               productId: existing.productId,
-              quantity: existing.quantity,
+              quantity: Math.abs(delta),
               movementType: "ADJUSTMENT",
               referenceId: id,
               notes: `حذف مرتجع — ${id}`,
@@ -196,6 +272,26 @@ export async function DELETE(
             where: { customerId_companyId: { customerId: existing.customerId, companyId: existing.companyId } },
             update: { balance: { increment: existing.total } },
             create: { customerId: existing.customerId, companyId: existing.companyId, balance: existing.total },
+          });
+        }
+
+        if (existing.type === "PURCHASE_RETURN" && existing.purchaseOrderId && existing.companyId) {
+          const purchasedNote = `مرتجع مشتريات — ${existing.purchaseOrderId}`;
+          await tx.settlement.deleteMany({
+            where: {
+              companyId: existing.companyId,
+              direction: "ADDITION",
+              reason: { contains: purchasedNote },
+            },
+          });
+          const po = await tx.purchaseOrder.findUnique({
+            where: { id: existing.purchaseOrderId },
+            select: { total: true },
+          });
+          const restored = Number(((po?.total || 0) + existing.total).toFixed(2));
+          await tx.purchaseOrder.update({
+            where: { id: existing.purchaseOrderId },
+            data: { total: restored },
           });
         }
       });

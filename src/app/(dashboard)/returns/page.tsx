@@ -39,6 +39,23 @@ interface SalesOrder {
   items: SalesOrderItem[];
 }
 
+interface PurchaseOrderItem {
+  id: string;
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+  product?: Product | null;
+}
+
+interface PurchaseOrder {
+  id: string;
+  supplierId: string;
+  total: number;
+  orderDate: string;
+  supplier?: Supplier | null;
+  items: PurchaseOrderItem[];
+}
+
 interface ReturnRecord {
   id: string;
   companyId: string;
@@ -56,6 +73,8 @@ interface ReturnRecord {
   productId: string;
   salesOrderId?: string | null;
   salesOrderItemId?: string | null;
+  purchaseOrderId?: string | null;
+  purchaseOrderItemId?: string | null;
   company?: Company;
   customer?: Customer | null;
   supplier?: Supplier | null;
@@ -63,6 +82,8 @@ interface ReturnRecord {
   warehouse?: Warehouse | null;
   salesOrder?: { id: string } | null;
   salesOrderItem?: { id: string; unitPrice: number; quantity: number } | null;
+  purchaseOrder?: { id: string } | null;
+  purchaseOrderItem?: { id: string; unitPrice: number; quantity: number } | null;
 }
 
 const RETURN_TYPE_LABELS: Record<string, string> = {
@@ -103,18 +124,24 @@ export default function ReturnsPage() {
 
   const [salesOrders, setSalesOrders] = useState<SalesOrder[]>([]);
   const [salesOrdersLoading, setSalesOrdersLoading] = useState(false);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [purchaseOrdersLoading, setPurchaseOrdersLoading] = useState(false);
 
   const [form, setForm] = useState({
     companyId: "",
     type: "SALE_RETURN" as "SALE_RETURN" | "PURCHASE_RETURN",
     salesOrderId: "",
     salesOrderItemId: "",
+    purchaseOrderId: "",
+    purchaseOrderItemId: "",
     quantity: "1",
     reason: "",
   });
 
   const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
   const [selectedItem, setSelectedItem] = useState<SalesOrderItem | null>(null);
+  const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<PurchaseOrder | null>(null);
+  const [selectedPurchaseItem, setSelectedPurchaseItem] = useState<PurchaseOrderItem | null>(null);
 
   const [viewingReturn, setViewingReturn] = useState<ReturnRecord | null>(null);
   const [editingReturn, setEditingReturn] = useState<ReturnRecord | null>(null);
@@ -162,15 +189,35 @@ export default function ReturnsPage() {
     }
   };
 
+  const fetchPurchaseOrders = async (companyId: string) => {
+    setPurchaseOrdersLoading(true);
+    try {
+      const res = await fetch(`/api/returns/purchase-orders?companyId=${companyId}`);
+      const data = await res.json();
+      setPurchaseOrders(Array.isArray(data) ? data : []);
+    } catch {
+      setPurchaseOrders([]);
+    } finally {
+      setPurchaseOrdersLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (form.companyId && form.type === "SALE_RETURN") {
       fetchSalesOrders(form.companyId);
+      setPurchaseOrders([]);
+    } else if (form.companyId && form.type === "PURCHASE_RETURN") {
+      fetchPurchaseOrders(form.companyId);
+      setSalesOrders([]);
     } else {
       setSalesOrders([]);
+      setPurchaseOrders([]);
     }
-    setForm((prev) => ({ ...prev, salesOrderId: "", salesOrderItemId: "" }));
+    setForm((prev) => ({ ...prev, salesOrderId: "", salesOrderItemId: "", purchaseOrderId: "", purchaseOrderItemId: "" }));
     setSelectedOrder(null);
     setSelectedItem(null);
+    setSelectedPurchaseOrder(null);
+    setSelectedPurchaseItem(null);
   }, [form.companyId, form.type]);
 
   useEffect(() => {
@@ -193,6 +240,26 @@ export default function ReturnsPage() {
     }
   }, [form.salesOrderItemId, selectedOrder]);
 
+  useEffect(() => {
+    if (form.purchaseOrderId) {
+      const order = purchaseOrders.find((o) => o.id === form.purchaseOrderId);
+      setSelectedPurchaseOrder(order || null);
+    } else {
+      setSelectedPurchaseOrder(null);
+    }
+    setForm((prev) => ({ ...prev, purchaseOrderItemId: "" }));
+    setSelectedPurchaseItem(null);
+  }, [form.purchaseOrderId, purchaseOrders]);
+
+  useEffect(() => {
+    if (form.purchaseOrderItemId && selectedPurchaseOrder) {
+      const it = selectedPurchaseOrder.items.find((i) => i.id === form.purchaseOrderItemId);
+      setSelectedPurchaseItem(it || null);
+    } else {
+      setSelectedPurchaseItem(null);
+    }
+  }, [form.purchaseOrderItemId, selectedPurchaseOrder]);
+
   const filteredReturns = useMemo(() => {
     return returns.filter((item) => {
       const matchesType = !typeFilter || item.type === typeFilter;
@@ -201,11 +268,13 @@ export default function ReturnsPage() {
       const supplierName = item.supplier?.name ?? "";
       const productName = item.product?.name ?? "";
       const orderNum = item.salesOrder?.id ?? "";
+      const purchaseOrderNum = item.purchaseOrder?.id ?? "";
       return matchesType && matchesCompany && (
         matchesQuery(customerName, search) ||
         matchesQuery(supplierName, search) ||
         matchesQuery(productName, search) ||
         matchesQuery(orderNum, search) ||
+        matchesQuery(purchaseOrderNum, search) ||
         matchesQuery(item.reason ?? "", search) ||
         matchesQuery(RETURN_TYPE_LABELS[item.type] ?? item.type, search)
       );
@@ -247,20 +316,35 @@ export default function ReturnsPage() {
   }, [returns]);
 
   const availableQuantity = useMemo(() => {
-    if (!selectedOrder || !selectedItem) return 0;
+    if (form.type === "SALE_RETURN") {
+      if (!selectedOrder || !selectedItem) return 0;
+      const existingReturns = returns.filter(
+        (r) => r.salesOrderId === selectedOrder.id && r.salesOrderItemId === selectedItem.id && r.status !== "REJECTED"
+      );
+      const totalReturned = existingReturns.reduce((sum, r) => sum + r.quantity, 0);
+      return selectedItem.quantity - totalReturned;
+    }
+    if (!selectedPurchaseOrder || !selectedPurchaseItem) return 0;
     const existingReturns = returns.filter(
-      (r) => r.salesOrderId === selectedOrder.id && r.salesOrderItemId === selectedItem.id && r.status !== "REJECTED"
+      (r) => r.purchaseOrderId === selectedPurchaseOrder.id && r.purchaseOrderItemId === selectedPurchaseItem.id && r.status !== "REJECTED"
     );
     const totalReturned = existingReturns.reduce((sum, r) => sum + r.quantity, 0);
-    return selectedItem.quantity - totalReturned;
-  }, [selectedOrder, selectedItem, returns]);
+    return selectedPurchaseItem.quantity - totalReturned;
+  }, [form.type, selectedOrder, selectedItem, selectedPurchaseOrder, selectedPurchaseItem, returns]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!form.companyId || !form.salesOrderId || !form.salesOrderItemId) {
-      toastError("يرجى اختيار الشركة وفاتورة البيع والمنتج");
-      return;
+    if (form.type === "SALE_RETURN") {
+      if (!form.companyId || !form.salesOrderId || !form.salesOrderItemId) {
+        toastError("يرجى اختيار الشركة وفاتورة البيع والمنتج");
+        return;
+      }
+    } else {
+      if (!form.companyId || !form.purchaseOrderId || !form.purchaseOrderItemId) {
+        toastError("يرجى اختيار الشركة وفاتورة الشراء والمنتج");
+        return;
+      }
     }
 
     const qty = Number(form.quantity);
@@ -276,16 +360,26 @@ export default function ReturnsPage() {
 
     setSaving(true);
     try {
+      const payload =
+        form.type === "SALE_RETURN"
+          ? {
+              type: form.type,
+              salesOrderId: form.salesOrderId,
+              salesOrderItemId: form.salesOrderItemId,
+              quantity: qty,
+              reason: form.reason,
+            }
+          : {
+              type: form.type,
+              purchaseOrderId: form.purchaseOrderId,
+              purchaseOrderItemId: form.purchaseOrderItemId,
+              quantity: qty,
+              reason: form.reason,
+            };
       const res = await fetch("/api/returns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: form.type,
-          salesOrderId: form.salesOrderId,
-          salesOrderItemId: form.salesOrderItemId,
-          quantity: qty,
-          reason: form.reason,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
 
@@ -341,10 +435,13 @@ export default function ReturnsPage() {
   };
 
   const resetForm = () => {
-    setForm({ companyId: "", type: "SALE_RETURN", salesOrderId: "", salesOrderItemId: "", quantity: "1", reason: "" });
+    setForm({ companyId: "", type: "SALE_RETURN", salesOrderId: "", salesOrderItemId: "", purchaseOrderId: "", purchaseOrderItemId: "", quantity: "1", reason: "" });
     setSelectedOrder(null);
     setSelectedItem(null);
+    setSelectedPurchaseOrder(null);
+    setSelectedPurchaseItem(null);
     setSalesOrders([]);
+    setPurchaseOrders([]);
   };
 
   const openCreate = () => {
@@ -459,7 +556,7 @@ export default function ReturnsPage() {
                     <td className="px-4 py-3">{item.company?.nameAr || item.company?.name || "—"}</td>
                     <td className="px-4 py-3">{item.product?.name || "—"}</td>
                     <td className="px-4 py-3">{item.customer?.name || item.supplier?.name || "—"}</td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{item.salesOrder?.id?.slice(0, 8) || "—"}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">{item.salesOrder?.id?.slice(0, 8) || item.purchaseOrder?.id?.slice(0, 8) || "—"}</td>
                     <td className="px-4 py-3 font-medium">{item.quantity}</td>
                     <td className="px-4 py-3">{item.unitPrice.toLocaleString()}</td>
                     <td className="px-4 py-3 font-semibold">{item.total.toLocaleString()}</td>
@@ -577,6 +674,59 @@ export default function ReturnsPage() {
             </div>
           )}
 
+          {form.type === "PURCHASE_RETURN" && form.companyId && (
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-gray-700">{t("returns.selectPurchaseOrder")}</label>
+              {purchaseOrdersLoading ? (
+                <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-500">
+                  <PrinterLoader size="sm" label={t("common.loading")} />
+                </div>
+              ) : (
+                <select className={inputClass} value={form.purchaseOrderId} onChange={(e) => setForm((prev) => ({ ...prev, purchaseOrderId: e.target.value }))} required>
+                  <option value="">{t("common.selectOption")}</option>
+                  {purchaseOrders.map((order) => (
+                    <option key={order.id} value={order.id}>
+                      {order.id.slice(0, 8)} — {order.supplier?.name || ""} — {new Date(order.orderDate).toLocaleDateString("en-GB")} {new Date(order.orderDate).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+
+          {selectedPurchaseOrder && (
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-gray-700">{t("returns.selectProduct")}</label>
+              <select className={inputClass} value={form.purchaseOrderItemId} onChange={(e) => setForm((prev) => ({ ...prev, purchaseOrderItemId: e.target.value }))} required>
+                <option value="">{t("common.selectOption")}</option>
+                {selectedPurchaseOrder.items.map((item) => {
+                  const existingReturns = returns.filter(
+                    (r) => r.purchaseOrderId === selectedPurchaseOrder.id && r.purchaseOrderItemId === item.id && r.status !== "REJECTED"
+                  );
+                  const totalReturned = existingReturns.reduce((sum, r) => sum + r.quantity, 0);
+                  const available = item.quantity - totalReturned;
+                  return (
+                    <option key={item.id} value={item.id} disabled={available <= 0}>
+                      {item.product?.name || item.productId} — {item.unitPrice.toLocaleString()} — متبقي {available}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          )}
+
+          {selectedPurchaseItem && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <h4 className="text-sm font-semibold text-blue-800 mb-2">{t("returns.purchaseDetails")}</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div><span className="text-gray-500">{t("common.product")}:</span> <span className="font-medium">{selectedPurchaseItem.product?.name}</span></div>
+                <div><span className="text-gray-500">{t("returns.unitPrice")}:</span> <span className="font-medium">{selectedPurchaseItem.unitPrice.toLocaleString()}</span></div>
+                <div><span className="text-gray-500">{t("returns.quantity")}:</span> <span className="font-medium">{selectedPurchaseItem.quantity}</span></div>
+                <div><span className="text-gray-500">{t("returns.availableForReturn")}:</span> <span className="font-bold text-blue-700">{availableQuantity}</span></div>
+              </div>
+            </div>
+          )}
+
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-gray-700">{t("returns.quantity")}</label>
@@ -591,11 +741,11 @@ export default function ReturnsPage() {
               />
             </div>
 
-            {selectedItem && (
+            {(selectedItem || selectedPurchaseItem) && (
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-gray-700">{t("returns.total")}</label>
                 <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-bold text-slate-900">
-                  {(Number(form.quantity) * selectedItem.unitPrice).toLocaleString()}
+                  {(Number(form.quantity) * (selectedItem?.unitPrice ?? selectedPurchaseItem?.unitPrice ?? 0)).toLocaleString()}
                 </div>
               </div>
             )}
@@ -623,7 +773,7 @@ export default function ReturnsPage() {
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("common.company")}</span><span className="mt-1 block font-medium">{viewingReturn.company?.nameAr || viewingReturn.company?.name}</span></div>
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("common.product")}</span><span className="mt-1 block font-medium">{viewingReturn.product?.name}</span></div>
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("returns.customerSupplier")}</span><span className="mt-1 block font-medium">{viewingReturn.customer?.name || viewingReturn.supplier?.name || "—"}</span></div>
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("sales.orderNumber")}</span><span className="mt-1 block font-medium">{viewingReturn.salesOrder?.id?.slice(0, 8) || "—"}</span></div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("returns.orderRef")}</span><span className="mt-1 block font-medium">{viewingReturn.salesOrder?.id?.slice(0, 8) || viewingReturn.purchaseOrder?.id?.slice(0, 8) || "—"}</span></div>
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("returns.quantity")}</span><span className="mt-1 block font-medium">{viewingReturn.quantity}</span></div>
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("returns.unitPrice")}</span><span className="mt-1 block font-medium">{viewingReturn.unitPrice.toLocaleString()}</span></div>
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-3"><span className="block text-xs text-gray-500">{t("returns.total")}</span><span className="mt-1 block font-bold">{viewingReturn.total.toLocaleString()}</span></div>
