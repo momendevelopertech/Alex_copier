@@ -60,7 +60,11 @@ export default function FinancePage() {
         return;
       }
       const cats = await catRes.json().catch(() => []);
-      setExpenses(await eRes.json()); setCompanies(await cRes.json()); setCategories(Array.isArray(cats) ? cats : []);
+      const eData = await eRes.json().catch(() => []);
+      setExpenses(Array.isArray(eData) ? eData : []);
+      const cData = await cRes.json().catch(() => []);
+      setCompanies(Array.isArray(cData) ? cData : []);
+      setCategories(Array.isArray(cats) ? cats : []);
     } finally {
       setLoading(false);
     }

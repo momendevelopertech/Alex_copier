@@ -64,7 +64,14 @@ export default function SettlementsPage() {
   const fetchData = async () => {
     try {
       const [sRes, coRes, cuRes, eRes] = await Promise.all([fetch("/api/settlements"), fetch("/api/companies"), fetch("/api/customers"), fetch("/api/engineers")]);
-      setSettlements(await sRes.json()); setCompanies(await coRes.json()); setCustomers(await cuRes.json()); setEngineers(await eRes.json());
+      const sData = await sRes.json().catch(() => []);
+      const cData = await coRes.json().catch(() => []);
+      const cuData = await cuRes.json().catch(() => []);
+      const eData = await eRes.json().catch(() => []);
+      setSettlements(Array.isArray(sData) ? sData : []);
+      setCompanies(Array.isArray(cData) ? cData : []);
+      setCustomers(Array.isArray(cuData) ? cuData : []);
+      setEngineers(Array.isArray(eData) ? eData : []);
     } finally {
       setLoading(false);
     }

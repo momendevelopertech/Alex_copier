@@ -43,7 +43,10 @@ export default function ExpenseCategoriesPage() {
         signOut({ callbackUrl: "/login" });
         return;
       }
-      setCategories(await cRes.json()); setCompanies(await coRes.json());
+      const catData = await cRes.json().catch(() => []);
+      const coData = await coRes.json().catch(() => []);
+      setCategories(Array.isArray(catData) ? catData : []);
+      setCompanies(Array.isArray(coData) ? coData : []);
     } finally {
       setLoading(false);
     }
