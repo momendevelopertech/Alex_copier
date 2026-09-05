@@ -86,7 +86,9 @@ export async function POST(
         });
         await tx.customer.update({
           where: { id: orderInfo.customerId },
-          data: { remainingDebt: Math.max(0, (debtBefore?.remainingDebt ?? 0) - paidAmount) },
+          // No floor clamp: excess installment payment becomes credit under the
+          // customer's account (رصيد تحت الحساب).
+          data: { remainingDebt: (debtBefore?.remainingDebt ?? 0) - paidAmount },
         });
 
         // Update customer ledger

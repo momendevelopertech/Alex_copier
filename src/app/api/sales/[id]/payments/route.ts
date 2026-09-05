@@ -90,10 +90,12 @@ export async function POST(
         where: { id: order.customerId },
         select: { remainingDebt: true },
       });
+      // No floor clamp: any payment beyond the outstanding debt becomes money
+      // under the customer's account (رصيد تحت الحساب) instead of being lost.
       await tx.customer.update({
         where: { id: order.customerId },
         data: {
-          remainingDebt: Math.max(0, (debtBefore?.remainingDebt ?? 0) - paymentAmount),
+          remainingDebt: (debtBefore?.remainingDebt ?? 0) - paymentAmount,
           lastPaymentDate: paymentDateTime,
         },
       });

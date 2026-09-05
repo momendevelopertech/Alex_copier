@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
 import { recalculatePaymentStatus } from "@/lib/payment-status";
+import { computeCreditSplit, creditUsedNote } from "@/lib/customer-credit";
 import { traceError } from "@/lib/prisma-errors";
 
 export async function GET() {
@@ -87,15 +88,9 @@ export async function POST(request: Request) {
     const taxable = subtotal - orderDiscount;
     const total = Math.round((taxable + taxable * Math.max(0, resolvedTaxRate) / 100) * 100) / 100;
 
-    // Partial upfront payment is only allowed for non-CASH orders and must not
-    // exceed the order total.
-    const initialPaidAmount = paymentMethod === "CASH"
-      ? total
-      : Math.min(Math.max(0, Number(raw.paidAmount) || 0), total);
-
     const [company, customer] = await Promise.all([
       prisma.company.findUnique({ where: { id: companyId }, select: { id: true } }),
-      prisma.customer.findUnique({ where: { id: customerId }, select: { id: true } }),
+      prisma.customer.findUnique({ where: { id: customerId }, select: { id: true, remainingDebt: true } }),
     ]);
     if (!company) {
       return NextResponse.json({ error: "الشركة غير موجودة", code: "COMPANY_NOT_FOUND" }, { status: 400 });
@@ -103,6 +98,13 @@ export async function POST(request: Request) {
     if (!customer) {
       return NextResponse.json({ error: "العميل غير موجود", code: "CUSTOMER_NOT_FOUND" }, { status: 400 });
     }
+
+    // Partial upfront payment is only allowed for non-CASH orders and must not
+    // exceed the order total. If the customer has money under their account
+    // (رصيد تحت الحساب), that credit is consumed FIRST automatically and the
+    // given upfront amount is treated as cash paying on top of the credit.
+    const creditSplit = computeCreditSplit(total, customer.remainingDebt ?? 0, Number(raw.paidAmount) || 0, paymentMethod);
+    const initialPaidAmount = creditSplit.paidAmount;
     if (engineerId) {
       const engineer = await prisma.engineer.findUnique({ where: { id: engineerId }, select: { id: true } });
       if (!engineer) {
@@ -164,7 +166,8 @@ export async function POST(request: Request) {
           taxRate: resolvedTaxRate,
           isTaxInvoice,
           total,
-          paidAmount: paymentMethod === "CASH" ? total : initialPaidAmount,
+          paidAmount: initialPaidAmount,
+          creditUsed: creditSplit.creditUsed,
           paymentStatus: paymentMethod === "CASH" ? "PAID" : initialPaidAmount >= total ? "PAID" : initialPaidAmount > 0 ? "PARTIAL" : "PENDING",
           tradeInTotal: 0,
           orderDate: new Date(raw.orderDate),
@@ -172,25 +175,25 @@ export async function POST(request: Request) {
         },
       });
 
-      // For CREDIT/INSTALLMENT/MIXED orders, increment customer debt
-      // Only count the unpaid portion as debt (total - initialPaidAmount)
-      if (paymentMethod !== "CASH") {
-        const unpaidPortion = total - initialPaidAmount;
-        if (unpaidPortion > 0) {
-          await tx.customer.update({
-            where: { id: customerId },
-            data: {
-              totalDebt: { increment: unpaidPortion },
-              remainingDebt: { increment: unpaidPortion },
-            },
-          });
+      // Update the customer balance:
+      // - unpaid => new debt (totalDebt + remainingDebt)
+      // - creditUsed => money under the customer's account consumed by this invoice
+      //   (raises remainingDebt back toward zero, since the credit is being used)
+      const remainingDelta = creditSplit.unpaid + creditSplit.creditUsed;
+      if (remainingDelta > 0 || creditSplit.unpaid > 0) {
+        await tx.customer.update({
+          where: { id: customerId },
+          data: {
+            ...(creditSplit.unpaid > 0 ? { totalDebt: { increment: creditSplit.unpaid } } : {}),
+            ...(remainingDelta > 0 ? { remainingDebt: { increment: remainingDelta } } : {}),
+          },
+        });
 
-          await tx.customerLedger.upsert({
-            where: { customerId_companyId: { customerId, companyId } },
-            update: { balance: { increment: unpaidPortion } },
-            create: { customerId, companyId, balance: unpaidPortion },
-          });
-        }
+        await tx.customerLedger.upsert({
+          where: { customerId_companyId: { customerId, companyId } },
+          update: { balance: { increment: remainingDelta } },
+          create: { customerId, companyId, balance: remainingDelta },
+        });
       }
 
       let tradeInTotal = 0;
@@ -280,13 +283,26 @@ export async function POST(request: Request) {
         });
       }
 
-      // Record initial payment as a CustomerPayment if partially paid upfront
-      if (initialPaidAmount > 0 && paymentMethod !== "CASH") {
+      // Record how the invoice was covered so the statement shows it clearly:
+      // the part paid from the customer's under-account money + any upfront cash.
+      if (creditSplit.creditUsed > 0) {
         await tx.customerPayment.create({
           data: {
             customerId,
             companyId,
-            amount: initialPaidAmount,
+            amount: creditSplit.creditUsed,
+            paymentDate: new Date(raw.orderDate),
+            notes: creditUsedNote(order.id),
+          },
+        });
+      }
+
+      if (paymentMethod !== "CASH" && creditSplit.cashUpfront > 0) {
+        await tx.customerPayment.create({
+          data: {
+            customerId,
+            companyId,
+            amount: creditSplit.cashUpfront,
             paymentDate: new Date(raw.orderDate),
             notes: `دفع مبدئي مع فاتورة بيع ${order.id}`,
           },

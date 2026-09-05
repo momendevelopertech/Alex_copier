@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => {
     requireAuth: vi.fn(),
     requirePageAccess: vi.fn(),
     recalculatePaymentStatus: vi.fn(),
+    getEffectiveTotal: vi.fn(),
     tx,
   };
 });
@@ -37,6 +38,7 @@ vi.mock("@/lib/auth-helpers", () => ({
 }));
 vi.mock("@/lib/payment-status", () => ({
   recalculatePaymentStatus: mocks.recalculatePaymentStatus,
+  getEffectiveTotal: mocks.getEffectiveTotal,
 }));
 
 import { POST } from "@/app/api/customers/[id]/payments/route";
@@ -67,6 +69,7 @@ describe("customer payment auto-distribution", () => {
     });
 
     mocks.recalculatePaymentStatus.mockResolvedValue("PARTIAL");
+    mocks.getEffectiveTotal.mockImplementation(async (_tx: unknown, _id: string, total: number) => total);
     mocks.tx.salesOrder.findMany.mockResolvedValue([
       { id: "o1", total: 800, paidAmount: 0 },
       { id: "o2", total: 200, paidAmount: 0 },
@@ -131,7 +134,7 @@ describe("customer payment auto-distribution", () => {
     expect(createCall.data.companyId).toBe("co9");
   });
 
-  it("clamps customer remainingDebt to zero on overpayment", async () => {
+  it("turns an overpayment into credit under the customer's account", async () => {
     const res = await POST(
       jsonRequest("http://localhost/api/customers/c1/payments", "POST", {
         amount: 2000, companyId: "co1",
@@ -140,6 +143,6 @@ describe("customer payment auto-distribution", () => {
     );
     expect(res.status).toBe(201);
     const updateCall = mocks.tx.customer.update.mock.calls[0][0];
-    expect(updateCall.data.remainingDebt).toBe(0);
+    expect(updateCall.data.remainingDebt).toBe(-1000);
   });
 });

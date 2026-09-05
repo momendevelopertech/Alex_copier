@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requirePageAccess } from "@/lib/auth-helpers";
 import { recalculatePaymentStatus } from "@/lib/payment-status";
+import { computeCreditSplit, creditUsedNote } from "@/lib/customer-credit";
 import { traceError } from "@/lib/prisma-errors";
 
 export async function GET(
@@ -117,19 +118,18 @@ export async function PUT(
     const taxable = subtotal - orderDiscount;
     const total = Math.round((taxable + taxable * Math.max(0, resolvedTaxRate) / 100) * 100) / 100;
 
-    // User-provided paid amount for non-CASH orders (partial upfront payment)
-    const initialPaidAmount = paymentMethod === "CASH"
-      ? total
-      : Math.min(Math.max(0, Number(raw.paidAmount) || 0), total);
+    // Original debt contribution of this order (to be reversed) — matches the
+    // POST forward logic. Unpaid portion adds debt; creditUsed consumed some of
+    // the customer's under-account money (also reflected in remainingDebt).
+    const originalCreditUsed = Number((existing as { creditUsed?: number }).creditUsed) || 0;
+    const originalUnpaid =
+      existing.paymentMethod !== "CASH" ? Math.max(0, existing.total - existing.paidAmount) : 0;
+    const originalRemainingDelta = originalUnpaid + originalCreditUsed;
 
     const warehouse = await prisma.warehouse.findFirst({
       where: { companyId, isMain: true },
       select: { id: true },
     });
-
-    // Original debt contribution (reverse) — matches the POST forward logic
-    const originalDebt =
-      existing.paymentMethod !== "CASH" ? Math.max(0, existing.total - existing.paidAmount) : 0;
 
     const updated = await prisma.$transaction(async (tx) => {
       // 1) Reverse stock from the ORIGINAL order using recorded movements
@@ -164,8 +164,9 @@ export async function PUT(
         await tx.installment.deleteMany({ where: { salesOrderId: id } });
       }
 
-      // 4) Reverse original customer debt
-      if (originalDebt > 0) {
+      // 4) Reverse original customer debt (including consumed under-account
+      // credit) and drop the statement rows we recorded for the credit usage.
+      if (originalRemainingDelta > 0) {
         const debtBefore = await tx.customer.findUnique({
           where: { id: existing.customerId },
           select: { totalDebt: true, remainingDebt: true },
@@ -173,16 +174,19 @@ export async function PUT(
         await tx.customer.update({
           where: { id: existing.customerId },
           data: {
-            totalDebt: Math.max(0, (debtBefore?.totalDebt ?? 0) - originalDebt),
-            remainingDebt: Math.max(0, (debtBefore?.remainingDebt ?? 0) - originalDebt),
+            totalDebt: Math.max(0, (debtBefore?.totalDebt ?? 0) - originalUnpaid),
+            remainingDebt: (debtBefore?.remainingDebt ?? 0) - originalRemainingDelta,
           },
         });
         await tx.customerLedger.upsert({
           where: { customerId_companyId: { customerId: existing.customerId, companyId: existing.companyId } },
-          update: { balance: { decrement: originalDebt } },
-          create: { customerId: existing.customerId, companyId: existing.companyId, balance: 0 },
+          update: { balance: { decrement: originalRemainingDelta } },
+          create: { customerId: existing.customerId, companyId: existing.companyId, balance: -originalRemainingDelta },
         });
       }
+      await tx.customerPayment.deleteMany({
+        where: { customerId: existing.customerId, notes: { contains: id } },
+      });
 
       // 5) Deduct new stock
       if (warehouse) {
@@ -213,7 +217,16 @@ export async function PUT(
           }
         : undefined;
 
-      // 6) Update the order header (keep same id to preserve references)
+      // 6) Compute how the new invoice total is covered (under-account credit is
+      // consumed FIRST, then the user-provided upfront cash), and read the new
+      // customer's balance fresh since step 4 may have reversed the old customer.
+      const customerNow = await tx.customer.findUnique({
+        where: { id: customerId },
+        select: { remainingDebt: true },
+      });
+      const creditSplit = computeCreditSplit(total, customerNow?.remainingDebt ?? 0, Number(raw.paidAmount) || 0, paymentMethod);
+      const initialPaidAmount = creditSplit.paidAmount;
+
       await tx.salesOrder.update({
         where: { id },
         data: {
@@ -230,25 +243,54 @@ export async function PUT(
           isTaxInvoice,
           total,
           paidAmount: initialPaidAmount,
+          creditUsed: creditSplit.creditUsed,
           tradeInTotal: 0,
           ...(installmentData && { installments: installmentData }),
         },
       });
 
-      // 7) Apply new customer debt (only the unpaid portion)
-      if (paymentMethod !== "CASH") {
-        const newDebt = Math.max(0, total - initialPaidAmount);
-        if (newDebt > 0) {
-          await tx.customer.update({
-            where: { id: customerId },
-            data: { totalDebt: { increment: newDebt }, remainingDebt: { increment: newDebt } },
-          });
-          await tx.customerLedger.upsert({
-            where: { customerId_companyId: { customerId, companyId } },
-            update: { balance: { increment: newDebt } },
-            create: { customerId, companyId, balance: newDebt },
-          });
-        }
+      // 7) Apply new customer balance:
+      //    - unpaid  => new debt (totalDebt + remainingDebt)
+      //    - creditUsed => under-account money consumed by this invoice
+      const remainingDelta = creditSplit.unpaid + creditSplit.creditUsed;
+      if (remainingDelta > 0 || creditSplit.unpaid > 0) {
+        await tx.customer.update({
+          where: { id: customerId },
+          data: {
+            ...(creditSplit.unpaid > 0 ? { totalDebt: { increment: creditSplit.unpaid } } : {}),
+            ...(remainingDelta > 0 ? { remainingDebt: { increment: remainingDelta } } : {}),
+          },
+        });
+        await tx.customerLedger.upsert({
+          where: { customerId_companyId: { customerId, companyId } },
+          update: { balance: { increment: remainingDelta } },
+          create: { customerId, companyId, balance: remainingDelta },
+        });
+      }
+
+      // Record how the invoice was covered so the statement shows it clearly.
+      const paymentEffectiveDate = raw.orderDate ? new Date(raw.orderDate) : existing.orderDate;
+      if (creditSplit.creditUsed > 0) {
+        await tx.customerPayment.create({
+          data: {
+            customerId,
+            companyId,
+            amount: creditSplit.creditUsed,
+            paymentDate: paymentEffectiveDate,
+            notes: creditUsedNote(id),
+          },
+        });
+      }
+      if (paymentMethod !== "CASH" && creditSplit.cashUpfront > 0) {
+        await tx.customerPayment.create({
+          data: {
+            customerId,
+            companyId,
+            amount: creditSplit.cashUpfront,
+            paymentDate: paymentEffectiveDate,
+            notes: `دفع مبدئي مع فاتورة بيع ${id}`,
+          },
+        });
       }
 
       // 8) Create new items + trade-in

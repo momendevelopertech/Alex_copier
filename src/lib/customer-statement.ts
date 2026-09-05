@@ -20,7 +20,8 @@ export interface CustomerStatement {
   rows: StatementRow[];
   openingBalance: number;
   totalBilled: number; // total debt (customer.totalDebt) — total billed to the customer
-  totalPaid: number; // total paid toward the debt (totalDebt - remainingDebt)
+  totalPaid: number; // total paid toward the debt (totalDebt - remainingDebt, capped at totalDebt)
+  creditBalance: number; // money under the customer's account when closingBalance is negative
   closingBalance: number;
 }
 
@@ -190,7 +191,10 @@ export async function buildCustomerStatement(customerId: string): Promise<Custom
     rows,
     openingBalance,
     totalBilled: round2(customer.totalDebt),
-    totalPaid: round2(Math.max(0, customer.totalDebt - customer.remainingDebt)),
+    // Cap at totalDebt: overpayments become credit (negative remainingDebt) and
+    // must not inflate the "paid" figure beyond what was actually billed.
+    totalPaid: round2(Math.min(customer.totalDebt, Math.max(0, customer.totalDebt - customer.remainingDebt))),
+    creditBalance: round2(Math.max(0, -(customer.totalDebt - customer.remainingDebt))),
     closingBalance: round2(balance),
   };
 }

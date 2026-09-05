@@ -149,7 +149,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           where: { id: existing.customerId! },
           data: {
             totalDebt: Math.max(0, (debtBefore?.totalDebt ?? 0) - origDebt),
-            remainingDebt: Math.max(0, (debtBefore?.remainingDebt ?? 0) - origDebt),
+            // No floor clamp: reversal re-instates any under-account credit.
+            remainingDebt: (debtBefore?.remainingDebt ?? 0) - origDebt,
           },
         });
         await tx.customerLedger.upsert({

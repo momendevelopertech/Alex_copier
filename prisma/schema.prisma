@@ -774,6 +774,7 @@ model SalesOrder {
   paymentMethod PaymentMethod
   paymentStatus PaymentStatus    @default(PENDING)
   paidAmount    Float            @default(0)
+  creditUsed    Float            @default(0)
   tradeInTotal  Float            @default(0)
   notes         String?
   orderDate     DateTime

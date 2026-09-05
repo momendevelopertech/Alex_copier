@@ -185,7 +185,9 @@ export async function POST(request: Request) {
         });
         await tx.customer.update({
           where: { id: salesOrder.customerId },
-          data: { remainingDebt: Math.max(0, (debtBefore?.remainingDebt ?? 0) - total) },
+          // No floor clamp: money back beyond the outstanding debt becomes credit
+          // under the customer's account (رصيد تحت الحساب).
+          data: { remainingDebt: (debtBefore?.remainingDebt ?? 0) - total },
         });
 
         // Recalculate payment status for the parent order

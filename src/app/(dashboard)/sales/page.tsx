@@ -44,7 +44,7 @@ const paymentStatusColors: Record<string, string> = {
   OVERDUE: "bg-red-100 text-red-800",
 };
 
-interface Customer { id: string; name: string; }
+interface Customer { id: string; name: string; remainingDebt?: number; }
 interface Company { id: string; name: string; }
 interface Engineer { id: string; name: string; email?: string | null; }
 interface SalesCategory { id: string; name: string; companyId: string; }
@@ -570,12 +570,24 @@ export default function SalesPage() {
                 setForm((f) => ({ ...f, customerId: item.id }));
               }}
             />
+            {(() => {
+              const sel = customers.find((c) => c.id === form.customerId);
+              if (sel && (sel.remainingDebt ?? 0) < 0) {
+                const credit = Math.abs(sel.remainingDebt ?? 0);
+                return (
+                  <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-semibold text-green-700 md:col-span-2">
+                    {t("sales.creditNotice")}: {credit.toLocaleString("ar-EG")} ج.م
+                  </div>
+                );
+              }
+              return null;
+            })()}
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">المهندس (اختياري)</label><select value={form.engineerId} onChange={(e) => setForm({ ...form, engineerId: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="">المهندس (اختياري)</option>{engineers.map((engineer) => (<option key={engineer.id} value={engineer.id}>{engineer.name}</option>))}</select></div>
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">نوع الطلب</label><select value={form.orderType} onChange={(e) => setForm({ ...form, orderType: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="MACHINE_SALE">{ORDER_TYPE_LABELS.MACHINE_SALE}</option><option value="SPARE_PART_SALE">{ORDER_TYPE_LABELS.SPARE_PART_SALE}</option></select></div>
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("sales.category")}</label><select value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="">{t("sales.noCategory")}</option>{salesCategories.filter((c) => !form.companyId || c.companyId === form.companyId).map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></div>
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">طريقة الدفع</label><select value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="CASH">{PAYMENT_METHOD_LABELS.CASH}</option><option value="CREDIT">{PAYMENT_METHOD_LABELS.CREDIT}</option><option value="INSTALLMENT">{PAYMENT_METHOD_LABELS.INSTALLMENT}</option><option value="MIXED">{PAYMENT_METHOD_LABELS.MIXED}</option></select></div>
             {form.paymentMethod !== "CASH" && (
-              <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">المبلغ المدفوع مقدماً (ج.م) <span className="text-xs text-gray-400">— اختياري للدفع الجزئي</span></label><input type="number" min="0" step="0.01" placeholder="0.00" value={form.paidAmount} onChange={(e) => setForm({ ...form, paidAmount: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+              <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">المبلغ المدفوع نقداً (ج.م) <span className="text-xs font-normal text-gray-400">— يُخصم رصيد تحت الحساب تلقائياً أولاً</span></label><input type="number" min="0" step="0.01" placeholder="0.00" value={form.paidAmount} onChange={(e) => setForm({ ...form, paidAmount: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
             )}
             <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">الضريبة</label><div className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2.5"><input id="isTaxInvoice" type="checkbox" checked={form.isTaxInvoice} onChange={(e) => setForm({ ...form, isTaxInvoice: e.target.checked, taxRate: e.target.checked ? "14" : "0" })} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" /><label htmlFor="isTaxInvoice" className="text-sm font-medium text-slate-700">فاتورة ضريبية</label>{form.isTaxInvoice && <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">14%</span>}</div></div>
             {form.isTaxInvoice && <div className="space-y-1.5"><label className="block text-sm font-medium text-slate-700">{t("sales.taxRate")}</label><input type="number" min="0" step="0.01" placeholder={t("sales.taxRate")} value={form.taxRate} onChange={(e) => setForm({ ...form, taxRate: e.target.value })} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>}

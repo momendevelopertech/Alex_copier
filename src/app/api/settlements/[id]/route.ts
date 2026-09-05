@@ -87,16 +87,43 @@ export async function PUT(
       return NextResponse.json({ error: "لا توجد بيانات للتحديث", code: "NO_CHANGES" }, { status: 400 });
     }
 
-    const settlement = await prisma.settlement.update({
-      where: { id },
-      data,
-      include: {
-        company: true,
-        customer: true,
-        engineer: true,
-        collector: true,
-        verifier: true,
-      },
+    const verifyingNow = body.status === "VERIFIED" && existing.status !== "VERIFIED";
+
+    const settlement = await prisma.$transaction(async (tx) => {
+      const updated = await tx.settlement.update({
+        where: { id },
+        data,
+        include: {
+          company: true,
+          customer: true,
+          engineer: true,
+          collector: true,
+          verifier: true,
+        },
+      });
+
+      // Post the settlement to the customer's balance the moment it is verified:
+      // ADDITION = money collected (reduces their debt; any excess becomes money
+      // under their account = رصيد تحت الحساب). SUBTRACTION = money given to the
+      // customer (increases their debt).
+      if (verifyingNow && updated.customerId) {
+        const effect = updated.direction === "SUBTRACTION" ? updated.amount : -updated.amount;
+        const debtBefore = await tx.customer.findUnique({
+          where: { id: updated.customerId },
+          select: { remainingDebt: true },
+        });
+        await tx.customer.update({
+          where: { id: updated.customerId },
+          data: { remainingDebt: (debtBefore?.remainingDebt ?? 0) + effect },
+        });
+        await tx.customerLedger.upsert({
+          where: { customerId_companyId: { customerId: updated.customerId, companyId: updated.companyId } },
+          update: { balance: { increment: effect } },
+          create: { customerId: updated.customerId, companyId: updated.companyId, balance: effect },
+        });
+      }
+
+      return updated;
     });
 
     if (settlement.status === "VERIFIED" && existing.status !== "VERIFIED") {

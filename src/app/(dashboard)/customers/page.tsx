@@ -153,7 +153,9 @@ export default function CustomersPage() {
   const stats = useMemo(() => {
     const totalRemaining = filtered.reduce((sum, c) => sum + (c.remainingDebt || 0), 0);
     const debtorsCount = filtered.filter((c) => (c.remainingDebt || 0) > 0).length;
-    return { totalRemaining, debtorsCount };
+    const creditCount = filtered.filter((c) => (c.remainingDebt || 0) < 0).length;
+    const totalCredit = filtered.reduce((sum, c) => sum + Math.max(0, -(c.remainingDebt || 0)), 0);
+    return { totalRemaining, debtorsCount, creditCount, totalCredit };
   }, [filtered]);
 
   const resetFilters = () => {
@@ -424,7 +426,7 @@ export default function CustomersPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
           <p className="text-xs font-medium text-amber-600">{t("customers.statsTotalRemaining")}</p>
           <p className="mt-1 text-lg font-bold text-amber-700">{stats.totalRemaining.toLocaleString("ar-EG")} ج.م</p>
@@ -432,6 +434,12 @@ export default function CustomersPage() {
         <div className="rounded-xl border border-red-200 bg-red-50 p-3">
           <p className="text-xs font-medium text-red-500">{t("customers.statsDebtors")}</p>
           <p className="mt-1 text-lg font-bold text-red-600">{stats.debtorsCount}</p>
+        </div>
+        <div className="rounded-xl border border-green-200 bg-green-50 p-3">
+          <p className="text-xs font-medium text-green-600">{t("customers.statsTotalCredit")}</p>
+          <p className="mt-1 text-lg font-bold text-green-700">
+            {stats.creditCount > 0 ? `${stats.totalCredit.toLocaleString("ar-EG")} ج.م (${stats.creditCount})` : "—"}
+          </p>
         </div>
       </div>
 
@@ -555,11 +563,9 @@ export default function CustomersPage() {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-bold text-amber-800">حساب العميل</h3>
                 <div className="flex gap-2">
-                  {selected.remainingDebt > 0 && (
-                    <button onClick={() => openPaymentModal(selected)} className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-green-700">
-                      تسجيل دفعة
-                    </button>
-                  )}
+                  <button onClick={() => openPaymentModal(selected)} className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-green-700">
+                    تسجيل دفعة
+                  </button>
                   <button onClick={() => openStatement(selected)} className="inline-flex items-center gap-1 rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-sky-700" title={t("statement.openStatement")}>
                     {t("statement.openStatement")}
                   </button>
@@ -574,9 +580,9 @@ export default function CustomersPage() {
                   <span className="mt-1 block text-lg font-bold text-slate-800">{selected.totalDebt.toLocaleString("ar-EG")} ج.م</span>
                 </div>
                 <div className="rounded-lg bg-white p-3 border border-amber-200">
-                  <span className="block text-xs text-gray-500">المتبقي</span>
+                  <span className="block text-xs text-gray-500">{selected.remainingDebt < 0 ? t("customers.underAccount") : "المتبقي"}</span>
                   <span className={`mt-1 block text-lg font-bold ${selected.remainingDebt > 0 ? "text-red-600" : "text-green-600"}`}>
-                    {selected.remainingDebt.toLocaleString("ar-EG")} ج.م
+                    {(selected.remainingDebt < 0 ? Math.abs(selected.remainingDebt) : selected.remainingDebt).toLocaleString("ar-EG")} ج.م
                   </span>
                 </div>
                 <div className="rounded-lg bg-white p-3 border border-amber-200">
@@ -613,6 +619,11 @@ export default function CustomersPage() {
               {selected.remainingDebt === 0 && selected.totalDebt > 0 && (
                 <div className="rounded-lg bg-green-100 p-2 text-center text-sm font-semibold text-green-700">
                   تم السداد بالكامل
+                </div>
+              )}
+              {selected.remainingDebt < 0 && (
+                <div className="rounded-lg bg-emerald-100 p-2 text-center text-sm font-semibold text-emerald-700">
+                  {t("customers.creditAvailable")}: {Math.abs(selected.remainingDebt).toLocaleString("ar-EG")} ج.م — {t("customers.creditHint")}
                 </div>
               )}
             </div>
@@ -794,19 +805,24 @@ export default function CustomersPage() {
                     <td className="px-4 py-3 text-sm font-medium">{customer.totalDebt > 0 ? `${customer.totalDebt.toLocaleString("ar-EG")} ج.م` : "—"}</td>
                     <td className="px-4 py-3 text-sm">
                       {customer.remainingDebt !== 0 ? (
-                        <span className={`font-semibold ${customer.remainingDebt > 0 ? "text-red-600" : "text-orange-600"}`}>
-                          {customer.remainingDebt.toLocaleString("ar-EG")} ج.م
+                        <span className={`inline-flex items-center gap-1.5 ${customer.remainingDebt > 0 ? "font-semibold text-red-600" : "font-semibold text-green-600"}`}>
+                          {customer.remainingDebt > 0 ? (
+                            <>{customer.remainingDebt.toLocaleString("ar-EG")} ج.م</>
+                          ) : (
+                            <>
+                              <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">{t("customers.underAccount")}</span>
+                              {Math.abs(customer.remainingDebt).toLocaleString("ar-EG")} ج.م
+                            </>
+                          )}
                         </span>
                       ) : "—"}
                     </td>
                     <td className="px-4 py-3 text-sm">{customer.lastPaymentDate ? date(customer.lastPaymentDate) : "—"}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                        {customer.remainingDebt > 0 && (
-                          <button onClick={() => openPaymentModal(customer)} className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-1.5 text-xs font-medium text-green-700 transition hover:bg-green-100" title="تسجيل دفعة">
-                            دفع
-                          </button>
-                        )}
+                        <button onClick={() => openPaymentModal(customer)} className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-2.5 py-1.5 text-xs font-medium text-green-700 transition hover:bg-green-100" title="تسجيل دفعة">
+                          دفع
+                        </button>
                         <button onClick={() => openStatement(customer)} className="inline-flex items-center gap-1 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1.5 text-xs font-medium text-sky-700 transition hover:bg-sky-100" title={t("statement.openStatement")}>
                           كشف حساب
                         </button>
@@ -849,7 +865,12 @@ export default function CustomersPage() {
           {paymentCustomer && paymentCustomer.totalDebt > 0 && (
             <div className="rounded-lg bg-gray-50 p-3 text-sm">
               <div className="flex justify-between"><span className="text-gray-500">الدين الكلي:</span><span className="font-medium">{paymentCustomer.totalDebt.toLocaleString("ar-EG")} ج.م</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">المتبقي:</span><span className="font-bold text-red-600">{paymentCustomer.remainingDebt.toLocaleString("ar-EG")} ج.م</span></div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">{paymentCustomer.remainingDebt < 0 ? t("customers.underAccount") : "المتبقي:"}</span>
+                <span className={`font-bold ${paymentCustomer.remainingDebt > 0 ? "text-red-600" : "text-green-600"}`}>
+                  {(paymentCustomer.remainingDebt < 0 ? Math.abs(paymentCustomer.remainingDebt) : paymentCustomer.remainingDebt).toLocaleString("ar-EG")} ج.م
+                </span>
+              </div>
             </div>
           )}
           <div className="space-y-1.5">
@@ -864,9 +885,23 @@ export default function CustomersPage() {
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-slate-700">المبلغ *</label>
             <input type="number" min="0.01" step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" required />
-            {paymentCustomer && paymentCustomer.remainingDebt > 0 && paymentAmount && (
-              <p className="text-xs text-gray-500">المتبقي بعد الدفع: {Math.max(0, paymentCustomer.remainingDebt - parseFloat(paymentAmount || "0")).toLocaleString("ar-EG")} ج.م</p>
+            {paymentCustomer && paymentAmount && (
+              (() => {
+                const after = paymentCustomer.remainingDebt - parseFloat(paymentAmount || "0");
+                if (after > 0) {
+                  return <p className="text-xs text-gray-500">المتبقي بعد الدفع: {after.toLocaleString("ar-EG")} ج.م</p>;
+                }
+                if (after < 0) {
+                  return (
+                    <p className="rounded-lg bg-emerald-50 px-2 py-1.5 text-xs font-semibold text-emerald-700">
+                      {t("customers.creditHint")}: {Math.abs(after).toLocaleString("ar-EG")} ج.م
+                    </p>
+                  );
+                }
+                return <p className="text-xs text-green-600">تم تسديد كامل المديونية</p>;
+              })()
             )}
+            {paymentCustomer && <p className="text-xs text-gray-400">{t("customers.paymentExcessHint")}</p>}
           </div>
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-slate-700">تاريخ الدفع</label>

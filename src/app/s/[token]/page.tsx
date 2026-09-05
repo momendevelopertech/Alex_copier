@@ -26,6 +26,7 @@ interface Statement {
   openingBalance: number;
   totalBilled: number;
   totalPaid: number;
+  creditBalance: number;
   closingBalance: number;
 }
 
@@ -148,7 +149,11 @@ export default function StatementPage({ params }: { params: Promise<{ token: str
             <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
               <Stat label={t("statement.totalBilled")} value={money(data.totalBilled)} tone="text-blue-700" />
               <Stat label={t("statement.totalPaid")} value={money(data.totalPaid)} tone="text-green-700" />
-              <Stat label={t("statement.currentDebt")} value={money(data.closingBalance)} tone={data.closingBalance > 0 ? "text-red-600" : "text-green-600"} />
+              {data.closingBalance < 0 ? (
+                <Stat label={t("statement.creditBalance")} value={money(data.creditBalance)} tone="text-green-700" />
+              ) : (
+                <Stat label={t("statement.currentDebt")} value={money(data.closingBalance)} tone={data.closingBalance > 0 ? "text-red-600" : "text-green-600"} />
+              )}
               <Stat label={t("statement.lastUpdate")} value={formatDate(new Date().toISOString())} tone="text-gray-700" />
             </div>
 
@@ -207,9 +212,16 @@ export default function StatementPage({ params }: { params: Promise<{ token: str
                 </div>
                 <div className="flex items-center justify-between border-t border-slate-200 bg-gray-50 px-4 py-3">
                   <span className="text-sm font-medium text-gray-600">{t("statement.closingBalance")}</span>
-                  <span className={`text-lg font-bold ${data.closingBalance > 0 ? "text-red-600" : "text-green-600"}`}>
-                    {money(data.closingBalance)}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    {data.closingBalance < 0 && (
+                      <span className="text-xs font-semibold text-green-600">
+                        <span dir="auto">{t("statement.creditBalance")}</span> — {money(data.creditBalance)}
+                      </span>
+                    )}
+                    <span className={`text-lg font-bold ${data.closingBalance > 0 ? "text-red-600" : "text-green-600"}`}>
+                      {money(data.closingBalance)}
+                    </span>
+                  </div>
                 </div>
               </>
             )}

@@ -107,7 +107,9 @@ export async function POST(
     }
 
     const paymentAmount = Number(amount);
-    const newRemaining = Math.max(0, customer.remainingDebt - paymentAmount);
+    // No floor clamp: any payment beyond the outstanding debt becomes money
+    // under the customer's account (رصيد تحت الحساب) instead of being lost.
+    const newRemaining = customer.remainingDebt - paymentAmount;
     const payDate = paymentDate ? new Date(paymentDate) : new Date();
 
     const payment = await prisma.$transaction(async (tx) => {

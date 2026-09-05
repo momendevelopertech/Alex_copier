@@ -303,7 +303,12 @@
     "noLocations": "لا توجد فروع مسجلة لهذا العميل",
     "deleteLocationConfirm": "هل أنت متأكد من حذف هذا الفرع؟",
     "statsTotalRemaining": "اجمالي المتبقي",
-    "statsDebtors": "عليهم فلوس متبقيه"
+    "statsDebtors": "عليهم فلوس متبقيه",
+    "statsTotalCredit": "لديهم رصيد تحت الحساب",
+    "underAccount": "رصيد تحت الحساب",
+    "creditAvailable": "رصيد تحت الحساب المتاح",
+    "creditHint": "يُخصم تلقائياً من فواتير البيع القادمة",
+    "paymentExcessHint": "أي مبلغ يزيد عن المديونية يتحول تلقائياً لرصيد تحت الحساب للعميل"
   },
   "suppliers": {
     "title": "الموردون",
@@ -463,6 +468,7 @@
     "paymentMethod": "طريقة الدفع",
     "paymentStatus": "حالة الدفع",
     "selectCustomer": "اختر العميل",
+    "creditNotice": "العميل له رصيد تحت الحساب وسيُخصم من الفاتورة",
     "orderType": "نوع الطلب",
     "machineSale": "بيع جهاز",
     "sparePartSale": "بيع قطع غيار",
@@ -582,7 +588,9 @@
     "companyFilter": "الشركة",
     "direction": "الاتجاه",
     "directionAddition": "إضافة (+)",
-    "directionSubtraction": "طرح (−)"
+    "directionSubtraction": "طرح (−)",
+    "debtPreview": "مديونية العميل حالياً",
+    "creditHint": "بعد الاعتماد يُخصم المبلغ من مديونية العميل، وأي فائض يتحول لرصيد تحت حسابه"
   },
   "reports": {
     "title": "التقارير",
@@ -823,6 +831,7 @@
     "totalBilled": "إجمالي المديونية",
     "totalPaid": "إجمالي المسدد",
     "currentDebt": "المتبقي",
+    "creditBalance": "رصيد تحت الحساب (دائن)",
     "date": "التاريخ والساعة",
     "description": "البيان",
     "amount": "المبلغ",

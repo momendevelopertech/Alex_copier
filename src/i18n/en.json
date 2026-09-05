@@ -310,7 +310,12 @@
     "noLocations": "No branches registered for this customer",
     "deleteLocationConfirm": "Are you sure you want to delete this branch?",
     "statsTotalRemaining": "Total Remaining",
-    "statsDebtors": "Customers with Debt"
+    "statsDebtors": "Customers with Debt",
+    "statsTotalCredit": "With Under-Account Credit",
+    "underAccount": "Under-account",
+    "creditAvailable": "Available under-account credit",
+    "creditHint": "Auto-deducted from upcoming sales invoices",
+    "paymentExcessHint": "Any amount above the outstanding debt automatically becomes under-account credit for the customer"
   },
   "suppliers": {
     "title": "Suppliers",
@@ -470,6 +475,7 @@
     "paymentMethod": "Payment Method",
     "paymentStatus": "Payment Status",
     "selectCustomer": "Select Customer",
+    "creditNotice": "This customer has under-account credit and it will be deducted from this invoice",
     "orderType": "Order Type",
     "machineSale": "Machine Sale",
     "sparePartSale": "Spare Part Sale",
@@ -588,7 +594,9 @@
     "companyFilter": "Company",
     "direction": "Direction",
     "directionAddition": "Addition (+)",
-    "directionSubtraction": "Subtraction (−)"
+    "directionSubtraction": "Subtraction (−)",
+    "debtPreview": "Customer current debt",
+    "creditHint": "On verification the amount reduces the customer's debt; any excess becomes under-account credit"
   },
   "reports": {
     "title": "Reports",
@@ -822,6 +830,7 @@
     "totalBilled": "Total billed",
     "totalPaid": "Total paid",
     "currentDebt": "Outstanding",
+    "creditBalance": "Under-account credit",
     "date": "Date & time",
     "description": "Description",
     "amount": "Amount",

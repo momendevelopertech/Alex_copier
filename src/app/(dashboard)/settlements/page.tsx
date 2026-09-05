@@ -20,7 +20,7 @@ import { apiErrorMessage } from "@/lib/api-client";
 import SubmitButton from "@/components/SubmitButton";
 
 interface Company { id: string; name: string; }
-interface Customer { id: string; name: string; }
+interface Customer { id: string; name: string; remainingDebt?: number; }
 interface Engineer { id: string; name: string; }
 interface User { id: string; name: string; }
 interface Settlement {
@@ -201,6 +201,24 @@ export default function SettlementsPage() {
               setForm((f) => ({ ...f, customerId: item.id }));
             }}
           />
+          {(() => {
+            const sel = customers.find((c) => c.id === form.customerId);
+            if (sel && (sel.remainingDebt ?? 0) !== 0) {
+              const debt = sel.remainingDebt ?? 0;
+              const isAddition = form.direction === "ADDITION";
+              return (
+                <div className={`rounded-lg border px-3 py-2 text-xs font-semibold md:col-span-2 ${debt > 0 ? "border-amber-200 bg-amber-50 text-amber-700" : "border-green-200 bg-green-50 text-green-700"}`}>
+                  {debt > 0
+                    ? `${t("settlements.debtPreview")}: ${debt.toLocaleString("ar-EG")} ج.م`
+                    : `${t("customers.underAccount")}: ${Math.abs(debt).toLocaleString("ar-EG")} ج.م`}
+                  {isAddition && (
+                    <span className="mt-0.5 block text-xs font-normal text-gray-500">{t("settlements.creditHint")}</span>
+                  )}
+                </div>
+              );
+            }
+            return null;
+          })()}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">{t("common.engineer")}</label>
             <select value={form.engineerId} onChange={(e) => setForm({ ...form, engineerId: e.target.value })} className={INPUT}>
