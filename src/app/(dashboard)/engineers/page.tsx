@@ -6,7 +6,7 @@ import Pagination from "@/components/Pagination";
 import SearchInput, { matchesQuery } from "@/components/SearchInput";
 import ExportButton from "@/components/ExportButton";
 import PrinterLoader from "@/components/PrinterLoader";
-import { Pencil, Plus, Trash2, Package, Eye, Save } from "lucide-react";
+import { Pencil, Plus, Trash2, Package, Eye, Save, ScrollText, Link2 } from "lucide-react";
 import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
@@ -121,6 +121,40 @@ export default function EngineersPage() {
   const openEngineerDetail = (engineer: Engineer) => {
     setSelected(engineer);
     fetchEngineerSales(engineer.id);
+  };
+
+  const getStatementToken = async (engineer: Engineer): Promise<string | null> => {
+    try {
+      const res = await fetch(`/api/engineers/${engineer.id}/statement-token`, { method: "POST" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.token) {
+        toastError(apiErrorMessage(data, t));
+        return null;
+      }
+      return data.token as string;
+    } catch {
+      toastError(t("common.error"));
+      return null;
+    }
+  };
+
+  const openStatement = async (engineer: Engineer) => {
+    const token = await getStatementToken(engineer);
+    if (!token) return;
+    const origin = window.location.origin;
+    window.open(`${origin}/e/${encodeURIComponent(token)}`, "_blank", "noopener,noreferrer");
+  };
+
+  const copyStatementLink = async (engineer: Engineer) => {
+    const token = await getStatementToken(engineer);
+    if (!token) return;
+    const url = `${window.location.origin}/e/${encodeURIComponent(token)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toastSuccess(t("statement.linkCopied"));
+    } catch {
+      toastError(t("common.error"));
+    }
   };
 
   const openEditEngineer = (engineer: Engineer) => {
@@ -405,9 +439,16 @@ export default function EngineersPage() {
               <div className="mt-4">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold text-slate-900">{t("engineers.salesHistory")}</h3>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                    <Package size={13} />{engineerSales.length}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                      <Package size={13} />{engineerSales.length}
+                    </span>
+                    {engineerSales.length > 0 && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                        {t("engineerStatement.totalSales")}: {engineerSales.reduce((sum, s) => sum + (s.total || 0), 0).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="overflow-x-auto rounded-xl border border-gray-200">
                   <table className="w-full text-sm">
@@ -440,6 +481,12 @@ export default function EngineersPage() {
 
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setSelected(null)} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">{t("common.close")}</button>
+              <button onClick={() => openStatement(selected)} className="inline-flex items-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-semibold text-sky-700 transition hover:bg-sky-100" title={t("statement.openStatement")}>
+                <ScrollText size={14} />{t("statement.openStatement")}
+              </button>
+              <button onClick={() => copyStatementLink(selected)} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100" title={t("statement.copyLink")}>
+                <Link2 size={14} />{t("statement.copyLink")}
+              </button>
               <button onClick={() => openEditEngineer(selected)} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700">
                 <Pencil size={14} />{t("common.edit")}
               </button>
@@ -528,6 +575,9 @@ export default function EngineersPage() {
                       <div className="flex gap-2">
                         <button onClick={(e) => { e.stopPropagation(); openEngineerDetail(engineer); }} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2 text-xs font-medium text-gray-600 transition hover:bg-gray-100" title={t("common.view")}>
                           <Eye size={14} />{t("common.view")}
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); openStatement(engineer); }} className="inline-flex items-center gap-1 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-2 text-xs font-medium text-sky-700 transition hover:bg-sky-100" title={t("statement.openStatement")}>
+                          <ScrollText size={14} />{t("statement.openStatement")}
                         </button>
                         <button onClick={(e) => { e.stopPropagation(); openEditEngineer(engineer); }} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2 text-xs font-medium text-blue-600 transition hover:bg-blue-100" title={t("common.edit")}>
                           <Pencil size={14} />{t("common.edit")}

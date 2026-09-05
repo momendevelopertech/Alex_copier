@@ -261,6 +261,7 @@ model Engineer {
   transportAllowance Float    @default(2000)
   commissionRate     Float    @default(25)
   isActive           Boolean  @default(true)
+  statementToken     String?  @unique
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
