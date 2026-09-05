@@ -18,6 +18,9 @@ import { useConfirm, useToast } from "@/components/UIProvider";
 import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 import { apiErrorMessage } from "@/lib/api-client";
 import SubmitButton from "@/components/SubmitButton";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 interface Company { id: string; name: string; }
 interface Customer { id: string; name: string; remainingDebt?: number; }
@@ -78,6 +81,7 @@ export default function SettlementsPage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+  const { refresh, refreshing } = useAutoRefresh(fetchData, ["settlements", "customers", "engineers", "sales"]);
 
   const autoAddOpen = useAutoAddForm();
   useEffect(() => {
@@ -93,7 +97,8 @@ export default function SettlementsPage() {
     });
     setSaving(false);
     setForm({ companyId: "", customerId: "", engineerId: "", amount: "", paymentMethod: "CASH", reason: "", direction: "ADDITION" });
-    setShowForm(false); fetchData();
+    setShowForm(false); refresh();
+    notifyDataChanged(["settlements", "customers", "sales", "engineers"]);
   };
 
   const handleVerify = async (id: string) => {
@@ -104,7 +109,8 @@ export default function SettlementsPage() {
     } else {
       toastSuccess(t("common.savedSuccessfully"));
     }
-    fetchData();
+    refresh();
+    notifyDataChanged(["settlements", "customers", "sales", "engineers"]);
   };
 
   const handleDelete = async (id: string) => {
@@ -112,7 +118,8 @@ export default function SettlementsPage() {
     const res = await fetch(`/api/settlements/${id}`, { method: "DELETE" });
     const data = await res.json().catch(() => null);
     if (!res.ok) { toastError(apiErrorMessage(data, t)); return; }
-    fetchData();
+    refresh();
+    notifyDataChanged(["settlements", "customers", "sales", "engineers"]);
     toastSuccess(t("common.deletedSuccessfully"));
   };
 
@@ -269,6 +276,7 @@ export default function SettlementsPage() {
             </button>
           )}
           <div className="md:ms-auto mt-2 md:mt-0">
+            <RefreshButton onRefresh={refresh} refreshing={refreshing} />
             <ExportButton filename="settlements" getExport={exportSettlements} disabled={filtered.length === 0} />
           </div>
         </div>

@@ -12,6 +12,9 @@ import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 import { apiErrorMessage } from "@/lib/api-client";
 import { Save } from "lucide-react";
 import SubmitButton from "@/components/SubmitButton";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 interface InventoryItem {
   id: string;
@@ -134,6 +137,7 @@ export default function InventoryPage() {
   useEffect(() => {
     fetchInventory();
   }, []);
+  const { refresh, refreshing } = useAutoRefresh(fetchInventory, ["inventory", "products", "purchases", "returns", "warehouses", "sales"]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,7 +156,8 @@ export default function InventoryPage() {
     setSaving(false);
     setForm({ warehouseId: "", productId: "", quantity: 1, movementType: "PURCHASE_IN", notes: "" });
     setShowForm(false);
-    fetchInventory();
+    refresh();
+    notifyDataChanged(["inventory", "products", "warehouses"]);
     toastSuccess(t("common.savedSuccessfully"));
   };
 
@@ -256,6 +261,7 @@ export default function InventoryPage() {
             </button>
           )}
           <div className="md:ms-auto mt-2 md:mt-0">
+            <RefreshButton onRefresh={refresh} refreshing={refreshing} />
             <ExportButton filename="inventory" getExport={exportInventory} disabled={filtered.length === 0} />
           </div>
         </div>

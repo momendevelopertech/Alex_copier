@@ -11,6 +11,9 @@ import FormModal from "@/components/FormModal";
 import SubmitButton from "@/components/SubmitButton";
 import { DateTimeCell } from "@/components/DateTimeCell";
 import { Save } from "lucide-react";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 interface Machine {
   id: string;
@@ -103,6 +106,7 @@ export default function WorkshopPage() {
   useEffect(() => {
     fetchMachines();
   }, []);
+  const { refresh, refreshing } = useAutoRefresh(fetchMachines, ["workshop", "machines"]);
 
   const handleScrap = async (e: React.FormEvent, machineId: string) => {
     e.preventDefault();
@@ -115,7 +119,8 @@ export default function WorkshopPage() {
     setSaving(false);
     setScrapForm({ reason: "", approvedBy: "", scrapValue: 0 });
     setScrapTarget(null);
-    fetchMachines();
+    refresh();
+    notifyDataChanged(["workshop", "machines"]);
   };
 
   return (
@@ -137,6 +142,7 @@ export default function WorkshopPage() {
             </button>
           )}
           <div className="md:ms-auto mt-2 md:mt-0">
+            <RefreshButton onRefresh={refresh} refreshing={refreshing} />
             <ExportButton filename="workshop-machines" getExport={exportWorkshop} disabled={filtered.length === 0} />
           </div>
         </div>

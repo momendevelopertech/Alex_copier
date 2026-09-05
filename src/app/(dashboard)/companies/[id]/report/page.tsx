@@ -7,6 +7,8 @@ import PrinterLoader from "@/components/PrinterLoader";
 import { DateTimeCell } from "@/components/DateTimeCell";
 import { ArrowLeft, ArrowDownRight, ArrowUpRight, Printer } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 
 interface ReportData {
   company: {
@@ -248,6 +250,10 @@ export default function CompanyReportPage() {
       .finally(() => setLoading(false));
   };
 
+  const { refresh, refreshing } = useAutoRefresh(fetchReport, [
+    "sales", "purchases", "settlements", "expenses", "returns", "companies",
+  ]);
+
   useEffect(() => {
     fetchReport();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -382,13 +388,16 @@ export default function CompanyReportPage() {
               <p className="text-sm text-gray-500">التقرير المالي — {from} إلى {to}</p>
             </div>
           </div>
-          <button
-            onClick={() => window.print()}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
-          >
-            <Printer size={16} />
-            طباعة
-          </button>
+          <div className="flex items-center gap-2">
+            <RefreshButton onRefresh={refresh} refreshing={refreshing} />
+            <button
+              onClick={() => window.print()}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
+            >
+              <Printer size={16} />
+              طباعة
+            </button>
+          </div>
         </div>
 
         <div className="no-print flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">

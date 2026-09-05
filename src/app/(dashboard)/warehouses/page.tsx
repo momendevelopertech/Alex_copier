@@ -14,6 +14,9 @@ import { apiErrorMessage } from "@/lib/api-client";
 import FormModal from "@/components/FormModal";
 import SubmitButton from "@/components/SubmitButton";
 import { DateTimeCell } from "@/components/DateTimeCell";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 interface Company {
   id: string;
@@ -111,6 +114,7 @@ export default function WarehousesPage() {
   useEffect(() => {
     fetchData();
   }, []);
+  const { refresh, refreshing } = useAutoRefresh(fetchData, ["warehouses", "inventory", "products", "purchases"]);
 
   const autoAddOpen = useAutoAddForm();
   useEffect(() => {
@@ -189,7 +193,8 @@ export default function WarehousesPage() {
       setShowForm(false);
       setForm(emptyForm);
       setEditingId(null);
-      await fetchData();
+      refresh();
+      notifyDataChanged(["warehouses", "inventory"]);
       toastSuccess(t("common.savedSuccessfully"));
     } finally {
       setSaving(false);
@@ -204,7 +209,8 @@ export default function WarehousesPage() {
       toastError(apiErrorMessage(data, t));
       return;
     }
-    await fetchData();
+    refresh();
+    notifyDataChanged(["warehouses", "inventory"]);
     toastSuccess(t("common.deletedSuccessfully"));
   };
 
@@ -406,7 +412,7 @@ export default function WarehousesPage() {
               {t("common.resetFilters")}
             </button>
           )}
-          <div className="md:ms-auto mt-2 md:mt-0"><ExportButton filename="warehouses" getExport={exportWarehouses} disabled={filtered.length === 0} /></div>
+          <div className="md:ms-auto mt-2 md:mt-0"><RefreshButton onRefresh={refresh} refreshing={refreshing} /><ExportButton filename="warehouses" getExport={exportWarehouses} disabled={filtered.length === 0} /></div>
         </div>
 
         {loading ? (

@@ -19,6 +19,9 @@ import SelectWithAdd from "@/components/SelectWithAdd";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
 import SubmitButton from "@/components/SubmitButton";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 const PRIORITY_LABELS: Record<string, string> = {
   NORMAL: "عادي",
@@ -133,6 +136,8 @@ export default function ServiceRequestsPage() {
     }
   };
 
+  const { refresh, refreshing } = useAutoRefresh(fetchData, ["service-requests", "engineers", "machines", "customers", "notifications"]);
+
   useEffect(() => { fetchData(); }, []);
 
   const autoAddOpen = useAutoAddForm();
@@ -155,7 +160,8 @@ export default function ServiceRequestsPage() {
     setSaving(false);
     setForm({ customerId: "", locationId: "", machineId: "", description: "", priority: "NORMAL" });
     setShowForm(false);
-    fetchData();
+    refresh();
+    notifyDataChanged(["service-requests", "machines", "customers", "notifications"]);
   };
 
   const handleAssign = async (id: string) => {
@@ -166,7 +172,8 @@ export default function ServiceRequestsPage() {
     });
     setAssigningId(null);
     setAssignEngineerId("");
-    fetchData();
+    refresh();
+    notifyDataChanged(["service-requests", "engineers", "notifications"]);
   };
 
   const handleStatus = async (id: string, status: string) => {
@@ -175,7 +182,8 @@ export default function ServiceRequestsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-    fetchData();
+    refresh();
+    notifyDataChanged(["service-requests", "machines", "notifications"]);
   };
 
   const handleDelete = async (id: string) => {
@@ -183,7 +191,8 @@ export default function ServiceRequestsPage() {
     const res = await fetch(`/api/service-requests/${id}`, { method: "DELETE" });
     const data = await res.json().catch(() => null);
     if (!res.ok) { toastError(apiErrorMessage(data, t)); return; }
-    fetchData();
+    refresh();
+    notifyDataChanged(["service-requests", "notifications"]);
     toastSuccess(t("common.deletedSuccessfully"));
   };
 
@@ -337,7 +346,8 @@ export default function ServiceRequestsPage() {
               {t("common.resetFilters")}
             </button>
           )}
-          <div className="md:ms-auto mt-2 md:mt-0">
+          <div className="md:ms-auto mt-2 md:mt-0 flex gap-2">
+            <RefreshButton onRefresh={refresh} refreshing={refreshing} />
             <ExportButton filename="service-requests" getExport={exportRequests} disabled={filtered.length === 0} />
           </div>
         </div>

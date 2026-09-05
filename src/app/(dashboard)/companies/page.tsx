@@ -11,6 +11,9 @@ import { useToast, useConfirm } from "@/components/UIProvider";
 import { FileText, Pencil, Plus, Save, Trash2, Eraser } from "lucide-react";
 import FormModal from "@/components/FormModal";
 import SubmitButton from "@/components/SubmitButton";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 interface CompanyData {
   id: string;
@@ -79,6 +82,7 @@ export default function CompaniesPage() {
   useEffect(() => {
     fetchCompanies();
   }, []);
+  const { refresh, refreshing } = useAutoRefresh(fetchCompanies, ["companies", "expenses"]);
 
   const autoAddOpen = useAutoAddForm();
   useEffect(() => {
@@ -135,7 +139,8 @@ export default function CompaniesPage() {
       setShowForm(false);
       setForm(emptyForm);
       setEditingId(null);
-      fetchCompanies();
+      refresh();
+      notifyDataChanged(["companies"]);
       toastSuccess(t("common.savedSuccessfully"));
     } finally {
       setSaving(false);
@@ -150,7 +155,8 @@ export default function CompaniesPage() {
       toastError(apiErrorMessage(data, t));
       return;
     }
-    fetchCompanies();
+    refresh();
+    notifyDataChanged(["companies"]);
     toastSuccess(t("common.deletedSuccessfully"));
   };
 
@@ -171,7 +177,8 @@ export default function CompaniesPage() {
         toastError(apiErrorMessage(data, t, "companies.resetData.failed"));
         return;
       }
-      fetchCompanies();
+      refresh();
+      notifyDataChanged(["companies"]);
       toastSuccess(t("companies.resetData.success"));
     } catch {
       toastError(t("companies.resetData.failed"));
@@ -289,9 +296,12 @@ export default function CompaniesPage() {
             placeholder={`${t("common.search")} ${t("common.company")}...`}
           />
         </div>
-        <p className="text-sm text-gray-500">
-          {t("pagination.showing")} {filtered.length} {t("pagination.of")} {companies.length}
-        </p>
+        <div className="flex items-center gap-3">
+          <RefreshButton onRefresh={refresh} refreshing={refreshing} />
+          <p className="text-sm text-gray-500">
+            {t("pagination.showing")} {filtered.length} {t("pagination.of")} {companies.length}
+          </p>
+        </div>
       </div>
 
       {filtered.length === 0 ? (

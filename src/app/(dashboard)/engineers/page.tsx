@@ -13,6 +13,9 @@ import { apiErrorMessage } from "@/lib/api-client";
 import FormModal from "@/components/FormModal";
 import SubmitButton from "@/components/SubmitButton";
 import { DateTimeCell } from "@/components/DateTimeCell";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 interface EngineerArea {
   id: string;
@@ -104,6 +107,8 @@ export default function EngineersPage() {
       setLoading(false);
     }
   };
+
+  const { refresh, refreshing } = useAutoRefresh(fetchEngineers, ["engineers", "users", "service-requests", "sales"]);
 
   const fetchEngineerSales = async (engineerId: string) => {
     setSalesLoading(true);
@@ -273,8 +278,9 @@ export default function EngineersPage() {
     setSelectedAccount(null);
     setEditingId(null);
     setShowForm(false);
-    fetchEngineers();
+    refresh();
     fetchLinkableUsers();
+    notifyDataChanged(["engineers", "users", "sales"]);
   };
 
   const handleUserSelection = (userId: string) => {
@@ -298,7 +304,8 @@ export default function EngineersPage() {
       const payload = await res.json().catch(() => null);
       toastError(apiErrorMessage(payload, t));
     }
-    fetchEngineers();
+    refresh();
+    notifyDataChanged(["engineers", "users", "sales", "service-requests", "settlements"]);
     setSelected(null);
   };
 
@@ -506,7 +513,8 @@ export default function EngineersPage() {
               {t("common.resetFilters")}
             </button>
           )}
-          <div className="md:ms-auto mt-2 md:mt-0">
+          <div className="md:ms-auto mt-2 md:mt-0 flex gap-2">
+            <RefreshButton onRefresh={refresh} refreshing={refreshing} />
             <ExportButton filename="engineers" getExport={exportEngineers} disabled={filtered.length === 0} />
           </div>
         </div>

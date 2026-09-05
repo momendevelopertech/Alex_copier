@@ -11,6 +11,9 @@ import { apiErrorMessage } from "@/lib/api-client";
 import { Plus, Pencil, Power, Eye, EyeOff, X, Trash2, Save, AlertTriangle } from "lucide-react";
 import SubmitButton from "@/components/SubmitButton";
 import { DateTimeCell } from "@/components/DateTimeCell";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 interface User {
   id: string;
@@ -73,9 +76,11 @@ const [modalOpen, setModalOpen] = useState(false);
       const data = await res.json();
       if (res.ok) setUsers(Array.isArray(data) ? data : []);
     } finally {
-      setUsersLoaded(true);
+setUsersLoaded(true);
     }
   };
+
+  const { refresh, refreshing } = useAutoRefresh(fetchUsers, ["users", "engineers"]);
 
   useEffect(() => {
     if (usersLoaded) return;
@@ -152,8 +157,9 @@ const [modalOpen, setModalOpen] = useState(false);
         return;
       }
 
-      setModalOpen(false);
-      await fetchUsers();
+setModalOpen(false);
+      refresh();
+      notifyDataChanged(["users", "engineers"]);
       setBanner({ type: "success", text: t(isEdit ? "settings.userUpdated" : "settings.userCreated") });
     } catch {
       setFormError(t("settings.actionFailed"));
@@ -180,7 +186,8 @@ const [modalOpen, setModalOpen] = useState(false);
         setBanner({ type: "error", text: apiErrorMessage(data, t, "settings.actionFailed") });
         return;
       }
-      setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, isActive: !user.isActive } : u)));
+setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, isActive: !user.isActive } : u)));
+      notifyDataChanged(["users", "engineers"]);
       setBanner({ type: "success", text: t("settings.statusChanged") });
     } catch {
       setBanner({ type: "error", text: t("settings.actionFailed") });
@@ -210,6 +217,7 @@ const [modalOpen, setModalOpen] = useState(false);
       }
 
 setUsers((prev) => prev.filter((u) => u.id !== user.id));
+      notifyDataChanged(["users", "engineers"]);
       setBanner({ type: "success", text: t("common.deletedSuccessfully") });
     } catch {
       setBanner({ type: "error", text: t("settings.actionFailed") });
@@ -273,13 +281,14 @@ setUsers((prev) => prev.filter((u) => u.id !== user.id));
                   {t("common.resetFilters")}
                 </button>
               )}
-              <button
+<button
                 onClick={openCreate}
                 className="md:ms-auto inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
               >
                 <Plus size={18} />
                 {t("settings.addUser")}
               </button>
+              <RefreshButton onRefresh={refresh} refreshing={refreshing} className="md:ms-2" />
             </div>
 
             {loading ? (

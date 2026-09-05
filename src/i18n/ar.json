@@ -186,7 +186,8 @@
     "phone": "الهاتف",
     "confirmTitle": "تأكيد",
     "deleteConfirm": "هل أنت متأكد من الحذف؟",
-    "creationDate": "تاريخ الإنشاء"
+    "creationDate": "تاريخ الإنشاء",
+    "refresh": "تحديث"
   },
   "returns": {
     "title": "المرتجعات",

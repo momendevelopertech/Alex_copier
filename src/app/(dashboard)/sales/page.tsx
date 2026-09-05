@@ -17,6 +17,9 @@ import FormModal from "@/components/FormModal";
 import SelectWithAdd from "@/components/SelectWithAdd";
 import SubmitButton from "@/components/SubmitButton";
 import { DateTimeCell } from "@/components/DateTimeCell";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CASH: "نقدي",
@@ -256,6 +259,8 @@ export default function SalesPage() {
     }
   };
 
+  const { refresh, refreshing } = useAutoRefresh(fetchData, ["sales", "products", "inventory", "customers", "companies", "trade-ins"]);
+
   useEffect(() => { fetchData(); }, []);
 
   const autoAddOpen = useAutoAddForm();
@@ -418,7 +423,8 @@ export default function SalesPage() {
     setFormMode("regular");
     setSaving(false);
     setShowForm(false);
-    fetchData();
+    refresh();
+    notifyDataChanged(["sales", "products", "inventory", "customers", "companies", "trade-ins", "notifications"]);
     toastSuccess(t("common.savedSuccessfully"));
   };
 
@@ -428,7 +434,8 @@ export default function SalesPage() {
     const data = await res.json().catch(() => null);
     if (!res.ok) { toastError(apiErrorMessage(data, t)); return; }
     setViewingOrder(null);
-    fetchData();
+    refresh();
+    notifyDataChanged(["sales", "products", "inventory", "customers", "companies", "notifications"]);
     toastSuccess(t("common.deletedSuccessfully"));
   };
 
@@ -489,7 +496,8 @@ export default function SalesPage() {
     setEditingId(null);
     setSavingInter(false);
     setShowInterForm(false);
-    fetchData();
+    refresh();
+    notifyDataChanged(["sales", "products", "inventory", "customers", "companies", "notifications"]);
     toastSuccess(t("common.savedSuccessfully"));
   };
 
@@ -923,7 +931,7 @@ export default function SalesPage() {
           <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} — ${t("common.all")}`} className="md:w-40" />
           <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={(v) => { setDateFrom(v); setPage(1); }} onToChange={(v) => { setDateTo(v); setPage(1); }} />
           {hasActiveFilters && (<button onClick={() => { setSearch(""); setPaymentFilter(""); setTypeFilter(""); setCompanyFilter(""); setDateFrom(""); setDateTo(""); }} className="text-sm text-gray-500 underline transition hover:text-gray-700">{t("common.resetFilters")}</button>)}
-          <div className="md:ms-auto mt-2 md:mt-0"><ExportButton filename="sales-orders" getExport={exportSales} disabled={filtered.length === 0} /></div>
+          <div className="md:ms-auto mt-2 md:mt-0 flex gap-2"><RefreshButton onRefresh={refresh} refreshing={refreshing} /><ExportButton filename="sales-orders" getExport={exportSales} disabled={filtered.length === 0} /></div>
         </div>
         {loading ? (
           <div className="flex min-h-[320px] w-full items-center justify-center px-4 py-8">

@@ -18,6 +18,9 @@ import {
 import FilterSelect from "@/components/FilterSelect";
 import Pagination from "@/components/Pagination";
 import PrinterLoader from "@/components/PrinterLoader";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 interface NotificationItem {
   id: string;
@@ -132,6 +135,8 @@ export default function NotificationsPage() {
     }
   };
 
+  const { refresh, refreshing } = useAutoRefresh(fetchNotifications, ["notifications"]);
+
   useEffect(() => {
     let cancelled = false;
     Promise.resolve().then(() => {
@@ -151,7 +156,8 @@ export default function NotificationsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ read }),
     });
-    void fetchNotifications();
+    refresh();
+    notifyDataChanged(["notifications"]);
   };
 
   const markAllAsRead = async () => {
@@ -160,7 +166,8 @@ export default function NotificationsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ markAllAsRead: true }),
     });
-    void fetchNotifications();
+    refresh();
+    notifyDataChanged(["notifications"]);
   };
 
   const openNotification = (notification: NotificationItem) => {
@@ -183,14 +190,17 @@ export default function NotificationsPage() {
             </span>
           )}
         </div>
-        <button
-          onClick={markAllAsRead}
-          disabled={unreadCount === 0}
-          className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <CheckCheck size={16} className="shrink-0" />
-          {t("notifications.markAllRead")}
-        </button>
+        <div className="flex items-center gap-2">
+          <RefreshButton onRefresh={refresh} refreshing={refreshing} />
+          <button
+            onClick={markAllAsRead}
+            disabled={unreadCount === 0}
+            className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <CheckCheck size={16} className="shrink-0" />
+            {t("notifications.markAllRead")}
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-md overflow-hidden">

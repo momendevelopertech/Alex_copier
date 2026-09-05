@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/i18n/context";
 import PrinterLoader from "@/components/PrinterLoader";
 import { DateTimeCell } from "@/components/DateTimeCell";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 
 interface ReportPayload {
   contracts: Array<{
@@ -99,29 +101,29 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/reports")
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled) {
-          setReport(data);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setReport(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      });
+  const fetchReport = async () => {
+    try {
+      const res = await fetch("/api/reports");
+      if (!res.ok) {
+        setReport(null);
+        return;
+      }
+      const data = await res.json();
+      setReport(data);
+    } catch {
+      setReport(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return () => {
-      cancelled = true;
-    };
+  const { refresh, refreshing } = useAutoRefresh(fetchReport, [
+    "contracts", "engineers", "sales", "settlements", "expenses", "machines", "investors", "products", "service-requests",
+  ]);
+
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const contractTotal = useMemo(
@@ -144,6 +146,7 @@ export default function ReportsPage() {
     <div dir={dir} className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <h1 className="text-xl font-bold sm:text-2xl">{t("reports.title")}</h1>
+        <RefreshButton onRefresh={refresh} refreshing={refreshing} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

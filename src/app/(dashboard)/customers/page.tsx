@@ -15,6 +15,9 @@ import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 import { apiErrorMessage } from "@/lib/api-client";
 import FormModal from "@/components/FormModal";
 import SubmitButton from "@/components/SubmitButton";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 interface CustomerLocation {
   id: string;
@@ -135,6 +138,8 @@ export default function CustomersPage() {
     }
   };
 
+  const { refresh, refreshing } = useAutoRefresh(fetchCustomers, ["customers", "sales", "payments"]);
+
   useEffect(() => {
     fetchCustomers();
   }, []);
@@ -248,7 +253,8 @@ export default function CustomersPage() {
       setForm(emptyForm);
       setEditingId(null);
       setShowForm(false);
-      await fetchCustomers();
+      refresh();
+      notifyDataChanged(["customers", "sales"]);
       toastSuccess(t("common.savedSuccessfully"));
     } finally {
       setSaving(false);
@@ -263,7 +269,8 @@ export default function CustomersPage() {
       toastError(apiErrorMessage(data, t));
       return;
     }
-    fetchCustomers();
+    refresh();
+    notifyDataChanged(["customers", "sales"]);
     setSelected(null);
     toastSuccess(t("common.deletedSuccessfully"));
   };
@@ -399,7 +406,8 @@ export default function CustomersPage() {
       toastSuccess("تم تسجيل الدفعة بنجاح");
       setShowPaymentModal(false);
       setPaymentCustomer(null);
-      fetchCustomers();
+      refresh();
+      notifyDataChanged(["customers", "payments", "sales", "companies", "notifications"]);
     } finally {
       setSavingPayment(false);
     }
@@ -763,6 +771,7 @@ export default function CustomersPage() {
             </button>
           )}
           <div className="flex gap-2 md:ms-auto mt-2 md:mt-0">
+            <RefreshButton onRefresh={refresh} refreshing={refreshing} />
             <ExportButton filename="customers" getExport={exportCustomers} disabled={filtered.length === 0} />
             <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-1.5 border border-gray-300 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 transition hover:bg-gray-50">
               <Upload size={14} />{t("common.import")}
@@ -857,7 +866,7 @@ export default function CustomersPage() {
         onClose={() => setShowImport(false)}
         entity="customers"
         title={`${t("common.import")} — ${t("customers.title")}`}
-        onImported={fetchCustomers}
+        onImported={refresh}
       />
 
       <FormModal open={showPaymentModal} onClose={() => { setShowPaymentModal(false); setPaymentCustomer(null); }} title={`تسجيل دفعة — ${paymentCustomer?.name || ""}`}>

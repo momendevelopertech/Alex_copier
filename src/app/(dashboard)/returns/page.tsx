@@ -13,6 +13,9 @@ import SubmitButton from "@/components/SubmitButton";
 import { DateTimeCell } from "@/components/DateTimeCell";
 import ExportButton from "@/components/ExportButton";
 import Pagination from "@/components/Pagination";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 interface Company { id: string; name: string; nameAr?: string; }
 interface Customer { id: string; name: string; }
@@ -170,6 +173,7 @@ export default function ReturnsPage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+  const { refresh, refreshing } = useAutoRefresh(fetchData, ["returns", "sales", "purchases", "customers", "suppliers", "products", "inventory"]);
 
   const autoAddOpen = useAutoAddForm();
   useEffect(() => {
@@ -390,7 +394,8 @@ export default function ReturnsPage() {
 
       setShowForm(false);
       resetForm();
-      await fetchData();
+      refresh();
+      notifyDataChanged(["returns", "sales", "purchases", "customers", "suppliers", "products", "inventory"]);
       toastSuccess("تم تسجيل المرتجع بنجاح");
     } catch {
       toastError("حدث خطأ أثناء تسجيل المرتجع");
@@ -408,7 +413,8 @@ export default function ReturnsPage() {
         toastError(data?.error || "تعذر الحذف");
         return;
       }
-      await fetchData();
+      refresh();
+      notifyDataChanged(["returns", "sales", "purchases", "customers", "suppliers", "products", "inventory"]);
       toastSuccess("تم الحذف بنجاح");
     } catch {
       toastError("حدث خطأ أثناء الحذف");
@@ -427,7 +433,8 @@ export default function ReturnsPage() {
         toastError(data?.error || "تعذر التحديث");
         return;
       }
-      await fetchData();
+      refresh();
+      notifyDataChanged(["returns", "sales", "purchases", "customers", "suppliers", "products", "inventory"]);
       toastSuccess("تم التحديث بنجاح");
     } catch {
       toastError("حدث خطأ أثناء التحديث");
@@ -512,6 +519,7 @@ export default function ReturnsPage() {
               allLabel={`${t("common.company")} — ${t("common.all")}`}
               className="lg:w-56"
             />
+            <RefreshButton onRefresh={refresh} refreshing={refreshing} />
             <ExportButton filename="returns" getExport={exportReturns} disabled={filteredReturns.length === 0} />
           </div>
         </div>

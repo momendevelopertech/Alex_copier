@@ -186,7 +186,8 @@
     "importErrorGeneric": "An error occurred during import. Check the file format and try again.",
     "from": "From date",
     "to": "To date",
-    "creationDate": "Created"
+    "creationDate": "Created",
+    "refresh": "Refresh"
   },
   "pagination": {
     "showing": "Showing",

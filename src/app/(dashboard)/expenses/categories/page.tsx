@@ -13,6 +13,9 @@ import FormModal from "@/components/FormModal";
 import SubmitButton from "@/components/SubmitButton";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 interface Company { id: string; name: string; }
 interface Category {
@@ -53,6 +56,7 @@ export default function ExpenseCategoriesPage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+  const { refresh, refreshing } = useAutoRefresh(fetchData, ["expenses", "companies"]);
 
   useEffect(() => {
     const handler = () => setShowForm(true);
@@ -102,7 +106,8 @@ export default function ExpenseCategoriesPage() {
     setEditingId(null);
     setShowForm(false);
     toastSuccess(t("common.savedSuccessfully"));
-    fetchData();
+    refresh();
+    notifyDataChanged(["expenses"]);
   };
 
   const handleDelete = async (id: string) => {
@@ -118,7 +123,8 @@ export default function ExpenseCategoriesPage() {
       return;
     }
     toastSuccess(t("common.deletedSuccessfully"));
-    fetchData();
+    refresh();
+    notifyDataChanged(["expenses"]);
   };
 
   return (
@@ -162,6 +168,9 @@ export default function ExpenseCategoriesPage() {
         <div className="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:flex-wrap">
           <div className="w-full md:w-80 md:flex-none"><SearchInput value={search} onChange={setSearch} placeholder={t("finance.searchCategoryPlaceholder")} /></div>
           <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); }} options={companies.map((c) => ({ value: c.id, label: c.name }))} allLabel={`${t("common.company")} — ${t("common.all")}`} className="md:w-40" />
+          <div className="md:ms-auto">
+            <RefreshButton onRefresh={refresh} refreshing={refreshing} />
+          </div>
         </div>
         {loading ? (
           <div className="flex min-h-[320px] w-full items-center justify-center px-4 py-8">

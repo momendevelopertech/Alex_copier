@@ -5,6 +5,8 @@ import { useI18n } from "@/i18n/context";
 import Link from "next/link";
 import PrinterLoader from "@/components/PrinterLoader";
 import { DateTimeCell } from "@/components/DateTimeCell";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import type { AlertKind, DashboardPayload } from "@/lib/dashboard";
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -136,26 +138,32 @@ export default function Dashboard() {
   const { t } = useI18n();
   const [data, setData] = useState<DashboardPayload | null>(null);
   const [failed, setFailed] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
   const isEngineerView = data?.role === "ENGINEER";
+
+  const loadDashboard = async () => {
+    try {
+      const res = await fetch("/api/dashboard");
+      if (!res.ok) throw new Error("request failed");
+      setData((await res.json()) as DashboardPayload);
+      setFailed(false);
+    } catch {
+      setFailed(true);
+    }
+  };
+
+  const { refresh, refreshing } = useAutoRefresh(loadDashboard, [
+    "sales", "purchases", "returns", "service-requests", "contracts", "machines", "inventory", "customers", "engineers", "settlements", "expenses", "investors", "notifications",
+  ]);
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/dashboard")
-      .then((res) => {
-        if (!res.ok) throw new Error("request failed");
-        return res.json();
-      })
-      .then((payload: DashboardPayload) => {
-        if (!cancelled) setData(payload);
-      })
-      .catch(() => {
-        if (!cancelled) setFailed(true);
-      });
+    Promise.resolve().then(() => {
+      if (!cancelled) void loadDashboard();
+    });
     return () => {
       cancelled = true;
     };
-  }, [reloadKey]);
+  }, []);
 
   if (failed) {
     return (
@@ -164,7 +172,7 @@ export default function Dashboard() {
         <button
           onClick={() => {
             setFailed(false);
-            setReloadKey((key) => key + 1);
+            void refresh();
           }}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
@@ -259,10 +267,13 @@ export default function Dashboard() {
     <div dir="rtl">
       <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
         <h1 className="text-2xl font-bold">{t("dashboard.title")}</h1>
-        <span className="text-xs text-gray-400">
-          {t("dashboard.updatedAt")}:{" "}
-          {new Date(data.generatedAt).toLocaleString("ar-EG")}
-        </span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-gray-400">
+            {t("dashboard.updatedAt")}:{" "}
+            {new Date(data.generatedAt).toLocaleString("ar-EG")}
+          </span>
+          <RefreshButton onRefresh={refresh} refreshing={refreshing} />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">

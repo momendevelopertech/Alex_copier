@@ -13,6 +13,9 @@ import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
 import FormModal from "@/components/FormModal";
 import SubmitButton from "@/components/SubmitButton";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 interface Company {
   id: string;
@@ -114,6 +117,7 @@ export default function ProductsPage() {
   useEffect(() => {
     fetchData();
   }, []);
+  const { refresh, refreshing } = useAutoRefresh(fetchData, ["products", "inventory", "sales", "purchases", "returns", "warehouses"]);
 
   const autoAddOpen = useAutoAddForm();
   useEffect(() => {
@@ -213,7 +217,8 @@ export default function ProductsPage() {
       setShowForm(false);
       setForm({ ...emptyForm, pricingTiers: { ...emptyPricingTiers } });
       setEditingId(null);
-      await fetchData();
+      refresh();
+      notifyDataChanged(["products", "inventory", "sales", "purchases", "returns"]);
       toastSuccess(t("common.savedSuccessfully"));
     } finally {
       setSaving(false);
@@ -229,7 +234,8 @@ export default function ProductsPage() {
       toastError(apiErrorMessage(data, t));
       return;
     }
-    await fetchData();
+    refresh();
+    notifyDataChanged(["products", "inventory", "sales", "purchases", "returns"]);
     toastSuccess(data?.archived ? t("products.archivedNotice") : t("common.deletedSuccessfully"));
   };
 
@@ -244,7 +250,8 @@ export default function ProductsPage() {
       toastError(apiErrorMessage(data, t));
       return;
     }
-    await fetchData();
+    refresh();
+    notifyDataChanged(["products", "inventory", "sales", "purchases", "returns"]);
     toastSuccess(t("common.savedSuccessfully"));
   };
 
@@ -397,7 +404,7 @@ export default function ProductsPage() {
           <FilterSelect value={companyFilter} onChange={(v) => { setCompanyFilter(v); setPage(1); }} options={companies.map((c) => ({ value: c.id, label: c.nameAr || c.name }))} allLabel={`${t("warehouses.company")} — ${t("common.all")}`} className="md:w-52" />
           <FilterSelect value={activeFilter} onChange={(v) => { setActiveFilter(v); setPage(1); }} options={[{ value: "true", label: t("common.active") }, { value: "false", label: t("common.inactive") }]} allLabel={`${t("common.status")} — ${t("common.all")}`} className="md:w-36" />
           {hasActiveFilters && (<button onClick={() => { setSearch(""); setTypeFilter(""); setCompanyFilter(""); setActiveFilter(""); }} className="text-sm text-slate-500 underline transition hover:text-slate-700">{t("common.resetFilters")}</button>)}
-          <div className="md:ms-auto mt-2 md:mt-0"><ExportButton filename="products" getExport={exportProducts} disabled={filtered.length === 0} /></div>
+          <div className="md:ms-auto mt-2 md:mt-0"><RefreshButton onRefresh={refresh} refreshing={refreshing} /><ExportButton filename="products" getExport={exportProducts} disabled={filtered.length === 0} /></div>
         </div>
 
         <div className="overflow-x-auto">

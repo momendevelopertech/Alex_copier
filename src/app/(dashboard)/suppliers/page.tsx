@@ -14,6 +14,9 @@ import FormModal from "@/components/FormModal";
 import SubmitButton from "@/components/SubmitButton";
 import { apiErrorMessage } from "@/lib/api-client";
 import { DateTimeCell } from "@/components/DateTimeCell";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 interface Supplier {
   id: string;
@@ -74,6 +77,7 @@ export default function SuppliersPage() {
   useEffect(() => {
     fetchSuppliers();
   }, []);
+  const { refresh, refreshing } = useAutoRefresh(fetchSuppliers, ["suppliers", "purchases", "returns"]);
 
   const filtered = suppliers.filter(
     (s) =>
@@ -155,7 +159,8 @@ export default function SuppliersPage() {
       setForm(emptyForm);
       setEditingId(null);
       setShowForm(false);
-      await fetchSuppliers();
+      refresh();
+      notifyDataChanged(["suppliers", "purchases"]);
       toastSuccess(t("common.savedSuccessfully"));
     } finally {
       setSaving(false);
@@ -171,7 +176,8 @@ export default function SuppliersPage() {
       return;
     }
     setSelected(null);
-    await fetchSuppliers();
+    refresh();
+    notifyDataChanged(["suppliers", "purchases"]);
     toastSuccess(t("common.deletedSuccessfully"));
   };
 
@@ -289,6 +295,7 @@ export default function SuppliersPage() {
           </button>
         )}
         <div className="flex gap-2 md:ms-auto mt-2 md:mt-0">
+          <RefreshButton onRefresh={refresh} refreshing={refreshing} />
           <ExportButton filename="suppliers" getExport={exportSuppliers} disabled={filtered.length === 0} />
           <button
             onClick={() => setShowImport(true)}
@@ -365,7 +372,7 @@ export default function SuppliersPage() {
         onClose={() => setShowImport(false)}
         entity="suppliers"
         title={`${t("common.import")} — ${t("suppliers.title")}`}
-        onImported={fetchSuppliers}
+        onImported={refresh}
       />
     </div>
   );

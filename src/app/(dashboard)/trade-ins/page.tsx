@@ -13,6 +13,9 @@ import { apiErrorMessage } from "@/lib/api-client";
 import FormModal from "@/components/FormModal";
 import { DateTimeCell } from "@/components/DateTimeCell";
 import { RotateCcw, Save, X } from "lucide-react";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 interface Company {
   id: string;
@@ -88,12 +91,15 @@ export default function TradeInsPage() {
   useEffect(() => {
     fetchData();
   }, []);
+  const { refresh, refreshing } = useAutoRefresh(fetchData, ["trade-ins", "products", "inventory"]);
 
   const handleDelete = async (id: string) => {
     try {
       const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       setProducts((prev) => prev.filter((p) => p.id !== id));
+      refresh();
+      notifyDataChanged(["trade-ins", "products", "inventory"]);
       toastSuccess("تم حذف المنتج بنجاح");
     } catch {
       toastError("فشل في حذف المنتج");
@@ -143,6 +149,7 @@ export default function TradeInsPage() {
             { value: "fair", label: "مقبول" },
             { value: "poor", label: "ضعيف" },
           ]} allLabel="الكل" />
+          <RefreshButton onRefresh={refresh} refreshing={refreshing} />
           <ExportButton filename="products-trade-in" getExport={exportData} />
         </div>
       </div>

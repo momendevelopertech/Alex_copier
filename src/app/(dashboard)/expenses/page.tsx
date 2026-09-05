@@ -17,6 +17,9 @@ import { DateTimeCell } from "@/components/DateTimeCell";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
 import { useRouter } from "next/navigation";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 interface Company { id: string; name: string; }
 interface Category { id: string; name: string; }
@@ -71,6 +74,7 @@ export default function FinancePage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+  const { refresh, refreshing } = useAutoRefresh(fetchData, ["expenses", "companies"]);
 
   useEffect(() => {
     const handler = () => setShowForm(true);
@@ -161,7 +165,8 @@ export default function FinancePage() {
     setEditingId(null);
     setShowForm(false);
     toastSuccess(t("common.savedSuccessfully"));
-    fetchData();
+    refresh();
+    notifyDataChanged(["expenses"]);
   };
 
   const handleDelete = async (id: string) => {
@@ -178,7 +183,8 @@ export default function FinancePage() {
     }
     setSelected(null);
     toastSuccess(t("common.deletedSuccessfully"));
-    fetchData();
+    refresh();
+    notifyDataChanged(["expenses"]);
   };
 
   return (
@@ -257,6 +263,7 @@ export default function FinancePage() {
               </button>
             )}
             <div className="md:ms-auto mt-2 md:mt-0">
+              <RefreshButton onRefresh={refresh} refreshing={refreshing} />
               <ExportButton filename="expenses" getExport={exportExpenses} disabled={filtered.length === 0} />
             </div>
           </div>

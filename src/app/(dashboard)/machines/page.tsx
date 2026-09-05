@@ -16,6 +16,9 @@ import { DateTimeCell } from "@/components/DateTimeCell";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { useUrlParams, useSearchWithDefault } from "@/hooks/useUrlParams";
 import SubmitButton from "@/components/SubmitButton";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 interface Machine {
   id: string;
@@ -106,6 +109,7 @@ const { success: toastSuccess } = useToast();
   useEffect(() => {
     fetchMachines();
   }, []);
+  const { refresh, refreshing } = useAutoRefresh(fetchMachines, ["machines", "sales", "contracts", "workshop", "customers"]);
 
   const autoAddOpen = useAutoAddForm();
   useEffect(() => {
@@ -165,13 +169,15 @@ const { success: toastSuccess } = useToast();
     setSaving(false);
     setForm(emptyForm);
     setShowForm(false);
-    fetchMachines();
+    refresh();
+    notifyDataChanged(["machines", "sales", "workshop", "contracts", "customers"]);
   };
 
   const handleDelete = async (id: string) => {
       if (!(await confirmAction({ message: t("common.deleteConfirm") }))) return;
       await fetch(`/api/machines/${id}`, { method: "DELETE" });
-      fetchMachines();
+      refresh();
+      notifyDataChanged(["machines", "sales", "workshop", "contracts", "customers"]);
       toastSuccess(t("common.deletedSuccessfully"));
     };
 
@@ -282,6 +288,7 @@ const { success: toastSuccess } = useToast();
             </button>
           )}
           <div className="flex gap-2 md:ms-auto mt-2 md:mt-0">
+            <RefreshButton onRefresh={refresh} refreshing={refreshing} />
             <ExportButton filename="machines" getExport={exportMachines} disabled={filtered.length === 0} />
             <button
               onClick={() => setShowImport(true)}
@@ -445,7 +452,7 @@ const { success: toastSuccess } = useToast();
         onClose={() => setShowImport(false)}
         entity="machines"
         title={`${t("common.import")} — ${t("machines.title")}`}
-        onImported={fetchMachines}
+        onImported={refresh}
       />
     </div>
   );

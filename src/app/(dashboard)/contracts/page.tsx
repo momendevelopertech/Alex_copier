@@ -16,6 +16,9 @@ import { DateTimeCell } from "@/components/DateTimeCell";
 import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
 import SubmitButton from "@/components/SubmitButton";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 const TYPE_LABELS: Record<string, string> = {
   MAINTENANCE_ONLY: "صيانة فقط",
@@ -127,6 +130,7 @@ export default function ContractsPage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+  const { refresh, refreshing } = useAutoRefresh(fetchData, ["contracts", "machines", "customers", "service-requests"]);
 
   const autoAddOpen = useAutoAddForm();
   useEffect(() => {
@@ -148,7 +152,8 @@ export default function ContractsPage() {
     setSaving(false);
     setForm({ customerId: "", contractType: "MAINTENANCE_ONLY", startDate: "", endDate: "", value: "", amountPaid: "", paymentMethod: "CASH", billingCycle: "MONTHLY", notes: "", machineIds: [] });
     setShowForm(false);
-    fetchData();
+    refresh();
+    notifyDataChanged(["contracts", "machines", "customers"]);
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
@@ -168,7 +173,8 @@ export default function ContractsPage() {
     setEditingId(null);
     setForm({ customerId: "", contractType: "MAINTENANCE_ONLY", startDate: "", endDate: "", value: "", amountPaid: "", paymentMethod: "CASH", billingCycle: "MONTHLY", notes: "", machineIds: [] });
     setShowForm(false);
-    fetchData();
+    refresh();
+    notifyDataChanged(["contracts", "machines", "customers"]);
   };
 
   const handleDelete = async (id: string) => {
@@ -177,7 +183,8 @@ export default function ContractsPage() {
     const data = await res.json().catch(() => null);
     if (!res.ok) { toastError(apiErrorMessage(data, t)); return; }
     setViewingContract(null);
-    fetchData();
+    refresh();
+    notifyDataChanged(["contracts", "machines", "customers"]);
     toastSuccess(t("common.deletedSuccessfully"));
   };
 
@@ -203,7 +210,8 @@ export default function ContractsPage() {
   const handleStatusToggle = async (id: string, currentStatus: string) => {
     const nextStatus = currentStatus === "ACTIVE" ? "TERMINATED" : "ACTIVE";
     await fetch(`/api/contracts/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: nextStatus }) });
-    fetchData();
+    refresh();
+    notifyDataChanged(["contracts", "machines", "customers"]);
   };
 
   const filtered = contracts.filter(contract =>
@@ -378,6 +386,7 @@ export default function ContractsPage() {
             </button>
           )}
           <div className="md:ms-auto mt-2 md:mt-0">
+            <RefreshButton onRefresh={refresh} refreshing={refreshing} />
             <ExportButton filename="contracts" getExport={exportContracts} disabled={filtered.length === 0} />
           </div>
         </div>

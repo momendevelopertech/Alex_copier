@@ -11,6 +11,9 @@ import SubmitButton from "@/components/SubmitButton";
 import { Plus, Save, Trash2, X } from "lucide-react";
 import { AddFormBoundary, useAutoAddForm } from "@/hooks/useAutoAddForm";
 import { useConfirm, useToast } from "@/components/UIProvider";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 interface Investor {
   id: string;
@@ -55,6 +58,7 @@ export default function InvestorsPage() {
   useEffect(() => {
     fetchInvestors();
   }, []);
+  const { refresh, refreshing } = useAutoRefresh(fetchInvestors, ["investors"]);
 
   const autoAddOpen = useAutoAddForm();
   useEffect(() => {
@@ -103,13 +107,15 @@ export default function InvestorsPage() {
     setSaving(false);
     setForm(emptyForm);
     setShowForm(false);
-    fetchInvestors();
+    refresh();
+    notifyDataChanged(["investors"]);
   };
 
   const handleDelete = async (id: string) => {
     if (!(await confirmAction({ message: t("common.deleteConfirm") }))) return;
     await fetch(`/api/investors/${id}`, { method: "DELETE" });
-    fetchInvestors();
+    refresh();
+    notifyDataChanged(["investors"]);
     toastSuccess(t("common.deletedSuccessfully"));
   };
 
@@ -157,6 +163,7 @@ export default function InvestorsPage() {
               </button>
             )}
             <div className="md:ms-auto mt-2 md:mt-0">
+              <RefreshButton onRefresh={refresh} refreshing={refreshing} />
               <ExportButton filename="investors" getExport={exportInvestors} disabled={filtered.length === 0} />
             </div>
           </div>

@@ -16,6 +16,9 @@ import { useConfirm, useToast } from "@/components/UIProvider";
 import { apiErrorMessage } from "@/lib/api-client";
 import SubmitButton from "@/components/SubmitButton";
 import { DateTimeCell } from "@/components/DateTimeCell";
+import RefreshButton from "@/components/RefreshButton";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { notifyDataChanged } from "@/lib/data-events";
 
 interface Supplier { id: string; name: string; }
 interface Company { id: string; name: string; }
@@ -134,6 +137,7 @@ export default function PurchasesPage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+  const { refresh, refreshing } = useAutoRefresh(fetchData, ["purchases", "products", "inventory", "warehouses", "suppliers", "returns"]);
 
   const autoAddOpen = useAutoAddForm();
   useEffect(() => {
@@ -215,7 +219,8 @@ export default function PurchasesPage() {
     setItemRows([{ productId: "", quantity: "", unitPrice: "" }]);
     setEditingId(null);
     setShowForm(false);
-    fetchData();
+    refresh();
+    notifyDataChanged(["purchases", "products", "inventory", "warehouses", "suppliers"]);
   };
 
   const openEditOrder = (order: PurchaseOrder) => {
@@ -295,7 +300,8 @@ export default function PurchasesPage() {
       const data = await res.json().catch(() => null);
       if (!res.ok) { toastError(apiErrorMessage(data, t)); return; }
       toastSuccess(t("common.updatedSuccessfully"));
-      fetchData();
+      refresh();
+      notifyDataChanged(["purchases", "products", "inventory", "warehouses", "suppliers"]);
     } finally {
       setSaving(false);
     }
@@ -309,7 +315,8 @@ export default function PurchasesPage() {
     const res = await fetch(`/api/purchases/${id}`, { method: "DELETE" });
     const data = await res.json().catch(() => null);
     if (!res.ok) { toastError(apiErrorMessage(data, t)); return; }
-    fetchData();
+    refresh();
+    notifyDataChanged(["purchases", "products", "inventory", "warehouses", "suppliers"]);
     toastSuccess(t("common.deletedSuccessfully"));
   };
 
@@ -430,6 +437,7 @@ export default function PurchasesPage() {
             </button>
           )}
           <div className="md:ms-auto mt-2 md:mt-0">
+            <RefreshButton onRefresh={refresh} refreshing={refreshing} />
             <ExportButton filename="purchase-orders" getExport={exportPurchases} disabled={filtered.length === 0} />
           </div>
         </div>
